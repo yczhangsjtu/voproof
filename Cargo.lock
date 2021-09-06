@@ -628,7 +628,9 @@ dependencies = [
  "ark-ff",
  "ark-poly",
  "ark-poly-commit",
+ "ark-serialize",
  "ark-std",
+ "derivative",
 ]
 
 [[package]]
