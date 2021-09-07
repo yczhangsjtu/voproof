@@ -209,7 +209,7 @@ where
         for f in fs.iter().chain(gs.iter()) {
             Self::check_degree_is_too_large(f.degree(), powers.size())?;
         }
-        let open_time = start_timer!(|| format!("Opening polynomial of degree {}", p.degree()));
+        let open_time = start_timer!(|| format!("Opening polynomials"));
 
         let witness_time = start_timer!(|| "Computing witness polynomials");
         let mut witness_poly_f = P::zero();
@@ -286,7 +286,8 @@ where
         rng: &mut R,
     ) -> Result<bool, Error> {
         let check_time =
-            start_timer!(|| format!("Checking {} evaluation proofs", commitments.len()));
+            start_timer!(|| format!("Checking {} evaluation proofs",
+                                    f_commitments.len() + g_commitments.len()));
 
         let mut total_q = <E::G1Projective>::zero();
         let mut total_q_2 = <E::G1Projective>::zero();
@@ -583,7 +584,11 @@ mod tests {
         for<'a, 'b> &'a P: Div<&'b P, Output = P> + Mul<E::Fr, Output = P>,
     {
         let rng = &mut test_rng();
-        for _ in 0..10 {
+        let batch_check_test_time = start_timer!(|| "Batch check test time");
+        for i in 0..10 {
+            let batch_check_test_time_body = start_timer!(|| format!("Batch check test body time {}", i));
+
+            let batch_check_test_time_preamble = start_timer!(|| format!("Batch check test preamble time {}", i));
             let degree = usize::rand(rng) % 19 + 1;
             let f_num = usize::rand(rng) % 19 + 1;
             let g_num = usize::rand(rng) % 19 + 1;
@@ -597,6 +602,10 @@ mod tests {
             let mut g_values = Vec::new();
             let mut z = E::Fr::rand(rng);
             let mut zz = E::Fr::rand(rng);
+            end_timer!(batch_check_test_time_preamble);
+
+            let batch_check_test_time_prepare =
+                start_timer!(|| format!("Batch check test prepare polys and comms time {} for {} polys", i, f_num + g_num));
             for _ in 0..f_num {
                 let f = P::rand(degree, rng);
                 let comm = KZG10::<E, P>::commit(&ck, &f)?;
@@ -619,11 +628,16 @@ mod tests {
                 g_comms.push(comm);
                 g_values.push(value);
             }
+            end_timer!(batch_check_test_time_prepare);
+
+            let batch_check_test_time_open = start_timer!(|| format!("Batch check test open time {}", i));
             let rand_xi = E::Fr::rand(rng);
             let rand_xi_2 = E::Fr::rand(rng);
             let (proof, proof_2) = KZG10::<E, P>::batch_open(
                 &ck, &fs, &gs, &z, &zz, &rand_xi, &rand_xi_2)?;
+            end_timer!(batch_check_test_time_open);
 
+            let batch_check_test_time_check_individual_time = start_timer!(|| format!("Batch check test check individual time {}", i));
             let mut total_f = P::zero();
             let mut total_g = P::zero();
             let mut xi_power = E::Fr::one();
@@ -650,12 +664,19 @@ mod tests {
             let total_g_eval = total_g.evaluate(&zz);
             assert!(KZG10::<E, P>::check(&vk, &comm_total_f, &z, &total_f_eval, &proof)?);
             assert!(KZG10::<E, P>::check(&vk, &comm_total_g, &zz, &total_g_eval, &proof_2)?);
+            end_timer!(batch_check_test_time_check_individual_time);
+
+            let batch_check_test_check_time = start_timer!(|| format!("Batch check test check time {}", i));
 
             assert!(KZG10::<E, P>::batch_check(
                 &vk, &f_comms, &g_comms, &z, &zz, &rand_xi, &rand_xi_2,
                 &f_values, &g_values, &proof, &proof_2, rng
             )?);
+            end_timer!(batch_check_test_check_time);
+
+            end_timer!(batch_check_test_time_body);
         }
+        end_timer!(batch_check_test_time);
         Ok(())
     }
 
