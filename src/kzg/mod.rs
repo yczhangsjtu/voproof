@@ -9,7 +9,7 @@ use ark_poly_commit::{
     Polynomial,
     Error,
     LabeledPolynomial,
-    PCRandomness,
+    // PCRandomness,
     PCCommitment};
 use ark_ec::msm::{FixedBaseMSM, VariableBaseMSM};
 use ark_ec::{group::Group, AffineCurve, PairingEngine, ProjectiveCurve};
@@ -25,6 +25,7 @@ use ark_std::{
     vec};
 
 use ark_std::rand::RngCore;
+use ark_std::ops::Mul;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -44,13 +45,12 @@ impl<E, P> KZG10<E, P>
 where
     E: PairingEngine,
     P: UVPolynomial<E::Fr, Point = E::Fr>,
-    for<'a, 'b> &'a P: Div<&'b P, Output = P>,
+    for<'a, 'b> &'a P: Div<&'b P, Output = P> + Mul<E::Fr, Output = P>,
 {
     /// Constructs public parameters when given as input the maximum degree `degree`
     /// for the polynomial commitment scheme.
     pub fn setup<R: RngCore>(
         max_degree: usize,
-        produce_g2_powers: bool,
         rng: &mut R,
     ) -> Result<UniversalParams<E>, Error> {
         if max_degree < 1 {
@@ -82,55 +82,7 @@ where
             &powers_of_beta,
         );
         end_timer!(g_time);
-        // let gamma_g_time = start_timer!(|| "Generating powers of gamma * G");
-        // let gamma_g_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, gamma_g);
-        /* let mut powers_of_gamma_g = FixedBaseMSM::multi_scalar_mul::<E::G1Projective>(
-            scalar_bits,
-            window_size,
-            &gamma_g_table,
-            &powers_of_beta,
-        ); */
-        // Add an additional power of gamma_g, because we want to be able to support
-        // up to D queries.
-        // powers_of_gamma_g.push(powers_of_gamma_g.last().unwrap().mul(&beta));
-        // end_timer!(gamma_g_time);
-
         let powers_of_g = E::G1Projective::batch_normalization_into_affine(&powers_of_g);
-        /* let powers_of_gamma_g =
-            E::G1Projective::batch_normalization_into_affine(&powers_of_gamma_g)
-                .into_iter()
-                .enumerate()
-                .collect(); */
-
-        /* let neg_powers_of_h_time = start_timer!(|| "Generating negative powers of h in G2");
-        let neg_powers_of_h = if produce_g2_powers {
-            let mut neg_powers_of_beta = vec![E::Fr::one()];
-            let mut cur = E::Fr::one() / &beta;
-            for _ in 0..max_degree {
-                neg_powers_of_beta.push(cur);
-                cur /= &beta;
-            }
-
-            let neg_h_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, h);
-            let neg_powers_of_h = FixedBaseMSM::multi_scalar_mul::<E::G2Projective>(
-                scalar_bits,
-                window_size,
-                &neg_h_table,
-                &neg_powers_of_beta,
-            );
-
-            let affines = E::G2Projective::batch_normalization_into_affine(&neg_powers_of_h);
-            let mut affines_map = BTreeMap::new();
-            affines.into_iter().enumerate().for_each(|(i, a)| {
-                affines_map.insert(i, a);
-            });
-            affines_map
-        } else {
-            BTreeMap::new()
-        };
-
-        end_timer!(neg_powers_of_h_time); */
-
         let h = h.into_affine();
         let beta_h = h.mul(beta).into_affine();
         let prepared_h = h.into();
@@ -138,10 +90,8 @@ where
 
         let pp = UniversalParams {
             powers_of_g,
-            // powers_of_gamma_g,
             h,
             beta_h,
-            // neg_powers_of_h,
             prepared_h,
             prepared_beta_h,
         };
@@ -153,9 +103,7 @@ where
     pub fn commit(
         powers: &Powers<E>,
         polynomial: &P,
-        // hiding_bound: Option<usize>,
-        rng: Option<&mut dyn RngCore>,
-    ) -> Result<(Commitment<E>, Randomness<E::Fr, P>), Error> {
+    ) -> Result<Commitment<E>, Error> {
         Self::check_degree_is_too_large(polynomial.degree(), powers.size())?;
 
         let commit_time = start_timer!(|| format!(
@@ -164,44 +112,19 @@ where
             polynomial.degree(),
             // hiding_bound,
         ));
+        end_timer!(commit_time);
 
         let (num_leading_zeros, plain_coeffs) =
             skip_leading_zeros_and_convert_to_bigints(polynomial);
 
         let msm_time = start_timer!(|| "MSM to compute commitment to plaintext poly");
-        let mut commitment = VariableBaseMSM::multi_scalar_mul(
+        let commitment = VariableBaseMSM::multi_scalar_mul(
             &powers.powers_of_g[num_leading_zeros..],
             &plain_coeffs,
         );
         end_timer!(msm_time);
 
-        let mut randomness = Randomness::<E::Fr, P>::empty();
-        /* if let Some(hiding_degree) = hiding_bound {
-            let mut rng = rng.ok_or(Error::MissingRng)?;
-            let sample_random_poly_time = start_timer!(|| format!(
-                "Sampling a random polynomial of degree {}",
-                hiding_degree
-            ));
-
-            randomness = Randomness::rand(hiding_degree, false, None, &mut rng);
-            Self::check_hiding_bound(
-                randomness.blinding_polynomial.degree(),
-                powers.powers_of_gamma_g.len(),
-            )?;
-            end_timer!(sample_random_poly_time);
-        }
-
-        let random_ints = convert_to_bigints(&randomness.blinding_polynomial.coeffs());
-        let msm_time = start_timer!(|| "MSM to compute commitment to random poly");
-        let random_commitment =
-           VariableBaseMSM::multi_scalar_mul(&powers.powers_of_gamma_g, random_ints.as_slice())
-               .into_affine();
-        end_timer!(msm_time);
-
-        commitment.add_assign_mixed(&random_commitment); */
-
-        end_timer!(commit_time);
-        Ok((Commitment(commitment.into()), randomness))
+        Ok(Commitment(commitment.into()))
     }
 
     /// Compute witness polynomial.
@@ -211,26 +134,15 @@ where
     /// p(z) is the remainder term. We can therefore omit p(z) when computing the quotient.
     pub fn compute_witness_polynomial(
         p: &P,
-        point: P::Point,
+        point: &P::Point,
         // randomness: &Randomness<E::Fr, P>,
     // ) -> Result<(P, Option<P>), Error> {
     ) -> Result<P, Error> {
-        let divisor = P::from_coefficients_vec(vec![-point, E::Fr::one()]);
+        let divisor = P::from_coefficients_vec(vec![-point.clone(), E::Fr::one()]);
 
         let witness_time = start_timer!(|| "Computing witness polynomial");
         let witness_polynomial = p / &divisor;
         end_timer!(witness_time);
-
-        /* let random_witness_polynomial = if randomness.is_hiding() {
-            let random_p = &randomness.blinding_polynomial;
-
-            let witness_time = start_timer!(|| "Computing random witness polynomial");
-            let random_witness_polynomial = random_p / &divisor;
-            end_timer!(witness_time);
-            Some(random_witness_polynomial)
-        } else {
-            None
-        }; */
 
         // Ok((witness_polynomial, random_witness_polynomial))
         Ok(witness_polynomial)
@@ -238,44 +150,22 @@ where
 
     pub(crate) fn open_with_witness_polynomial<'a>(
         powers: &Powers<E>,
-        point: P::Point,
-        // randomness: &Randomness<E::Fr, P>,
+        // point: P::Point,
         witness_polynomial: &P,
-        // hiding_witness_polynomial: Option<&P>,
     ) -> Result<Proof<E>, Error> {
         Self::check_degree_is_too_large(witness_polynomial.degree(), powers.size())?;
         let (num_leading_zeros, witness_coeffs) =
             skip_leading_zeros_and_convert_to_bigints(witness_polynomial);
 
         let witness_comm_time = start_timer!(|| "Computing commitment to witness polynomial");
-        let mut w = VariableBaseMSM::multi_scalar_mul(
+        let w = VariableBaseMSM::multi_scalar_mul(
             &powers.powers_of_g[num_leading_zeros..],
             &witness_coeffs,
         );
         end_timer!(witness_comm_time);
 
-        /* let random_v = if let Some(hiding_witness_polynomial) = hiding_witness_polynomial {
-            let blinding_p = &randomness.blinding_polynomial;
-            let blinding_eval_time = start_timer!(|| "Evaluating random polynomial");
-            let blinding_evaluation = blinding_p.evaluate(&point);
-            end_timer!(blinding_eval_time);
-
-            let random_witness_coeffs = convert_to_bigints(&hiding_witness_polynomial.coeffs());
-            let witness_comm_time =
-                start_timer!(|| "Computing commitment to random witness polynomial");
-            w += &VariableBaseMSM::multi_scalar_mul(
-                &powers.powers_of_gamma_g,
-                &random_witness_coeffs,
-            );
-            end_timer!(witness_comm_time);
-            Some(blinding_evaluation)
-        } else {
-            None
-        }; */
-
         Ok(Proof {
             w: w.into_affine(),
-            // random_v,
         })
     }
 
@@ -283,20 +173,18 @@ where
     pub(crate) fn open<'a>(
         powers: &Powers<E>,
         p: &P,
-        point: P::Point,
-        // rand: &Randomness<E::Fr, P>,
+        point: &P::Point,
     ) -> Result<Proof<E>, Error> {
         Self::check_degree_is_too_large(p.degree(), powers.size())?;
         let open_time = start_timer!(|| format!("Opening polynomial of degree {}", p.degree()));
 
         let witness_time = start_timer!(|| "Computing witness polynomials");
-        let witness_poly = Self::compute_witness_polynomial(p, point)?;
-        // let (witness_poly, hiding_witness_poly) = Self::compute_witness_polynomial(p, point, rand)?;
+        let witness_poly = Self::compute_witness_polynomial(p, &point)?;
         end_timer!(witness_time);
 
         let proof = Self::open_with_witness_polynomial(
             powers,
-            point,
+            // point,
             // rand,
             &witness_poly,
             // hiding_witness_poly.as_ref(),
@@ -312,50 +200,50 @@ where
         powers: &Powers<E>,
         fs: &[P],
         gs: &[P],
-        z: &E::Fr,
-        zz: &E::Fr,
+        z: &P::Point,
+        zz: &P::Point,
         rand_xi: &E::Fr,
         rand_xi_2: &E::Fr,
         // rand: &Randomness<E::Fr, P>,
     ) -> Result<(Proof<E>, Proof<E>), Error> {
-        for f in fs.iter().concat(gs.iter()) {
+        for f in fs.iter().chain(gs.iter()) {
             Self::check_degree_is_too_large(f.degree(), powers.size())?;
         }
         let open_time = start_timer!(|| format!("Opening polynomial of degree {}", p.degree()));
 
         let witness_time = start_timer!(|| "Computing witness polynomials");
-        let witness_poly_f = P::zero();
-        let xi_power = E::Fr::one();
-        let witness_poly_g = P::zero();
-        let xi_power_2 = E::Fr::one();
+        let mut witness_poly_f = P::zero();
+        let mut xi_power = E::Fr::one();
+        let mut witness_poly_g = P::zero();
+        let mut xi_power_2 = E::Fr::one();
         for f in fs.iter() {
-            witness_poly_f += xi_power * Self::compute_witness_polynomial(f, z)?;
+            witness_poly_f += &Self::compute_witness_polynomial(f, z)?.mul(xi_power);
             xi_power *= rand_xi;
         }
         for g in gs.iter() {
-            witness_poly_g += &(xi_power_2 * Self::compute_witness_polynomial(g, zz)?);
-            xi_power_2 *= &rand_xi_2;
+            witness_poly_g += &Self::compute_witness_polynomial(g, zz)?.mul(xi_power_2);
+            xi_power_2 *= rand_xi_2;
         }
         end_timer!(witness_time);
 
         let proof = Self::open_with_witness_polynomial(
             powers,
-            z,
+            // z,
             // rand,
             &witness_poly_f,
             // hiding_witness_poly.as_ref(),
-        );
+        )?;
 
         let proof_2 = Self::open_with_witness_polynomial(
             powers,
-            zz,
+            // zz,
             // rand,
             &witness_poly_g,
             // hiding_witness_poly.as_ref(),
-        );
+        )?;
 
         end_timer!(open_time);
-        (proof, proof_2)
+        Ok((proof, proof_2))
     }
 
     /// Verifies that `value` is the evaluation at `point` of the polynomial
@@ -363,24 +251,21 @@ where
     pub fn check(
         vk: &VerifierKey<E>,
         comm: &Commitment<E>,
-        point: E::Fr,
-        value: E::Fr,
+        point: &E::Fr,
+        value: &E::Fr,
         proof: &Proof<E>,
     ) -> Result<bool, Error> {
         let check_time = start_timer!(|| "Checking evaluation");
-        let mut inner = comm.0.into_projective() - &vk.g.mul(value);
-        /* if let Some(random_v) = proof.random_v {
-            inner -= &vk.gamma_g.mul(random_v);
-        } */
+        let inner = comm.0.into_projective() - &vk.g.mul(value.into_repr());
         // left hand side = e(C - y G, H) = (f(x) - y) e(G, H)
         let lhs = E::pairing(inner, vk.h);
 
-        let inner = vk.beta_h.into_projective() - &vk.h.mul(point);
+        let inner = vk.beta_h.into_projective() - &vk.h.mul(point.into_repr());
         // right hand side = e(W, (x - z) H) = w (x - z) e(G, H)
         let rhs = E::pairing(proof.w, inner);
 
         end_timer!(check_time, || format!("Result: {}", lhs == rhs));
-        // f(x) - y = w (beta - z) => w = (f(x) - y) / (x - z)
+        // f(x) - y = w (x - z) => w = (f(x) - y) / (x - z)
         Ok(lhs == rhs)
     }
 
@@ -390,10 +275,10 @@ where
         vk: &VerifierKey<E>,
         f_commitments: &[Commitment<E>],
         g_commitments: &[Commitment<E>],
-        z: &P::Point,
-        zz: &P::Point,
-        rand_xi: &P::Point,
-        rand_xi_2: &P::Point,
+        z: &E::Fr,
+        zz: &E::Fr,
+        rand_xi: &E::Fr,
+        rand_xi_2: &E::Fr,
         f_values: &[E::Fr],
         g_values: &[E::Fr],
         proof: &Proof<E>,
@@ -409,42 +294,37 @@ where
         let combination_time = start_timer!(|| "Combining commitments and proofs");
         // We don't need to sample randomizers from the full field,
         // only from 128-bit strings.
-        let mut randomizer = u128::rand(rng).into();
+        let randomizer: E::Fr = u128::rand(rng).into();
         let mut y = E::Fr::zero();
         let mut y_2 = E::Fr::zero();
         let mut xi_power = E::Fr::one();
         let mut xi_power_2 = E::Fr::one();
 
         for (c, v) in f_commitments.iter().zip(f_values) {
-            total_q += &c.mul(xi_power.into_repr());
-            y += &(v * xi_power);
-            xi_power *= &rand_xi;
+            total_q += &c.0.mul(xi_power.into_repr());
+            y += &(xi_power * v);
+            xi_power *= rand_xi;
         }
         total_q -= &vk.g.mul(y);
 
         for (c, v) in g_commitments.iter().zip(g_values) {
-            total_q_2 += &c.mul(xi_power_2.into_repr());
-            y_2 += &(v * xi_power_2);
-            xi_power_2 *= &rand_xi_2;
+            total_q_2 += &c.0.mul(xi_power_2.into_repr());
+            y_2 += &(xi_power_2 * v);
+            xi_power_2 *= rand_xi_2;
         }
         total_q_2 -= &vk.g.mul(y_2);
 
-        let F = total_q + &total_q_2.mul(randomizer) +
-            &proof.w.mul(z) + &proof_2.w.mul(randomizer * zz);
-        let total_w = proof.w + proof_2.w.mul(randomizer)
-
+        let point_f = total_q + &total_q_2.mul(randomizer.into_repr()) +
+            &proof.w.mul(z.into_repr()) + &proof_2.w.mul(randomizer * zz);
+        let point_f = point_f.into_affine();
+        let total_w = proof.w + proof_2.w.mul(randomizer).into_affine();
         end_timer!(combination_time);
-
-        let to_affine_time = start_timer!(|| "Converting results to affine for pairing");
-        let affine_points = E::G1Projective::batch_normalization_into_affine(&[F, -total_w]);
-        let (F, total_w) = (affine_points[0], affine_points[1]);
-        end_timer!(to_affine_time);
 
         let pairing_time = start_timer!(|| "Performing product of pairings");
 
         let result = E::product_of_pairings(&[
-            (F.into(), vk.prepared_h.clone()),
-            (total_w.into(), vk.prepared_beta_h.clone()),
+            (point_f.into(), vk.prepared_h.clone()),
+            ((-total_w).into(), vk.prepared_beta_h.clone()),
         ])
         .is_one();
 
@@ -562,17 +442,12 @@ mod tests {
                 supported_degree += 1;
             }
             let powers_of_g = pp.powers_of_g[..=supported_degree].to_vec();
-            let powers_of_gamma_g = (0..=supported_degree)
-                .map(|i| pp.powers_of_gamma_g[&i])
-                .collect();
 
             let powers = Powers {
                 powers_of_g: ark_std::borrow::Cow::Owned(powers_of_g),
-                powers_of_gamma_g: ark_std::borrow::Cow::Owned(powers_of_gamma_g),
             };
             let vk = VerifierKey {
                 g: pp.powers_of_g[0],
-                gamma_g: pp.powers_of_gamma_g[&0],
                 h: pp.h,
                 beta_h: pp.beta_h,
                 prepared_h: pp.prepared_h.clone(),
@@ -593,16 +468,22 @@ mod tests {
             Fr::from_repr(7.into()).unwrap(),
             Fr::from_repr(9.into()).unwrap(),
         ]);
-        let pp = KZG_Bls12_381::setup(10, false, rng).unwrap();
+        let pp = KZG_Bls12_381::setup(10, rng).unwrap();
         let (powers, vk) = KZG_Bls12_381::trim(&pp, 6).unwrap();
-        let (comm, _) = KZG10::commit(&powers, &p, None, Some(rng)).unwrap();
+        let comm = KZG10::commit(&powers, &p).unwrap();
 
         let z = Fr::from_repr(2.into()).unwrap();
         println!("z = {}", z);
         let px = p.evaluate(&z);
         println!("p(z) = {}", px);
 
-        KZG10::open(&powers, &p, z, &Randomness::empty());
+        let proof = KZG10::open(&powers, &p, &z).unwrap();
+        assert!(
+            KZG_Bls12_381::check(&vk, &comm, &z, &px, &proof).unwrap(),
+            "proof was incorrect for max_degree = {}, polynomial_degree = {}",
+            10,
+            p.degree(),
+        );
     }
 
     #[test]
@@ -620,14 +501,14 @@ mod tests {
         f_p += (f, &p);
 
         let degree = 4;
-        let pp = KZG_Bls12_381::setup(degree, false, rng).unwrap();
+        let pp = KZG_Bls12_381::setup(degree, rng).unwrap();
         let (powers, _) = KZG_Bls12_381::trim(&pp, degree).unwrap();
 
         // let hiding_bound = None;
         // let (comm, _) = KZG10::commit(&powers, &p, hiding_bound, Some(rng)).unwrap();
         // let (f_comm, _) = KZG10::commit(&powers, &f_p, hiding_bound, Some(rng)).unwrap();
-        let (comm, _) = KZG10::commit(&powers, &p, Some(rng)).unwrap();
-        let (f_comm, _) = KZG10::commit(&powers, &f_p, Some(rng)).unwrap();
+        let comm = KZG10::commit(&powers, &p).unwrap();
+        let f_comm = KZG10::commit(&powers, &f_p).unwrap();
         let mut f_comm_2 = Commitment::empty();
         f_comm_2 += (f, &comm);
 
@@ -638,25 +519,25 @@ mod tests {
     where
         E: PairingEngine,
         P: UVPolynomial<E::Fr, Point = E::Fr>,
-        for<'a, 'b> &'a P: Div<&'b P, Output = P>,
+        for<'a, 'b> &'a P: Div<&'b P, Output = P> + Mul<E::Fr, Output = P>,
     {
         let rng = &mut test_rng();
-        for _ in 0..100 {
+        for _ in 0..10 {
             let mut degree = 0;
             while degree <= 1 {
                 degree = usize::rand(rng) % 20;
             }
-            let pp = KZG10::<E, P>::setup(degree, false, rng)?;
+            let pp = KZG10::<E, P>::setup(degree, rng)?;
             let (ck, vk) = KZG10::<E, P>::trim(&pp, degree)?;
             let p = P::rand(degree, rng);
             // let hiding_bound = Some(1);
             // let (comm, rand) = KZG10::<E, P>::commit(&ck, &p, hiding_bound, Some(rng))?;
-            let (comm, rand) = KZG10::<E, P>::commit(&ck, &p, Some(rng))?;
+            let comm = KZG10::<E, P>::commit(&ck, &p)?;
             let point = E::Fr::rand(rng);
             let value = p.evaluate(&point);
-            let proof = KZG10::<E, P>::open(&ck, &p, point, &rand)?;
+            let proof = KZG10::<E, P>::open(&ck, &p, &point)?;
             assert!(
-                KZG10::<E, P>::check(&vk, &comm, point, value, &proof)?,
+                KZG10::<E, P>::check(&vk, &comm, &point, &value, &proof)?,
                 // "proof was incorrect for max_degree = {}, polynomial_degree = {}, hiding_bound = {:?}",
                 "proof was incorrect for max_degree = {}, polynomial_degree = {}",
                 degree,
@@ -671,22 +552,20 @@ mod tests {
     where
         E: PairingEngine,
         P: UVPolynomial<E::Fr, Point = E::Fr>,
-        for<'a, 'b> &'a P: Div<&'b P, Output = P>,
+        for<'a, 'b> &'a P: Div<&'b P, Output = P> + Mul<E::Fr, Output = P>,
     {
         let rng = &mut test_rng();
-        for _ in 0..100 {
+        for _ in 0..10 {
             let degree = 50;
-            let pp = KZG10::<E, P>::setup(degree, false, rng)?;
+            let pp = KZG10::<E, P>::setup(degree, rng)?;
             let (ck, vk) = KZG10::<E, P>::trim(&pp, 2)?;
             let p = P::rand(1, rng);
-            // let hiding_bound = Some(1);
-            // let (comm, rand) = KZG10::<E, P>::commit(&ck, &p, hiding_bound, Some(rng))?;
-            let (comm, rand) = KZG10::<E, P>::commit(&ck, &p, Some(rng))?;
+            let comm = KZG10::<E, P>::commit(&ck, &p)?;
             let point = E::Fr::rand(rng);
             let value = p.evaluate(&point);
-            let proof = KZG10::<E, P>::open(&ck, &p, point, &rand)?;
+            let proof = KZG10::<E, P>::open(&ck, &p, &point)?;
             assert!(
-                KZG10::<E, P>::check(&vk, &comm, point, value, &proof)?,
+                KZG10::<E, P>::check(&vk, &comm, &point, &value, &proof)?,
                 // "proof was incorrect for max_degree = {}, polynomial_degree = {}, hiding_bound = {:?}",
                 "proof was incorrect for max_degree = {}, polynomial_degree = {}",
                 degree,
@@ -701,37 +580,80 @@ mod tests {
     where
         E: PairingEngine,
         P: UVPolynomial<E::Fr, Point = E::Fr>,
-        for<'a, 'b> &'a P: Div<&'b P, Output = P>,
+        for<'a, 'b> &'a P: Div<&'b P, Output = P> + Mul<E::Fr, Output = P>,
     {
         let rng = &mut test_rng();
         for _ in 0..10 {
-            let mut degree = 0;
-            while degree <= 1 {
-                degree = usize::rand(rng) % 20;
-            }
-            let pp = KZG10::<E, P>::setup(degree, false, rng)?;
+            let degree = usize::rand(rng) % 19 + 1;
+            let f_num = usize::rand(rng) % 19 + 1;
+            let g_num = usize::rand(rng) % 19 + 1;
+            let pp = KZG10::<E, P>::setup(degree, rng)?;
             let (ck, vk) = KZG10::<E, P>::trim(&pp, degree)?;
-            let mut comms = Vec::new();
-            let mut values = Vec::new();
-            let mut points = Vec::new();
-            let mut proofs = Vec::new();
-            for _ in 0..10 {
-                let p = P::rand(degree, rng);
-                // let hiding_bound = Some(1);
-                // let (comm, rand) = KZG10::<E, P>::commit(&ck, &p, hiding_bound, Some(rng))?;
-                let (comm, rand) = KZG10::<E, P>::commit(&ck, &p, Some(rng))?;
-                let point = E::Fr::rand(rng);
-                let value = p.evaluate(&point);
-                let proof = KZG10::<E, P>::open(&ck, &p, point, &rand)?;
+            let mut fs = Vec::new();
+            let mut gs = Vec::new();
+            let mut f_comms = Vec::new();
+            let mut g_comms = Vec::new();
+            let mut f_values = Vec::new();
+            let mut g_values = Vec::new();
+            let mut z = E::Fr::rand(rng);
+            let mut zz = E::Fr::rand(rng);
+            for _ in 0..f_num {
+                let f = P::rand(degree, rng);
+                let comm = KZG10::<E, P>::commit(&ck, &f)?;
+                let value = f.evaluate(&z);
+                let proof = KZG10::<E, P>::open(&ck, &f, &z)?;
 
-                assert!(KZG10::<E, P>::check(&vk, &comm, point, value, &proof)?);
-                comms.push(comm);
-                values.push(value);
-                points.push(point);
-                proofs.push(proof);
+                assert!(KZG10::<E, P>::check(&vk, &comm, &z, &value, &proof)?);
+                fs.push(f);
+                f_comms.push(comm);
+                f_values.push(value);
             }
+            for _ in 0..g_num {
+                let g = P::rand(degree, rng);
+                let comm = KZG10::<E, P>::commit(&ck, &g)?;
+                let value = g.evaluate(&zz);
+                let proof = KZG10::<E, P>::open(&ck, &g, &zz)?;
+
+                assert!(KZG10::<E, P>::check(&vk, &comm, &zz, &value, &proof)?);
+                gs.push(g);
+                g_comms.push(comm);
+                g_values.push(value);
+            }
+            let rand_xi = E::Fr::rand(rng);
+            let rand_xi_2 = E::Fr::rand(rng);
+            let (proof, proof_2) = KZG10::<E, P>::batch_open(
+                &ck, &fs, &gs, &z, &zz, &rand_xi, &rand_xi_2)?;
+
+            let mut total_f = P::zero();
+            let mut total_g = P::zero();
+            let mut xi_power = E::Fr::one();
+            let mut xi_power_2 = E::Fr::one();
+            let mut total_comm_f = Commitment::<E>::empty();
+            let mut total_comm_g = Commitment::<E>::empty();
+            for (f, comm_f) in fs.iter().zip(&f_comms) {
+                total_f += &f.mul(xi_power);
+                total_comm_f += (xi_power, &comm_f);
+                xi_power *= rand_xi;
+            }
+            let comm_total_f = KZG10::<E, P>::commit(&ck, &total_f)?;
+            assert!(comm_total_f == total_comm_f, "Sum of f commitment != commit to sum of f");
+
+            for (g, comm_g) in gs.iter().zip(&g_comms) {
+                total_g += &g.mul(xi_power_2);
+                total_comm_g += (xi_power_2, &comm_g);
+                xi_power_2 *= rand_xi_2;
+            }
+            let comm_total_g = KZG10::<E, P>::commit(&ck, &total_g)?;
+            assert!(comm_total_g == total_comm_g, "Sum of g commitment != commit to sum of g");
+
+            let total_f_eval = total_f.evaluate(&z);
+            let total_g_eval = total_g.evaluate(&zz);
+            assert!(KZG10::<E, P>::check(&vk, &comm_total_f, &z, &total_f_eval, &proof)?);
+            assert!(KZG10::<E, P>::check(&vk, &comm_total_g, &zz, &total_g_eval, &proof_2)?);
+
             assert!(KZG10::<E, P>::batch_check(
-                &vk, &comms, &points, &values, &proofs, rng
+                &vk, &f_comms, &g_comms, &z, &zz, &rand_xi, &rand_xi_2,
+                &f_values, &g_values, &proof, &proof_2, rng
             )?);
         }
         Ok(())
@@ -761,7 +683,7 @@ mod tests {
         let rng = &mut test_rng();
 
         let max_degree = 123;
-        let pp = KZG_Bls12_381::setup(max_degree, false, rng).unwrap();
+        let pp = KZG_Bls12_381::setup(max_degree, rng).unwrap();
         let (powers, _) = KZG_Bls12_381::trim(&pp, max_degree).unwrap();
 
         let p = DensePoly::<Fr>::rand(max_degree + 1, rng);

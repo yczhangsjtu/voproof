@@ -13,3 +13,7 @@ use ark_poly_commit::{
 use ark_std::{test_rng};
 use ark_ff::fields::PrimeField;
 // use voproof::kzg::{KZG10, UniversalParams, Powers, VerifierKey, Randomness};
+//
+
+fn main() {
+}
