@@ -1,6 +1,15 @@
 use ark_ff::PrimeField as Field;
 use ark_std::{vec, vec::Vec};
-use crate::error::Error;
+use ark_std::rand::RngCore;
+use ark_poly::{UVPolynomial,
+    univariate::DensePolynomial
+};
+use ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
+use sha2::{Sha256, Digest};
+use crate::{
+    error::Error,
+    kzg::Commitment
+};
 
 pub fn power<F: Field>(a: F, e: i64) -> F {
     if e < 0 {
@@ -26,6 +35,52 @@ pub fn sparse_mvp<F: Field>(
         res[r.clone() as usize] += right[c.clone() as usize] * v;
     }
     Ok(res)
+}
+
+pub fn sample_field<F: Field, R: RngCore>(rng: &mut R) -> F {
+    F::rand(rng)
+}
+
+pub fn sample_vec<F: Field, R: RngCore>(rng: &mut R, k: u64) -> Vec<F> {
+    let mut res = Vec::new();
+    for _ in 0..k {
+        res.push(sample_field(rng));
+    }
+    res
+}
+
+pub fn poly_from_vec<F: Field>(v: Vec<F>) -> DensePolynomial<F> {
+    DensePolynomial::from_coefficients_vec(v)
+}
+
+/// Note: use the macro to_bytes![a, b, c] to convert any collection
+/// of elements to a single bytes array, as long as a, b, c implement
+/// the ToBytes trait.
+pub fn hash_to_field<F: Field>(bytes: Vec<u8>) -> F {
+    let mut sha = Sha256::new();
+    sha.update(bytes);
+    let output = sha.finalize();
+    F::from_le_bytes_mod_order(&output)
+}
+
+pub fn combine_commits<E: PairingEngine>(
+    comms: &Vec<Commitment<E>>, coeffs: &Vec<E::Fr>)
+    -> Commitment<E> {
+    Commitment{ 
+        0: VariableBaseMSM::multi_scalar_mul(
+            &comms.iter().map(|x| x.0).collect::<Vec<_>>()[..],
+            &coeffs.iter().map(|x| x.into_repr()).collect::<Vec<_>>()[..]).into_affine()
+    }
+}
+
+pub fn evaluate_sparse<F: Field>(x: F, coeffs: &Vec<F>, indices: &Vec<u64>) -> F {
+    coeffs.iter().zip(indices).fold(F::zero(),
+        |y, (c, i)| y + c.clone() * power(x, i.clone() as i64))
+}
+
+pub fn evaluate_short<F: Field>(x: F, coeffs: &Vec<F>) -> F {
+    coeffs.iter().enumerate().fold(F::zero(),
+        |y, (i, c)| y + c.clone() * power(x, i.clone() as i64))
 }
 
 #[cfg(test)]
