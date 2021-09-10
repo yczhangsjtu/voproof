@@ -169,6 +169,8 @@ pub enum Error {
         /// Index of the offending polynomial.
         label: String,
     },
+
+    Unimplemented(String),
 }
 
 impl core::fmt::Display for Error {
@@ -255,6 +257,7 @@ impl core::fmt::Display for Error {
                 support up to degree ({:?})", label, poly_degree, supported_degree
             ),
             Error::IncorrectInputLength(err) => write!(f, "{}", err),
+            Error::Unimplemented(info) => write!(f, "Unimplemented {}", info),
         }
     }
 }

@@ -32,4 +32,5 @@ pub struct R1CSWitness<F: Field> {
 }
 
 impl<F: Field> Instance<F> for R1CSInstance<F> {}
+impl<F: Field> Witness<F> for R1CSWitness<F> {}
 

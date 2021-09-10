@@ -5,7 +5,7 @@ use ark_ff::{Field, PrimeField, ToBytes, ToConstraintField, Zero};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, SerializationError};
 use ark_std::{
     rand::RngCore,
-    collections::BTreeMap,
+    // collections::BTreeMap,
     borrow::Cow,
     io::{Read, Write},
     marker::PhantomData,
@@ -32,6 +32,23 @@ pub struct UniversalParams<E: PairingEngine> {
     /// \beta times the above generator of G2, prepared for use in pairings.
     #[derivative(Debug = "ignore")]
     pub prepared_beta_h: E::G2Prepared,
+}
+
+impl<E: PairingEngine> UniversalParams<E> {
+    pub fn empty() -> Self {
+        let powers_of_g = Vec::new();
+        let h = E::G2Affine::default();
+        let beta_h = E::G2Affine::default();
+        let prepared_h = E::G2Prepared::default();
+        let prepared_beta_h = E::G2Prepared::default();
+        Self {
+            powers_of_g,
+            h,
+            beta_h,
+            prepared_h,
+            prepared_beta_h,
+        }
+    }
 }
 
 impl<E: PairingEngine> PCUniversalParams for UniversalParams<E> {
