@@ -11,6 +11,22 @@ use crate::{
     kzg::Commitment
 };
 
+pub fn to_field<F: Field>(i: u64) -> F {
+    F::from_repr(i.into()).unwrap()
+}
+
+pub fn to_int<F: Field>(e: F) -> u64 {
+    let digits = e.into_repr().into().to_u64_digits();
+    match digits.len() {
+        0 => 0,
+        1 => digits[0],
+        _ => {
+            println!("{:?}", digits);
+            panic!("Number too big!")
+        }
+    }
+}
+
 pub fn power<F: Field>(a: F, e: i64) -> F {
     if e < 0 {
         a.pow(&[(-e) as u64])
@@ -87,6 +103,13 @@ pub fn evaluate_short<F: Field>(x: F, coeffs: &Vec<F>) -> F {
 mod tests {
     use super::*;
     use ark_bls12_381::Fr as F;
+
+    #[test]
+    fn test_int_field_transform() {
+        for i in 0..1000 {
+            assert_eq!(i, to_int::<F>(to_field::<F>(i)));
+        }
+    }
 
     #[test]
     fn test_sparse_mvp() {

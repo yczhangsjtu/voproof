@@ -1,4 +1,5 @@
 use ark_ec::PairingEngine;
+use ark_std::Zero;
 use crate::error::Error;
 use crate::kzg::{
     Proof as KZGProof,

@@ -3,6 +3,7 @@ from sympy import Symbol, latex, sympify, Integer, Expr,\
 from sympy.abc import alpha, X
 from sympy.core.numbers import Infinity
 from latex_builder import tex
+from rust_builder import keep_alpha_number
 
 """
 _uuid_counter = 0
@@ -87,6 +88,18 @@ class _NamedBasic(object):
     self._cached_expr = ret
     return self._cached_expr
 
+  # Dump rust name
+  def dumpr(self):
+    ret = [self.name]
+    if self._type is not None:
+      ret.append(self._type)
+    if self.modifier is not None:
+      ret.append(self.modifier)
+    if self.subscript is not None:
+      ret.append(keep_alpha_number(str(self.subscript)))
+    if self.has_prime:
+      ret.append("prime")
+    return "_".join(ret)
 
 __name_counters = {}
 
@@ -171,14 +184,22 @@ class VectorSlice(object):
     self.start = sympify(start)
     self.end = None if end is None else sympify(end)
 
-  def dumps(self):
+  def get_range(self, start, end):
     if self.end is None:
-      slc = "[%s]" % latex(self.start)
-    elif self.end == Infinity:
-      slc = "[%s..]" % latex(self.start)
-    else:
-      slc = "[%s..%s]" % (latex(self.start), latex(self.end))
-    return "{%s}_{%s}" % (self.named_vector.dumps(), slc)
+      return "[%s]" % start
+    if self.end == Infinity:
+      return "[%s..]" % start
+    slc = "[%s..%s]" % (start, end)
+
+  def dumps(self):
+    end = latex(self.end) if self.end is not None else ""
+    return "{%s}_{%s}" % (self.named_vector.dumps(),
+                          self.get_range(latex(self.start), end))
+
+  def dumpr(self):
+    end = str(self.end) if self.end is not None else ""
+    return "%s%s" % (self.named_vector.dumpr(),
+                     self.get_range(str(self.start), end))
 
 
 class UnitVector(object):

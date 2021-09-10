@@ -4,7 +4,7 @@ extern crate derivative;
 extern crate ark_std;
 
 mod kzg;
-mod tools;
+pub mod tools;
 mod error;
 mod cs;
 
