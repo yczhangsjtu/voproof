@@ -16,7 +16,7 @@ use voproof::tools::{to_int, to_field};
 // use voproof::kzg::{KZG10, UniversalParams, Powers, VerifierKey, Randomness};
 
 fn main() {
-    println!("{:?}", (0..10).map(|i| i*i).collect::<Vec<_>>());
+    println!("{:?}", (1..=10).map(|i| i*i).collect::<Vec<_>>());
     println!("{:?}", (0..10i32).scan(0, |acc, i| {
         *acc = *acc + i;
         Some(*acc)

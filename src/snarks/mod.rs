@@ -1,10 +1,15 @@
 mod voproof_r1cs;
 mod voproof_hpr;
 mod voproof_pov;
+mod template;
 
 use ark_ec::PairingEngine;
 use ark_ff::Field;
-use crate::kzg::{UniversalParams, Powers, VerifierKey};
+use ark_std::Zero;
+use crate::kzg::{
+    UniversalParams, Powers, VerifierKey,
+    Proof as KZGProof
+};
 use crate::error::Error;
 use crate::cs::{
     CSSize, ConstraintSystem, Instance, Witness,

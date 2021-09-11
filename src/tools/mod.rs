@@ -1,6 +1,10 @@
 use ark_ff::PrimeField as Field;
 use ark_std::{vec, vec::Vec};
-use ark_std::rand::RngCore;
+use ark_std::{
+    rand::RngCore,
+    iter::Iterator,
+    One, Zero,
+};
 use ark_poly::{UVPolynomial,
     univariate::DensePolynomial
 };
@@ -99,6 +103,57 @@ pub fn evaluate_short<F: Field>(x: F, coeffs: &Vec<F>) -> F {
         |y, (i, c)| y + c.clone() * power(x, i.clone() as i64))
 }
 
+pub struct PowerVectorIterator<F: Field> {
+    _start: u64,
+    _end: u64,
+    _alpha: F,
+    _length: u64,
+    _shifted: u64,
+    _i: u64,
+    _curr: Option<F>,
+}
+
+impl<F: Field> Iterator for PowerVectorIterator<F> {
+    type Item = F;
+    fn next(&mut self) -> Option<F> {
+        if self._end <= self._start || self._i >= self._end {
+            return None;
+        }
+        let ret = if self._i < self._shifted || self._i >= self._length + self._shifted {
+            Some(F::zero())
+        } else if let Some(curr) = self._curr {
+            Some(curr)
+        } else {
+            let curr = power(self._alpha, (self._i - self._shifted) as i64);
+            self._curr = Some(curr);
+            Some(curr)
+        };
+
+        self._i += 1;
+        if let Some(curr) = self._curr {
+            self._curr = Some(curr * self._alpha);
+        }
+
+        ret
+    }
+}
+
+pub fn power_iter<F: Field>(start: u64, end: u64, alpha: F, length: u64, shifted: u64)
+    -> PowerVectorIterator<F>{
+    if end <= start {
+        panic!("Invalid range");
+    }
+    PowerVectorIterator {
+        _start: start,
+        _end: end,
+        _alpha: alpha,
+        _length: length,
+        _shifted: shifted,
+        _i: start,
+        _curr: None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,5 +183,15 @@ mod tests {
                               F::from_repr(1.into()).unwrap(),
                               F::from_repr(5.into()).unwrap(),
                               F::from_repr(2.into()).unwrap()]);
+    }
+
+    #[test]
+    fn test_power_iterator() {
+        assert_eq!(power_iter::<F>(0, 5, F::one(), 3, 0).collect::<Vec<F>>(),
+                   vec![F::one(), F::one(), F::one(), F::zero(), F::zero()]);
+        assert_eq!(power_iter::<F>(2, 6, to_field(2), 3, 0).collect::<Vec<F>>(),
+                   vec![to_field(4), F::zero(), F::zero(), F::zero()]);
+        assert_eq!(power_iter::<F>(2, 6, to_field(2), 3, 3).collect::<Vec<F>>(),
+                   vec![F::zero(), to_field(1), to_field(2), to_field(4)]);
     }
 }

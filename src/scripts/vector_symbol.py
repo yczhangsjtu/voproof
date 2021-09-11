@@ -5,24 +5,6 @@ from sympy.core.numbers import Infinity
 from latex_builder import tex
 from rust_builder import keep_alpha_number
 
-"""
-_uuid_counter = 0
-
-def get_uuid():
-  global _uuid_counter
-  ret = "uuid%dsymbol" % _uuid_counter
-  _uuid_counter += 1
-  return ret
-
-
-_uuid_to_basic_dict = {}
-
-def clear_basics():
-  global _uuid_to_basic_dict, _uuid_counter
-  _uuid_to_basic_dict = {}
-  _uuid_counter = 0
-"""
-
 
 class _NamedBasic(object):
   def __init__(self, name, modifier=None, subscript=None, has_prime=False,
@@ -126,6 +108,8 @@ class NamedVector(_NamedBasic):
     super(NamedVector, self).__init__(name, modifier=modifier, subscript=subscript,
                                       has_prime=has_prime, _type="vec")
     self.local_evaluate = False
+    self.hint_computation = None
+    self.randomizers = None
 
   def slice(self, start, end=None):
     return VectorSlice(self, start, end)

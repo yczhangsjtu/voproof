@@ -7,6 +7,8 @@ from vector_symbol import NamedVector, PowerVector, UnitVector, \
 from latex_builder import tex, LaTeXBuilder, AccumulationVector, \
                           ExpressionVector, Math, Enumerate, Itemize, \
                           add_paren_if_add
+from rust_builder import rust, RustBuilder, AccumulationVectorRust, mut, ref, \
+                         Samples
 from sympy import Symbol, Integer, UnevaluatedExpr, Expr, Max, simplify, \
                   latex, srepr, Add, Mul
 from sympy.core.numbers import Infinity
@@ -18,8 +20,9 @@ Fstar = Symbol("\\mathbb{F}^*")
 
 
 class Computes(object):
-  def __init__(self, latex_builder, owner=None):
+  def __init__(self, latex_builder, rust_builder, owner=None):
     self.latex_builder = latex_builder
+    self.rust_builder = rust_builder
     self.owner = owner
 
   def dumps(self):
@@ -28,22 +31,25 @@ class Computes(object):
       ret = "\\%s computes %s" % (self.owner, ret)
     return ret
 
+  def dumpr(self):
+    return self.rust_builder.dumpr()
+
 
 class IndexerComputes(object):
-  def __init__(self, latex_builder, has_indexer=True):
-    super(IndexerComputes, self).__init__(latex_builder, "indexer"
-                                              if has_indexer else None)
+  def __init__(self, latex_builder, rust_builder, has_indexer=True):
+    super(IndexerComputes, self).__init__(latex_builder, rust_builder,
+                                          "indexer" if has_indexer else None)
 
 
 class ProverComputes(Computes):
-  def __init__(self, latex_builder, has_prover=True):
-    super(ProverComputes, self).__init__(latex_builder, "prover"
-                                                        if has_prover else None)
+  def __init__(self, latex_builder, rust_builder, has_prover=True):
+    super(ProverComputes, self).__init__(latex_builder, rust_builder,
+                                         "prover" if has_prover else None)
 
 
 class VerifierComputes(Computes):
   def __init__(self, latex_builder, has_verifier=True):
-    super(VerifierComputes, self).__init__(latex_builder,
+    super(VerifierComputes, self).__init__(latex_builder, rust_builder,
                                            "verifier" if has_verifier else None)
 
 
@@ -130,8 +136,8 @@ class PublicCoinProtocolExecution(object):
   def input_witness(self, arg):
     self.prover_inputs.append(arg)
 
-  def preprocess(self, latex_builder):
-    self.preprocessings.append(latex_builder)
+  def preprocess(self, latex_builder, rust_builder):
+    self.preprocessings.append(IndexerComputes(latex_builder, rust_builder))
 
   def preprocess_output_pk(self, expr):
     self.indexer_output_pk.append(expr)
@@ -139,11 +145,11 @@ class PublicCoinProtocolExecution(object):
   def preprocess_output_vk(self, expr):
     self.indexer_output_vk.append(expr)
 
-  def prover_computes(self, latex_builder):
-    self.interactions.append(ProverComputes(latex_builder))
+  def prover_computes(self, latex_builder, rust_builder):
+    self.interactions.append(ProverComputes(latex_builder, rust_builder))
 
-  def verifier_computes(self, latex_builder):
-    self.verifier_computations.append(VerifierComputes(latex_builder))
+  def verifier_computes(self, latex_builder, rust_builder):
+    self.verifier_computations.append(VerifierComputes(latex_builder, rust_builder))
 
   def verifier_send_randomness(self, *args):
     # If the verifier already sent some randomnesses in the last step,
@@ -352,9 +358,10 @@ class EvalQuery(object):
 
 
 class CombinePolynomial(object):
-  def __init__(self, poly, coeff_latex_builders):
+  def __init__(self, poly, coeff_latex_builders, coeff_rust_builders):
     self.poly = poly
     self.coeff_latex_builders = coeff_latex_builders
+    self.coeff_rust_builders = coeff_rust_builders
 
   def dump_items(self, has_commit=False, has_poly=False, has_oracle=True):
     oralce_sum_items, poly_sum_items, commit_sum_items, items, one = \
@@ -477,7 +484,7 @@ class PIOPFromVOProtocol(object):
     vec_to_poly_dict = {}
     self.vo.preprocess(voexec, *args)
     for pp in voexec.preprocessings:
-      piopexec.preprocess(pp)
+      piopexec.preprocess(pp.latex_builder, pp.rust_builder)
     for vector, size in voexec.indexer_vectors.vectors:
       poly = vector.to_named_vector_poly()
       piopexec.preprocess_polynomial(vector.to_named_vector_poly(), size)
@@ -498,6 +505,9 @@ class PIOPFromVOProtocol(object):
     q = Integer(1)
     Ftoq = UnevaluatedExpr(F ** q)
 
+    samples = Samples()
+    piopexec.prover_computes(LaTeXBuilder(), RustBuilder(samples))
+
     self.debug("Executing VO protocol")
     self.vo.execute(voexec, *args)
     self.prover_inputs = voexec.prover_inputs
@@ -507,17 +517,28 @@ class PIOPFromVOProtocol(object):
     self.debug("Process interactions")
     for interaction in voexec.interactions:
       if isinstance(interaction, ProverComputes):
-        piopexec.prover_computes(interaction.latex_builder)
+        piopexec.prover_computes(interaction.latex_builder, interaction.rust_builder)
       elif isinstance(interaction, VerifierSendRandomnesses):
         piopexec.verifier_send_randomness(*interaction.names)
       elif isinstance(interaction, ProverSubmitVectors):
         for v, size in interaction.vectors:
           randomizer = get_named_vector("delta")
-          poly = v.get_poly_with_same_name()
-          piopexec.prover_computes(Math(randomizer).sample(Ftoq)
-            .comma(poly)
-            .assign("f_{%s\\|%s}(X)" % (v.dumps(), randomizer.dumps()))
-          )
+          poly = v.to_named_vector_poly()
+
+          # The prover does not actually compute anything when it
+          # is expected to append randomizers to the vector. This
+          # "append" is postponed until the vector is involved in
+          # any computations. For now, just remember that this vec
+          # is randomized.
+          v.randomizers = []
+          for i in range(int(q)):
+            delta = get_name("delta")
+            samples.append(delta)
+            v.randomizers.append(delta)
+          piopexec.prover_computes(
+              Math(randomizer).sample(Ftoq).comma(Math(v))
+                              .assign(v).double_bar(randomizer),
+              RustBuilder())
           piopexec.prover_send_polynomial(poly, self.vector_size + q)
           vec_to_poly_dict[v.key()] = poly
 
@@ -551,6 +572,7 @@ class PIOPFromVOProtocol(object):
 
       rcomputes = LaTeXBuilder().start_math().append(r).assign().end_math() \
                                 .space("the sum of:").eol()
+      rcomputes_rust = RustBuilder()
       r_items = Itemize()
       for i, inner in enumerate(voexec.inner_products):
         difference = inner.dump_hadamard_difference()

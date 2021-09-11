@@ -14,6 +14,67 @@ def rust(expr):
   return str(expr)
 
 
+class Samples(object):
+  def __init__(self):
+    self.items = []
+
+  def append(self, item):
+    self.items.append(item)
+
+  def dumpr(self):
+    ret = RustBuilder()
+    for item in self.items:
+      ret.let(item).assign_func("sample_field::<F, _>") \
+         .append_to_last("rng").end()
+    return ret
+
+
+class RustArg(object):
+  def __init__(self, name, is_ref=False, is_mutable=False):
+    self.name = name
+    self.is_ref = is_ref
+    self.is_mutable = is_mutable
+
+  def dumpr(self):
+    if not self.is_ref:
+      return dumpr(self.name)
+    if self.is_mutable:
+      return "&mut %s" % dumpr(self.name)
+    return "&%s" % dumpr(self.name)
+
+
+def ref(name):
+  return RustArg(name, is_ref=True)
+
+
+def mut(name):
+  return RustArg(name, is_ref=True, is_mutable=True)
+
+
+class RustList(object):
+  def __init__(self):
+    self.items = []
+
+  def append(self, item):
+    if isinstance(item, list):
+      self.items += item
+    else:
+      self.items.append(item)
+    return self
+
+  def dumpr(self):
+    return ", ".join([rust(item) for item in self.items])
+
+
+class FunctionCall(RustList):
+  def __init__(self, func_name):
+    super(FunctionCall, self).__init()
+    self.func_name = func_name
+
+  def dumpr(self):
+    return "%s(%s)" % (self.func_name, super(FunctionCall, self).dumpr())
+
+
 class RustBuilder(object):
   def __init__(self, *args):
     self.items = list(args)
@@ -27,6 +88,35 @@ class RustBuilder(object):
     else:
       self.items.append(right)
     return self
+
+  def append_to_last(self, right):
+    if hasattr(self[-1], 'append'):
+      self[-1].append(right)
+    return self
+    raise Exception("Cannot append to last element of type %s"
+                    % type(self[-1]))
+
+  def let(self, right=None):
+    self.append("let")
+    if right is not None:
+      self.space(right)
+    return self
+
+  def letmut(self, right=None):
+    self.append("let mut")
+    if right is not None:
+      self.space(right)
+    return self
+
+  def func(self, right):
+    if isinstance(right, str):
+      return self.append(FunctionCall(right))
+    elif isinstance(right, FunctionCall):
+      return self.append(right)
+    raise Exception("Cannot call type %s" % type(right))
+
+  def assign_func(self, right):
+    return self.assign().func(right)
 
   def space(self, right=None):
     self.append(" ")
@@ -97,6 +187,9 @@ class RustBuilder(object):
 
   def eol(self):
     return self.append("\n")
+  
+  def end(self):
+    return self.append(";\n")
 
   def dumpr(self):
     if len(self.stack) > 0:
@@ -110,44 +203,42 @@ class ExpressionVectorRust(object):
     self.length = sympify(length)
 
   def dumpr(self):
-    return "(0..%s).map(|i| %s).collect::<Vec<F>>()" \
+    return "(1..=%s).map(|i| %s).collect::<Vec<F>>()" \
            % (rust(self.length), rust(self.expr))
 
 
 class AccumulationVectorRust(object):
-  def __init__(self, expr, length, accumulator="sum"):
+  def __init__(self, expr, length, accumulator="*"):
     super(AccumulationVector, self).__init__()
     self.expr = expr
     self.length = sympify(length)
     self.accumulator = accumulator
 
   def dumpr(self):
-    return "(0..%s).scan(F::zero(), |acc, i| {*acc = *acc + (%s); Some(*acc)})" \
-           ".collect::<Vec<F>>()" % (rust(self.length), rust(self.expr))
+    return "(1..=%s).scan(F::zero(), |acc, &mut i| {*acc = *acc %s (%s); Some(*acc)})" \
+           ".collect::<Vec<F>>()" % (rust(self.length), self.accumulator, rust(self.expr))
 
 
 class SumAccumulationVector(AccumulationVector):
   def __init__(self, named_vector, length):
-    super(SumAccumulationVector, self).__init__(named_vector.slice("j"),
-                                                length, "sum")
+    super(SumAccumulationVector, self).__init__(named_vector.slice("i-1"), length, "+")
 
 
 class ProductAccumulationDivideVector(AccumulationVector):
   def __init__(self, v1, v2, length):
     super(ProductAccumulationDivideVector, self).__init__(
-        "\\left(%s/%s\\right)" % (v1.slice("j").dumps(), v2.slice("j").dumps()),
-        length, "prod")
+        "(%s/%s)" % (v1.slice("i-1").dumpr(), v2.slice("i-1").dumpr()), length, "*")
 
 
 def add_paren_if_add(expr):
   if isinstance(expr, Add):
-    return "\\left(%s\\right)" % latex(expr)
-  return tex(expr)
+    return "(%s)" % rust(expr)
+  return rust(expr)
 
 
 def add_paren_if_not_atom(vector):
   if not vector.is_atom():
-    return "\\left(%s\\right)" % tex(vector)
-  return tex(vector)
+    return "(%s)" % rust(vector)
+  return rust(vector)
 
 
