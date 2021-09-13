@@ -6,6 +6,7 @@ from vector_symbol import get_named_vector, PowerVector, UnitVector, \
 from latex_builder import Math, AccumulationVector, ExpressionVector, \
                           LaTeXBuilder, ProductAccumulationDivideVector, \
                           add_paren_if_not_atom, tex
+from rust_builder import RustBuilder
 
 # ell = Symbol("\\ell", positive=True)
 # m = Symbol("m", positive=True)
@@ -31,7 +32,7 @@ class ProductEq(VOProtocol):
     r = get_named_vector("r")
     voexec.prover_computes(Math(r).assign(ProductAccumulationDivideVector(
       named_u, named_v, ell
-    )))
+    )), RustBuilder())
 
     voexec.prover_submit_vector(r, ell)
     voexec.hadamard_query(
@@ -56,27 +57,31 @@ class TripleProductEq(VOProtocol):
     u = get_named_vector("u")
     voexec.prover_computes(Math(u).assign(add_paren_if_not_atom(u1))
                                   .circ(add_paren_if_not_atom(u2))
-                                  .circ(add_paren_if_not_atom(u3)))
+                                  .circ(add_paren_if_not_atom(u3)),
+                           RustBuilder())
     v = get_named_vector("v")
     voexec.prover_computes(Math(v).assign(add_paren_if_not_atom(v1))
                                   .circ(add_paren_if_not_atom(v2))
-                                  .circ(add_paren_if_not_atom(v3)))
+                                  .circ(add_paren_if_not_atom(v3)),
+                           RustBuilder())
 
     r = get_named_vector("r")
     voexec.prover_computes(Math(r).assign(ProductAccumulationDivideVector(
       u, v, ell
-    )))
+    )), RustBuilder())
 
     s = get_named_vector("s")
     voexec.prover_computes(Math(s).assign(r)
                                   .slash(add_paren_if_not_atom(v1))
-                                  .circ(add_paren_if_not_atom(u1)))
+                                  .circ(add_paren_if_not_atom(u1)),
+                           RustBuilder())
 
     t = get_named_vector("s")
     voexec.prover_computes(Math(s).assign()
       .paren(r.shift(1) + UnitVector(1) - UnitVector(ell + 1))
       .slash(add_paren_if_not_atom(u2))
-      .circ(add_paren_if_not_atom(v2)))
+      .circ(add_paren_if_not_atom(v2)),
+      RustBuilder())
 
     voexec.prover_submit_vector(r, ell)
     voexec.prover_submit_vector(s, ell)
@@ -125,7 +130,7 @@ class CopyCheck(VOProtocol):
     vsigma = get_named_vector("sigma")
     voexec.preprocess(Math(vsigma).assign(
       ExpressionVector(gamma ** (Symbol("\\sigma(i)")-1), ell)
-    ))
+    ), RustBuilder())
     voexec.preprocess_vector(vsigma, ell)
     voexec.preprocess_output_pk(vsigma)
     voexec.vsigma = vsigma
@@ -203,7 +208,7 @@ class POV(VOProtocol):
     C, Cc, Ca, Cm, d, n = voexec.C, voexec.Cc, voexec.Ca, voexec.Cm, voexec.d, voexec.vector_size
     w = get_named_vector("w")
     voexec.prover_computes(Math(w).assign(a.slice(Cc+1,C)).double_bar(b)
-                           .double_bar(c))
+                           .double_bar(c), RustBuilder())
     voexec.prover_submit_vector(w, 3 * C - Cc)
     t = get_named_vector("t")
     t.local_evaluate = True
@@ -254,10 +259,10 @@ class POVProverEfficient(VOProtocol):
     bp = get_named_vector("b")
     cp = get_named_vector("c")
     s = get_named_vector("s")
-    voexec.prover_computes(Math(ap).assign(a.slice(Cc+1,C)))
-    voexec.prover_computes(Math(bm).assign(b.slice(Cc+1,Cc+Cm)))
-    voexec.prover_computes(Math(bp).assign(b.slice(Cc+Cm,C)))
-    voexec.prover_computes(Math(cp).assign(c.slice(Cc+1,C)))
+    voexec.prover_computes(Math(ap).assign(a.slice(Cc+1,C)), RustBuilder())
+    voexec.prover_computes(Math(bm).assign(b.slice(Cc+1,Cc+Cm)), RustBuilder())
+    voexec.prover_computes(Math(bp).assign(b.slice(Cc+Cm,C)), RustBuilder())
+    voexec.prover_computes(Math(cp).assign(c.slice(Cc+1,C)), RustBuilder())
 
     voexec.prover_submit_vector(ap, Ca+Cm)
     voexec.prover_submit_vector(bp, Ca)

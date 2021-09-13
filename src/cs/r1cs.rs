@@ -11,9 +11,28 @@ pub struct R1CS<F: Field> {
     pub crows: Vec<u64>,
     pub ccols: Vec<u64>,
     pub cvals: Vec<F>,
+    pub nrows: u64,
+    pub ncols: u64,
 }
 
-impl<F: Field> ConstraintSystem<F> for R1CS<F> {}
+impl<F: Field> ConstraintSystem<F, R1CSSize> for R1CS<F> {
+    fn get_size(&self) -> R1CSSize {
+        let density = self.arows.len();
+        assert_eq!(density, self.acols.len());
+        assert_eq!(density, self.avals.len());
+        assert_eq!(density, self.brows.len());
+        assert_eq!(density, self.bcols.len());
+        assert_eq!(density, self.bvals.len());
+        assert_eq!(density, self.crows.len());
+        assert_eq!(density, self.ccols.len());
+        assert_eq!(density, self.cvals.len());
+        R1CSSize {
+            nrows: self.nrows,
+            ncols: self.ncols,
+            density,
+        }
+    }
+}
 
 pub struct R1CSSize {
     pub nrows: u64,

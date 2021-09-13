@@ -26,7 +26,7 @@ class Samples(object):
     for item in self.items:
       ret.let(item).assign_func("sample_field::<F, _>") \
          .append_to_last("rng").end()
-    return ret
+    return rust(ret)
 
 
 class RustArg(object):
@@ -68,7 +68,7 @@ class RustList(object):
 
 class FunctionCall(RustList):
   def __init__(self, func_name):
-    super(FunctionCall, self).__init()
+    super(FunctionCall, self).__init__()
     self.func_name = func_name
 
   def dumpr(self):
@@ -90,11 +90,11 @@ class RustBuilder(object):
     return self
 
   def append_to_last(self, right):
-    if hasattr(self[-1], 'append'):
-      self[-1].append(right)
+    if hasattr(self.items[-1], 'append'):
+      self.items[-1].append(right)
     return self
     raise Exception("Cannot append to last element of type %s"
-                    % type(self[-1]))
+                    % type(self.items[-1]))
 
   def let(self, right=None):
     self.append("let")
@@ -186,10 +186,10 @@ class RustBuilder(object):
     return self
 
   def eol(self):
-    return self.append("\n")
+    return self.append("\n" + " " * 12)
   
   def end(self):
-    return self.append(";\n")
+    return self.append(";\n" + " " * 8)
 
   def dumpr(self):
     if len(self.stack) > 0:
@@ -209,7 +209,7 @@ class ExpressionVectorRust(object):
 
 class AccumulationVectorRust(object):
   def __init__(self, expr, length, accumulator="*"):
-    super(AccumulationVector, self).__init__()
+    super(AccumulationVectorRust, self).__init__()
     self.expr = expr
     self.length = sympify(length)
     self.accumulator = accumulator
@@ -219,14 +219,14 @@ class AccumulationVectorRust(object):
            ".collect::<Vec<F>>()" % (rust(self.length), self.accumulator, rust(self.expr))
 
 
-class SumAccumulationVector(AccumulationVector):
+class SumAccumulationVectorRust(AccumulationVectorRust):
   def __init__(self, named_vector, length):
-    super(SumAccumulationVector, self).__init__(named_vector.slice("i-1"), length, "+")
+    super(SumAccumulationVectorRust, self).__init__(named_vector.slice("i-1"), length, "+")
 
 
-class ProductAccumulationDivideVector(AccumulationVector):
+class ProductAccumulationDivideVectorRust(AccumulationVectorRust):
   def __init__(self, v1, v2, length):
-    super(ProductAccumulationDivideVector, self).__init__(
+    super(ProductAccumulationDivideVectorRust, self).__init__(
         "(%s/%s)" % (v1.slice("i-1").dumpr(), v2.slice("i-1").dumpr()), length, "*")
 
 

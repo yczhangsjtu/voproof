@@ -139,7 +139,7 @@ impl<F: Field> Iterator for PowerVectorIterator<F> {
 }
 
 pub fn power_iter<F: Field>(start: u64, end: u64, alpha: F, length: u64, shifted: u64)
-    -> PowerVectorIterator<F>{
+    -> PowerVectorIterator<F> {
     if end <= start {
         panic!("Invalid range");
     }

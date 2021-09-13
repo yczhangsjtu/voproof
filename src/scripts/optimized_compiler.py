@@ -8,7 +8,7 @@ from latex_builder import tex, LaTeXBuilder, AccumulationVector, \
                           ExpressionVector, Math, Enumerate, Itemize, \
                           add_paren_if_add
 from rust_builder import rust, RustBuilder, AccumulationVectorRust, mut, ref, \
-                         Samples
+                         Samples, SumAccumulationVectorRust
 from sympy import Symbol, Integer, UnevaluatedExpr, Expr, Max, simplify, \
                   latex, srepr, Add, Mul
 from sympy.core.numbers import Infinity
@@ -35,7 +35,7 @@ class Computes(object):
     return self.rust_builder.dumpr()
 
 
-class IndexerComputes(object):
+class IndexerComputes(Computes):
   def __init__(self, latex_builder, rust_builder, has_indexer=True):
     super(IndexerComputes, self).__init__(latex_builder, rust_builder,
                                           "indexer" if has_indexer else None)
@@ -48,7 +48,7 @@ class ProverComputes(Computes):
 
 
 class VerifierComputes(Computes):
-  def __init__(self, latex_builder, has_verifier=True):
+  def __init__(self, latex_builder, rust_builder, has_verifier=True):
     super(VerifierComputes, self).__init__(latex_builder, rust_builder,
                                            "verifier" if has_verifier else None)
 
@@ -358,17 +358,16 @@ class EvalQuery(object):
 
 
 class CombinePolynomial(object):
-  def __init__(self, poly, coeff_latex_builders, coeff_rust_builders):
+  def __init__(self, poly, coeff_latex_builders):
     self.poly = poly
     self.coeff_latex_builders = coeff_latex_builders
-    self.coeff_rust_builders = coeff_rust_builders
 
   def dump_items(self, has_commit=False, has_poly=False, has_oracle=True):
     oralce_sum_items, poly_sum_items, commit_sum_items, items, one = \
         [], [], [], [], None
     for key, poly_coeff_lb in self.coeff_latex_builders.items():
       # The coeff here must be Symbol
-      poly, coeff, latex_builder = poly_coeff_lb
+      poly, coeff, latex_builder, rust_builder = poly_coeff_lb
       items.append(latex_builder)
       if key == "one":
         one = latex(coeff)
@@ -465,7 +464,7 @@ class PIOPExecution(PublicCoinProtocolExecution):
       ret.append(vc.dumps())
     for polycom in self.poly_combines:
       for item in polycom.dump_items():
-        ret.append(VerifierComputes(item).dumps())
+        ret.append(VerifierComputes(item, RustBuilder()).dumps())
     for query in self.eval_checks:
       ret.append(query.dumps_check())
     return ret.dumps()
@@ -594,13 +593,21 @@ class PIOPFromVOProtocol(object):
         shifts += inner.shifts()
       rcomputes.append(r_items)
 
-      piopexec.prover_computes(rcomputes)
+      piopexec.prover_computes(rcomputes, rcomputes_rust)
 
       randomizer = get_named_vector("delta")
       rtilde = get_named_vector("r", modifier="tilde")
+      rtilde.randomizers = []
+      for i in range(int(q)):
+        delta = get_name("delta")
+        samples.append(delta)
+        rtilde.randomizers.append(delta)
+
       piopexec.prover_computes(Math(randomizer).sample(Ftoq)
         .comma(rtilde).assign(AccumulationVector(r.slice("j"), n))
-        .double_bar(randomizer))
+        .double_bar(randomizer),
+        RustBuilder().let(rtilde).assign(SumAccumulationVectorRust(r, n)).end())
+
       fr = rtilde.to_named_vector_poly()
       piopexec.prover_send_polynomial(fr, n + q)
       vec_to_poly_dict[rtilde.key()] = fr
@@ -629,11 +636,12 @@ class PIOPFromVOProtocol(object):
     tx = get_named_polynomial("t")
     vec_to_poly_dict[t.key()] = tx
     tcomputes.append(t_items)
-    piopexec.prover_computes(tcomputes)
+    piopexec.prover_computes(tcomputes, RustBuilder())
     piopexec.prover_computes(Math(randomizer).sample(Ftoq)
       .comma(tx).assign("f_{%s\\|%s}(X)" %
                         (randomizer.dumps(),
-                         t.slice(n + 1, Infinity).dumps())))
+                         t.slice(n + 1, Infinity).dumps())),
+      RustBuilder())
     piopexec.prover_send_polynomial(tx, 2 * q + max_shift)
     # t should be replaced by delta||t_{[n+1:]}, however, there are no more
     # computations involving vectors, only polynomials, so neglecting this
@@ -687,7 +695,7 @@ class PIOPFromVOProtocol(object):
               vec_to_poly_dict[vec2.key()].dumps_var(X)))
 
     hxcomputes.append(hx_items)
-    piopexec.prover_computes(hxcomputes)
+    piopexec.prover_computes(hxcomputes, RustBuilder())
 
     self.debug("Compute h1 and h2")
     h_degree, h_inverse_degree = n + max_shift + q, n + max_shift + q
@@ -696,12 +704,14 @@ class PIOPFromVOProtocol(object):
 
     piopexec.prover_computes(Math(h1x).assign(hx)
                              .dot(X ** self.degree_bound)
-                             .append("\\bmod").append(X ** self.degree_bound))
+                             .append("\\bmod").append(X ** self.degree_bound),
+                             RustBuilder())
     piopexec.prover_computes(Math(h2x)
                              .assign("\\frac{%s}{X}" % hx.dumps_var(X))
                              .minus("X^{%s}\\cdot %s" %
                                     (latex(-self.degree_bound-1),
-                                     h1x.dumps_var(X))))
+                                     h1x.dumps_var(X))),
+                             RustBuilder())
     piopexec.prover_send_polynomial(h1x, self.degree_bound)
     piopexec.prover_send_polynomial(h2x, h_degree - 1)
 
@@ -727,12 +737,15 @@ class PIOPFromVOProtocol(object):
       if not vec.local_evaluate:
         piopexec.eval_query(y, omega/z, vec_to_poly_dict[key])
       else:
-        piopexec.verifier_computes(Math(y).assign(vec_to_poly_dict[key].dumps_var(omega/z)))
+        piopexec.verifier_computes(
+            Math(y).assign(vec_to_poly_dict[key].dumps_var(omega/z)),
+            RustBuilder()
+        )
       query_results[key] = y
 
     self.debug("Compute gx")
     gx = get_named_polynomial("g")
-    coeff_builders = {} # map: key -> (poly, Symbol(coeff), latex_builder)
+    coeff_builders = {} # map: key -> (poly, Symbol(coeff), latex_builder, rust_builder)
 
     # 1. The part contributed by the extended hadamard query
     for i, side in enumerate(extended_hadamard):
@@ -770,7 +783,7 @@ class PIOPFromVOProtocol(object):
           c = Symbol(get_name("c"))
           # Temporarily use list, because the format depends on whether
           # this list size is > 1
-          coeff_builders[_key] = (poly, c, [value]) 
+          coeff_builders[_key] = (poly, c, [value])
         else:
           _poly, c, items = coeff_builders[_key]
           if _poly != poly:
@@ -797,7 +810,7 @@ class PIOPFromVOProtocol(object):
       else:
         latex_builder = Math(coeff).assign(coeff_list[0])
 
-      _coeff_builders[key] = (poly, coeff, latex_builder)
+      _coeff_builders[key] = (poly, coeff, latex_builder, RustBuilder())
 
     coeff_builders = _coeff_builders
 
@@ -817,8 +830,9 @@ class ZKSNARK(object):
     self.pk = []
     self.proof = []
 
-  def preprocess(self, computation):
-    self.indexer_computations.append(computation)
+  def preprocess(self, latex_builder, rust_builder):
+    self.indexer_computations.append(
+        IndexerComputes(latex_builder, rust_builder, has_indexer=False))
 
   def preprocess_output_vk(self, expr):
     self.vk.append(expr)
@@ -826,13 +840,13 @@ class ZKSNARK(object):
   def preprocess_output_pk(self, expr):
     self.pk.append(expr)
 
-  def prover_computes(self, latex_builder):
+  def prover_computes(self, latex_builder, rust_builder):
     if isinstance(latex_builder, str):
       raise Exception("latex_builder cannot be str: %s" % latex_builder)
-    self.prover_computations.append(ProverComputes(latex_builder, False))
+    self.prover_computations.append(ProverComputes(latex_builder, rust_builder, False))
 
-  def verifier_computes(self, latex_builder):
-    self.verifier_computations.append(VerifierComputes(latex_builder, False))
+  def verifier_computes(self, latex_builder, rust_builder):
+    self.verifier_computations.append(VerifierComputes(latex_builder, rust_builder, False))
 
   def dump_indexer(self):
     enum = Enumerate()
@@ -844,6 +858,10 @@ class ZKSNARK(object):
     enum.append("Output\n" + itemize.dumps())
     return enum.dumps()
 
+  def dump_indexer_rust(self):
+    return "".join(
+        [computation.dumpr() for computation in self.indexer_computations])
+
   def dump_prover(self):
     enum = Enumerate()
     for computation in self.prover_computations:
@@ -852,11 +870,19 @@ class ZKSNARK(object):
                 ",".join(tex(p) for p in self.proof))
     return enum.dumps()
 
+  def dump_prover_rust(self):
+    return "".join(
+        [computation.dumpr() for computation in self.prover_computations])
+
   def dump_verifier(self):
     enum = Enumerate()
     for computation in self.verifier_computations:
       enum.append(computation.dumps())
     return enum.dumps()
+
+  def dump_verifier_rust(self):
+    return "".join(
+        [computation.dumpr() for computation in self.verifier_computations])
 
 
 class ZKSNARKFromPIOPExecKZG(ZKSNARK):
@@ -866,12 +892,12 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     transcript = [x for x in piopexec.verifier_inputs]
 
     for preprocess in piopexec.preprocessings:
-      self.preprocess(preprocess)
+      self.preprocess(preprocess.latex_builder, preprocess.rust_builder)
 
     for poly, degree in piopexec.indexer_polynomials.polynomials:
       self.preprocess(Math(poly.dump_comm())
                       .assign("\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
-                              % poly.dumps()))
+                              % poly.dumps()), RustBuilder())
       self.preprocess_output_vk(poly.dump_comm())
       transcript.append(poly.dump_comm())
 
@@ -884,40 +910,41 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
 
     for interaction in piopexec.interactions:
       if isinstance(interaction, ProverComputes):
-        self.prover_computes(interaction.latex_builder)
+        self.prover_computes(interaction.latex_builder, interaction.rust_builder)
       elif isinstance(interaction, VerifierSendRandomnesses):
         for i, r in enumerate(interaction.names):
           compute_hash = Math(r).assign(
             "\\mathsf{H}_{%d}(%s)"
             % (i+1, ",".join([tex(x) for x in transcript]))
           )
-          self.prover_computes(compute_hash)
-          self.verifier_computes(compute_hash)
+          self.prover_computes(compute_hash, RustBuilder())
+          self.verifier_computes(compute_hash, RustBuilder())
       if isinstance(interaction, ProverSendPolynomials):
         for poly, degree in interaction.polynomials:
           self.prover_computes(Math(poly.dump_comm()).assign(
             "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
             % (poly.dumps())
-          ))
+          ), RustBuilder())
           transcript.append(poly.dump_comm())
           self.proof.append(poly.dump_comm())
 
     self.prover_computes(Math(",".join(["%s:=%s" %
       (tex(query.name), tex(query.poly.dumps_var(query.point)))
-      for query in piopexec.eval_queries])))
+      for query in piopexec.eval_queries])),
+      RustBuilder())
     self.proof += [query.name for query in piopexec.eval_queries]
 
     for computation in piopexec.verifier_computations:
-      self.prover_computes(computation.latex_builder)
-      self.verifier_computes(computation.latex_builder)
+      self.prover_computes(computation.latex_builder, computation.rust_builder)
+      self.verifier_computes(computation.latex_builder, computation.rust_builder)
 
     for poly_combine in piopexec.poly_combines:
       prover_items = poly_combine.dump_items(has_oracle=False, has_commit=True, has_poly=True)
       verifier_items = poly_combine.dump_items(has_oracle=False, has_commit=True, has_poly=False)
       for item in prover_items:
-        self.prover_computes(item)
+        self.prover_computes(item, RustBuilder())
       for item in verifier_items:
-        self.verifier_computes(item)
+        self.verifier_computes(item, RustBuilder())
 
     queries = piopexec.eval_queries + piopexec.eval_checks
     points_poly_dict = {}
@@ -958,6 +985,6 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     array = "\\begin{array}{l}\n%s\\\\\n%s\n\\left\\{%s\\right\\},[x]_2\\end{array}" \
             % (lists, points, proof_str)
     verify_computation = Math("\\mathsf{vrfy}").paren(array).equals(1)
-    self.prover_computes(open_computation)
-    self.verifier_computes(verify_computation)
+    self.prover_computes(open_computation, RustBuilder())
+    self.verifier_computes(verify_computation, RustBuilder())
 

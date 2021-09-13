@@ -4,8 +4,9 @@ mod voproof_pov;
 mod template;
 
 use ark_ec::PairingEngine;
-use ark_ff::Field;
-use ark_std::Zero;
+use ark_ff::PrimeField as Field;
+use ark_poly::univariate::DensePolynomial as DensePoly;
+use ark_std::{test_rng, Zero};
 use crate::kzg::{
     UniversalParams, Powers, VerifierKey,
     Proof as KZGProof
@@ -15,12 +16,14 @@ use crate::cs::{
     CSSize, ConstraintSystem, Instance, Witness,
     r1cs::{R1CS, R1CSSize, R1CSInstance, R1CSWitness}
 };
+use crate::tools::*;
+use crate::kzg::*;
 
 pub trait SNARKProverKey<E: PairingEngine> {}
 pub trait SNARKVerifierKey<E: PairingEngine> {}
 pub trait SNARKProof<E: PairingEngine> {}
 
-pub trait SNARK<E: PairingEngine> {
+pub trait SNARK<E: PairingEngine, F: Field> {
     type Size: CSSize;
     type CS: ConstraintSystem<E::Fr>;
     type PK: SNARKProverKey<E>;

@@ -1,7 +1,9 @@
 use ark_ff::Field;
 
 pub trait CSSize {}
-pub trait ConstraintSystem<F: Field> {}
+pub trait ConstraintSystem<F: Field, S: CSSize> {
+    fn get_size(&self) -> S;
+}
 pub trait Instance<F: Field> {}
 pub trait Witness<F: Field> {}
 

@@ -6,6 +6,7 @@ from vector_symbol import get_named_vector, PowerVector, UnitVector, \
 from latex_builder import Math, AccumulationVector, ExpressionVector, \
                           LaTeXBuilder, ProductAccumulationDivideVector, \
                           add_paren_if_not_atom
+from rust_builder import RustBuilder
 
 class SparseMVP(VOProtocol):
   def __init__(self):
@@ -19,14 +20,14 @@ class SparseMVP(VOProtocol):
     y = get_named_vector("y")
     voexec.preprocess(Math(u).assign(
       ExpressionVector("\\gamma^{\\mathsf{row}_i}", ell)
-    ))
+    ), RustBuilder())
     voexec.preprocess(Math(w).assign(
       ExpressionVector("\\gamma^{\\mathsf{col}_i}", ell)
-    ))
+    ), RustBuilder())
     voexec.preprocess(Math(v).assign(
       ExpressionVector("\\mathsf{val}_i", ell)
-    ))
-    voexec.preprocess(Math(y).assign(u).circ(w))
+    ), RustBuilder())
+    voexec.preprocess(Math(y).assign(u).circ(w), RustBuilder())
     voexec.preprocess_vector(u, ell)
     voexec.preprocess_vector(w, ell)
     voexec.preprocess_vector(v, ell)
@@ -52,12 +53,13 @@ class SparseMVP(VOProtocol):
     r = get_named_vector("r")
     voexec.prover_computes(Math(r).assign(
       ExpressionVector("\\frac{1}{\\alpha-\\gamma^i}", H)
-    ))
+    ), RustBuilder())
     c = get_named_vector("c")
     voexec.prover_computes(Math(c).assign()
-                           .transpose(r, paren=False).append("\\boldsymbol{M}"))
+                           .transpose(r, paren=False).append("\\boldsymbol{M}"),
+                           RustBuilder())
     s = get_named_vector("s")
-    voexec.prover_computes(Math(s).assign(r).double_bar().paren(-c))
+    voexec.prover_computes(Math(s).assign(r).double_bar().paren(-c), RustBuilder())
     voexec.prover_submit_vector(s, H + K)
     voexec.hadamard_query(
       mu * PowerVector(1, H) - PowerVector(gamma, H),
@@ -80,7 +82,7 @@ class SparseMVP(VOProtocol):
       ExpressionVector("\\frac{1}{(\\alpha-%s)(\\beta-%s}" %
                        (voexec.u.slice(Symbol("i")).dumps(),
                         voexec.w.slice(Symbol("i")).dumps()), ell)
-    ))
+    ), RustBuilder())
     voexec.prover_submit_vector(h, ell + K)
 
     voexec.hadamard_query(
@@ -118,14 +120,14 @@ class SparseMVPProverEfficient(VOProtocol):
     y = get_named_vector("y")
     voexec.preprocess(Math(u).assign(
       ExpressionVector("\\gamma^{\\mathsf{row}_i}", ell)
-    ))
+    ), RustBuilder())
     voexec.preprocess(Math(w).assign(
       ExpressionVector("\\gamma^{\\mathsf{col}_i}", ell)
-    ))
+    ), RustBuilder())
     voexec.preprocess(Math(v).assign(
       ExpressionVector("\\mathsf{val}_i", ell)
-    ))
-    voexec.preprocess(Math(y).assign(u).circ(w))
+    ), RustBuilder())
+    voexec.preprocess(Math(y).assign(u).circ(w), RustBuilder())
     voexec.preprocess_vector(u, ell)
     voexec.preprocess_vector(w, ell)
     voexec.preprocess_vector(v, ell)
@@ -151,7 +153,7 @@ class SparseMVPProverEfficient(VOProtocol):
     r = get_named_vector("r")
     voexec.prover_computes(Math(r).assign(
       ExpressionVector("\\frac{1}{\\alpha-\\gamma^i}", H)
-    ))
+    ), RustBuilder())
     voexec.prover_submit_vector(r, H)
     voexec.hadamard_query(
       mu * PowerVector(1, H) - PowerVector(gamma, H),
@@ -161,7 +163,8 @@ class SparseMVPProverEfficient(VOProtocol):
     )
     c = get_named_vector("c")
     voexec.prover_computes(Math(c).assign()
-                           .transpose(r, paren=False).append("\\boldsymbol{M}"))
+                           .transpose(r, paren=False).append("\\boldsymbol{M}"),
+                           RustBuilder())
     voexec.prover_submit_vector(c, K)
     voexec.inner_product_query(
       a.shift(n - K),
@@ -175,16 +178,16 @@ class SparseMVPProverEfficient(VOProtocol):
 
     r = get_named_vector("r")
     voexec.prover_computes(Math(r).assign(
-      ExpressionVector("\\frac{1}{\\beta-\\gamma^i}", K))
-    )
+      ExpressionVector("\\frac{1}{\\beta-\\gamma^i}", K)),
+      RustBuilder())
     voexec.prover_submit_vector(r, K)
 
     t = get_named_vector("t")
     voexec.prover_computes(Math(t).assign(
       ExpressionVector("\\frac{1}{(\\alpha-%s)(\\beta-%s}" %
                        (voexec.u.slice(Symbol("i")).dumps(),
-                        voexec.w.slice(Symbol("i")).dumps()), ell))
-    )
+                        voexec.w.slice(Symbol("i")).dumps()), ell)),
+      RustBuilder())
     voexec.prover_submit_vector(t, ell)
 
     voexec.hadamard_query(
@@ -226,12 +229,15 @@ class R1CS(VOProtocol):
     voexec.input_witness(w)
 
     H, K, s, n = voexec.r1cs_H, voexec.r1cs_K, voexec.s, voexec.vector_size
+
     u = get_named_vector("u")
     voexec.prover_computes(Math(u).assign().paren(
-      LaTeXBuilder("\\boldsymbol{M}").paren(
-        LaTeXBuilder(1).double_bar(x).double_bar(w)
-      )
-    ).double_bar(1).double_bar(x).double_bar(w))
+        LaTeXBuilder("\\boldsymbol{M}").paren(
+          LaTeXBuilder(1).double_bar(x).double_bar(w)
+        )
+      ).double_bar(1).double_bar(x).double_bar(w),
+      RustBuilder().let(u).assign_func("sparse_mvp")
+                   .append_to_last([H, K]))
     voexec.prover_submit_vector(u, 3 * H + K)
     voexec.run_subprotocol(SparseMVP(), u)
     voexec.hadamard_query(
@@ -265,7 +271,7 @@ class R1CSProverEfficient(VOProtocol):
     y = get_named_vector("y")
     voexec.prover_computes(Math(y).assign().paren(
       Math("\\boldsymbol{M}").paren(Math(1).double_bar(x).double_bar(w))
-    ))
+    ),RustBuilder())
     voexec.prover_submit_vector(y, 3 * H)
     voexec.prover_submit_vector(w, H - ell - 1)
     voexec.run_subprotocol(SparseMVPProverEfficient(),
@@ -298,7 +304,7 @@ class HPR(VOProtocol):
 
     H, K, s, n = voexec.hpr_H, voexec.hpr_K, voexec.s, voexec.vector_size
     w = get_named_vector("w")
-    voexec.prover_computes(Math(w).assign(w1).double_bar(w2).double_bar(w3))
+    voexec.prover_computes(Math(w).assign(w1).double_bar(w2).double_bar(w3), RustBuilder())
     voexec.prover_submit_vector(w, 3 * K)
     voexec.run_subprotocol(SparseMVP(),
                            x + w.shift(ell + 1) +
@@ -330,7 +336,7 @@ class HPRProverEfficient(VOProtocol):
 
     H, K, s, n = voexec.hpr_H, voexec.hpr_K, voexec.s, voexec.vector_size
     w = get_named_vector("w")
-    voexec.prover_computes(Math(w).assign(w1).double_bar(w2).double_bar(w3))
+    voexec.prover_computes(Math(w).assign(w1).double_bar(w2).double_bar(w3), RustBuilder())
     voexec.prover_submit_vector(w, 3 * K)
     voexec.run_subprotocol(SparseMVPProverEfficient(),
                            w.shift(1) + UnitVector(1), x)
