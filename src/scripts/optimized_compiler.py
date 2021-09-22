@@ -3,7 +3,7 @@ from vector_symbol import NamedVector, PowerVector, UnitVector, \
                    SparseVector, get_name, reset_name_counters, \
                    StructuredVector, VectorCombination, get_named_vector, \
                    PolynomialCombination, simplify_max_with_hints, \
-                   get_named_polynomial
+                   get_named_polynomial, PolynomialCommitment
 from latex_builder import tex, LaTeXBuilder, AccumulationVector, \
                           ExpressionVector, Math, Enumerate, Itemize, \
                           add_paren_if_add
@@ -18,6 +18,18 @@ from os.path import basename
 F = Symbol("\\mathbb{F}")
 Fstar = Symbol("\\mathbb{F}^*")
 
+
+def get_rust_type(expr):
+  if isinstance(expr, PolynomialCommitment):
+    return "Commitment<E>"
+  if isinstance(expr, NamedVector):
+    return "Vec<E::Fr>"
+  if isinstance(expr, Symbol):
+    if str(expr).startswith("W"):
+      return "KZGProof<E>"
+    else:
+      return "E::Fr"
+  raise Exception("Unknown rust type for: %s of type %s" % (latex(expr), type(expr)))
 
 class Computes(object):
   def __init__(self, latex_builder, rust_builder, owner=None):
@@ -375,7 +387,7 @@ class CombinePolynomial(object):
         if has_oracle:
           oracle_sum_items.append("%s\\cdot [%s]" % (latex(coeff), poly.dumps()))
         if has_commit:
-          commit_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.dump_comm()))
+          commit_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.to_comm()))
         if has_poly:
           poly_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.dumps()))
 
@@ -392,7 +404,7 @@ class CombinePolynomial(object):
     if has_poly:
       items.append(Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
     if has_commit:
-      items.append(Math("%s" % self.poly.dump_comm()).assign("+".join(commit_sum_items)))
+      items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
 
     return items
 
@@ -884,6 +896,24 @@ class ZKSNARK(object):
     return "".join(
         [computation.dumpr() for computation in self.verifier_computations])
 
+  def dump_vk_definition(self):
+    return "\n    ".join(["pub %s: %s," % (rust(item), get_rust_type(item)) for item in self.vk])
+
+  def dump_pk_definition(self):
+    return "\n    ".join(["pub %s: %s," % (rust(item), get_rust_type(item)) for item in self.pk])
+
+  def dump_proof_definition(self):
+    return "\n    ".join(["pub %s: %s," % (rust(item), get_rust_type(item)) for item in self.proof])
+
+  def dump_vk_construction(self):
+    return ("\n" + " " * 12).join(["%s: %s," % (rust(item), rust(item)) for item in self.vk])
+
+  def dump_pk_construction(self):
+    return ("\n" + " " * 12).join(["%s: %s," % (rust(item), rust(item)) for item in self.pk])
+
+  def dump_proof_construction(self):
+    return ("\n" + " " * 12).join(["%s: %s," % (rust(item), rust(item)) for item in self.proof])
+
 
 class ZKSNARKFromPIOPExecKZG(ZKSNARK):
   def __init__(self, piopexec):
@@ -895,11 +925,11 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       self.preprocess(preprocess.latex_builder, preprocess.rust_builder)
 
     for poly, degree in piopexec.indexer_polynomials.polynomials:
-      self.preprocess(Math(poly.dump_comm())
+      self.preprocess(Math(poly.to_comm())
                       .assign("\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
                               % poly.dumps()), RustBuilder())
-      self.preprocess_output_vk(poly.dump_comm())
-      transcript.append(poly.dump_comm())
+      self.preprocess_output_vk(poly.to_comm())
+      transcript.append(poly.to_comm())
 
     for p in piopexec.indexer_output_pk:
       self.preprocess_output_pk(p)
@@ -921,12 +951,12 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           self.verifier_computes(compute_hash, RustBuilder())
       if isinstance(interaction, ProverSendPolynomials):
         for poly, degree in interaction.polynomials:
-          self.prover_computes(Math(poly.dump_comm()).assign(
+          self.prover_computes(Math(poly.to_comm()).assign(
             "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
             % (poly.dumps())
           ), RustBuilder())
-          transcript.append(poly.dump_comm())
-          self.proof.append(poly.dump_comm())
+          transcript.append(poly.to_comm())
+          self.proof.append(poly.to_comm())
 
     self.prover_computes(Math(",".join(["%s:=%s" %
       (tex(query.name), tex(query.poly.dumps_var(query.point)))
@@ -958,7 +988,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     for point, queries in points_poly_dict.items():
       open_proof.append(Symbol(get_name("W")))
       open_points.append(queries[0].point)
-      query_tuple_lists.append([(query.poly.dump_comm(),
+      query_tuple_lists.append([(query.poly.to_comm(),
                                  query.name, query.poly.dumps())
                                 for query in queries])
 

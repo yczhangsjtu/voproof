@@ -22,20 +22,21 @@ impl<F: Field> Instance<F> for __NAME__Instance<F> {} /*{Remove this line}*/
 impl<F: Field> Witness<F> for __NAME__Witness<F> {} /*{Remove this line}*/
 
 pub struct __NAME__ProverKey<'a, E: PairingEngine> {
-    /*{ProverKey}*/
     pub verifier_key: __NAME__VerifierKey<E>,
     pub powers: Powers<'a, E>,
     pub max_degree: u64,
+    /*{ProverKey}*/
 }
 
 pub struct __NAME__VerifierKey<E: PairingEngine> {
-    /*{VerifierKey}*/
     pub comms: Vec<E::G1Affine>, /*{Remove this line}*/
+    /*{VerifierKey}*/
     pub kzg_vk: VerifierKey<E>,
     pub size: __NAME__Size,
 }
 
 pub struct __NAME__Proof<E: PairingEngine> {
+    /*{Proof}*/
     pub comms: Vec<E::G1Affine>, /*{Remove this line}*/
     pub kzg_proofs: Vec<KZGProof<E>>, /*{Remove this line}*/
 }
@@ -97,6 +98,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProof__NAME__ {
                 prepared_h: pp.prepared_h.clone(),
                 prepared_beta_h: pp.prepared_beta_h.clone(),
             },
+            size,
         };
         Ok((__NAME__ProverKey::<E> {
             verifier_key,
@@ -109,7 +111,9 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProof__NAME__ {
         let size = pk.verifier_key.size;
         let rng = &mut test_rng();
         /*{prove}*/
-        Err(Error::Unimplemented("__NAME__ prove".into())) /*{Remove this line}*/
+        Ok(__NAME__Proof::<E> {
+            /*{proof}*/
+        })
     }
     fn verify(vk: &Self::VK, x: &Self::Ins, proof: &Self::Pf) -> Result<(), Error> {
         let size = vk.size;

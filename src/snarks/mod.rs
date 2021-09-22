@@ -6,7 +6,7 @@ mod template;
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField as Field;
 use ark_poly::univariate::DensePolynomial as DensePoly;
-use ark_std::{test_rng, Zero};
+use ark_std::{test_rng, Zero, vec::Vec};
 use crate::kzg::{
     UniversalParams, Powers, VerifierKey,
     Proof as KZGProof
@@ -25,7 +25,7 @@ pub trait SNARKProof<E: PairingEngine> {}
 
 pub trait SNARK<E: PairingEngine, F: Field> {
     type Size: CSSize;
-    type CS: ConstraintSystem<E::Fr>;
+    type CS: ConstraintSystem<F, E::Fr>;
     type PK: SNARKProverKey<E>;
     type VK: SNARKVerifierKey<E>;
     type Ins: Instance<E::Fr>;

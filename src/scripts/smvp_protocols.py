@@ -237,7 +237,7 @@ class R1CS(VOProtocol):
         )
       ).double_bar(1).double_bar(x).double_bar(w),
       RustBuilder().let(u).assign_func("sparse_mvp")
-                   .append_to_last([H, K]))
+                   .append_to_last([H, K]).end())
     voexec.prover_submit_vector(u, 3 * H + K)
     voexec.run_subprotocol(SparseMVP(), u)
     voexec.hadamard_query(

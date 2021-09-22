@@ -9,19 +9,37 @@ use super::*;
 
 
 pub struct R1CSProverKey<'a, E: PairingEngine> {
-    /*{ProverKey}*/
     pub verifier_key: R1CSVerifierKey<E>,
     pub powers: Powers<'a, E>,
     pub max_degree: u64,
+    pub u_vec: Vec<E::Fr>,
+    pub w_vec: Vec<E::Fr>,
+    pub v_vec: Vec<E::Fr>,
+    pub y_vec: Vec<E::Fr>,
 }
 
 pub struct R1CSVerifierKey<E: PairingEngine> {
-    /*{VerifierKey}*/
+    pub cm_u_vec: Commitment<E>,
+    pub cm_w_vec: Commitment<E>,
+    pub cm_v_vec: Commitment<E>,
+    pub cm_y_vec: Commitment<E>,
     pub kzg_vk: VerifierKey<E>,
     pub size: R1CSSize,
 }
 
 pub struct R1CSProof<E: PairingEngine> {
+    pub cm_u_vec_1: Commitment<E>,
+    pub cm_s_vec: Commitment<E>,
+    pub cm_h_vec: Commitment<E>,
+    pub cm_r_vec_tilde: Commitment<E>,
+    pub cm_t: Commitment<E>,
+    pub cm_h_1: Commitment<E>,
+    pub cm_h_2: Commitment<E>,
+    pub y: E::Fr,
+    pub y_1: E::Fr,
+    pub y_2: E::Fr,
+    pub W: KZGProof<E>,
+    pub W_1: KZGProof<E>,
 }
 
 pub struct VOProofR1CS {}
@@ -34,7 +52,11 @@ impl<E: PairingEngine> SNARKProof<E> for R1CSProof<E> {}
 
 impl VOProofR1CS {
     fn get_max_degree(size: &R1CSSize) -> usize {
-        /*{size}*/
+        let H=size.nrows;
+        let K=size.ncols;
+        let S=size.density;
+        
+        K + 6*S
     }
 }
 
@@ -73,9 +95,15 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let H=size.nrows;
         let K=size.ncols;
         let S=size.density;
+        let H=size.nrows;
+        let K=size.ncols;
+        let S=size.density;
         
         let verifier_key = R1CSVerifierKey::<E> {
-            /*{index verifier key}*/
+            cm_u_vec: cm_u_vec,
+            cm_w_vec: cm_w_vec,
+            cm_v_vec: cm_v_vec,
+            cm_y_vec: cm_y_vec,
             kzg_vk: VerifierKey {
                 g: pp.powers_of_g[0],
                 h: pp.h,
@@ -83,12 +111,16 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
                 prepared_h: pp.prepared_h.clone(),
                 prepared_beta_h: pp.prepared_beta_h.clone(),
             },
+            size,
         };
         Ok((R1CSProverKey::<E> {
             verifier_key,
             powers: powers_of_g,
             max_degree,
-            /*{index prover key}*/
+            u_vec: u_vec,
+            w_vec: w_vec,
+            v_vec: v_vec,
+            y_vec: y_vec,
         }, verifier_key))
     }
     fn prove(pk: &Self::PK, x: &Self::Ins, w: &Self::Wit) -> Result<Self::Pf, Error> {
@@ -101,8 +133,23 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let delta_1=sample_field::<F, _>(rng);
         let delta_2=sample_field::<F, _>(rng);
         let delta_3=sample_field::<F, _>(rng);
+        let u_vec_1=sparse_mvp(H, K);
         let r_vec_tilde=(1..=K + 3*S).scan(F::zero(), |acc, &mut i| {*acc = *acc + (r_vec_1[i - 1]); Some(*acc)}).collect::<Vec<F>>();
         
+        Ok(R1CSProof::<E> {
+            cm_u_vec_1: cm_u_vec_1,
+            cm_s_vec: cm_s_vec,
+            cm_h_vec: cm_h_vec,
+            cm_r_vec_tilde: cm_r_vec_tilde,
+            cm_t: cm_t,
+            cm_h_1: cm_h_1,
+            cm_h_2: cm_h_2,
+            y: y,
+            y_1: y_1,
+            y_2: y_2,
+            W: W,
+            W_1: W_1,
+        })
     }
     fn verify(vk: &Self::VK, x: &Self::Ins, proof: &Self::Pf) -> Result<(), Error> {
         let size = vk.size;

@@ -9,7 +9,7 @@ from smvp_protocols import SparseMVP, SparseMVPProverEfficient, \
                            R1CS, R1CSProverEfficient, \
                            HPR, HPRProverEfficient
 from pov_protocols import POV, POVProverEfficient
-from rust_builder import RustBuilder
+from rust_builder import RustBuilder, rust
 from latex_builder import LaTeXBuilder
 
 ell = Symbol("\\ell", positive=True)
@@ -74,6 +74,7 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
 
   debug("Start compiling to zkSNARK...")
   zkSNARK = ZKSNARKFromPIOPExecKZG(piopexec)
+  zkSNARK.indexer_computations =  [VerifierComputes(LaTeXBuilder(), size_init)] + zkSNARK.indexer_computations
   zkSNARK.verifier_computations = [VerifierComputes(LaTeXBuilder(), size_init)] + zkSNARK.verifier_computations
   zkSNARK.prover_computations = [ProverComputes(LaTeXBuilder(), size_init)] + zkSNARK.prover_computations
   debug()
@@ -84,11 +85,36 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
       temp = template.readlines()
     temp = [line.replace("__NAME__", name)
             for line in temp if "/*{Remove this line}*/" not in line]
+    size_mark = "/*{size}*/"
+    vk_definition_mark, vk_return_mark = "/*{VerifierKey}*/", "/*{index verifier key}*/"
+    pk_definition_mark, pk_return_mark = "/*{ProverKey}*/", "/*{index prover key}*/"
+    proof_definition_mark, proof_return_mark = "/*{Proof}*/", "/*{proof}*/"
     indexer_mark, prover_mark, verifier_mark = "/*{index}*/", "/*{prove}*/", "/*{verify}*/"
     indexer_code, prover_code, verifier_code = \
         zkSNARK.dump_indexer_rust(), zkSNARK.dump_prover_rust(), \
         zkSNARK.dump_verifier_rust()
+    verifier_key_definition = zkSNARK.dump_vk_definition()
+    prover_key_definition = zkSNARK.dump_pk_definition()
+    proof_definition = zkSNARK.dump_proof_definition()
+    verifier_key_construction = zkSNARK.dump_vk_construction()
+    prover_key_construction = zkSNARK.dump_pk_construction()
+    proof_construction = zkSNARK.dump_proof_construction()
     for i in range(len(temp)):
+      if size_mark in temp[i]:
+        temp[i] = temp[i].replace(size_mark, "%s\n        %s" % 
+                                             (rust(size_init), str(piopexec.max_degree)))
+      if vk_definition_mark in temp[i]:
+        temp[i] = temp[i].replace(vk_definition_mark, verifier_key_definition)
+      if pk_definition_mark in temp[i]:
+        temp[i] = temp[i].replace(pk_definition_mark, prover_key_definition)
+      if proof_definition_mark in temp[i]:
+        temp[i] = temp[i].replace(proof_definition_mark, proof_definition)
+      if vk_return_mark in temp[i]:
+        temp[i] = temp[i].replace(vk_return_mark, verifier_key_construction)
+      if pk_return_mark in temp[i]:
+        temp[i] = temp[i].replace(pk_return_mark, prover_key_construction)
+      if proof_return_mark in temp[i]:
+        temp[i] = temp[i].replace(proof_return_mark, proof_construction)
       if indexer_mark in temp[i]:
         temp[i] = temp[i].replace(indexer_mark, indexer_code)
       if prover_mark in temp[i]:

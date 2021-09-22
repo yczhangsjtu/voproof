@@ -746,8 +746,27 @@ class NamedPolynomial(_NamedBasic):
   def dumps_var(self, var):
     return "%s(%s)" % (super(NamedPolynomial, self).dumps(), tex(var))
 
-  def dump_comm(self):
-    return "\\mathsf{cm}_{%s}" % super(NamedPolynomial, self).dumps()
+  def to_comm(self):
+    return PolynomialCommitment(self)
+
+
+# TODO: Define a class particularly for polynomial commitment
+class PolynomialCommitment(object):
+  def __init__(self, polynomial):
+    # Must be named polynomial or named vector polynomial
+    self.polynomial = polynomial
+
+  def dumps(self):
+    if isinstance(self.polynomial, NamedPolynomial):
+      return "\\mathsf{cm}_{%s}" % super(NamedPolynomial, self.polynomial).dumps()
+    else: # NamedVectorPolynomial
+      return "\\mathsf{cm}_{%s}" % self.polynomial.vector.dumps()
+  
+  def dumpr(self):
+    if isinstance(self.polynomial, NamedPolynomial):
+      return "cm_%s" % super(NamedPolynomial, self.polynomial).dumpr()
+    else:
+      return "cm_%s" % self.polynomial.vector.dumpr()
 
 
 def get_named_polynomial(name, modifier=None, has_prime=False):
@@ -772,8 +791,8 @@ class NamedVectorPolynomial(object):
   def dumps_var(self, var):
     return "f_{%s}(%s)" % (self.vector.dumps(), tex(var))
 
-  def dump_comm(self):
-    return "\\mathsf{cm}_{%s}" % self.vector.dumps()
+  def to_comm(self):
+    return PolynomialCommitment(self)
 
 
 class PolynomialCombination(CoeffMap):
