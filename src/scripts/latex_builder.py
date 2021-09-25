@@ -1,5 +1,6 @@
 from sympy import Symbol, latex, sympify, Integer, Expr,\
                   simplify, Max, Add, Mul, Pow, srepr
+import re
 
 
 def tex(expr):
@@ -36,6 +37,102 @@ class Itemize(LaTeXList):
 class Enumerate(LaTeXList):
   def __init__(self):
     super(Enumerate, self).__init__("enumerate")
+
+
+def encapsulate_type(item):
+  if item.__class__.__name__ == "NamedVector":
+    return "%s\\in\\field^n" % tex(item)
+  if isinstance(item, Symbol):
+    return "%s\\in\\mathbb{N}" % tex(item)
+  if isinstance(item, tuple) and len(item) == 2:
+    return "%s\\in%s" % (tex(item[0]), tex(item[1]))
+  raise Exception("Unknown type: %s (%s)" % (type(item), tex(item)))
+
+
+def name_to_label(name):
+  name = re.sub('(.)([A-Z][a-z]+)', r'\1.\2', name)
+  return re.sub('([a-z0-9])([A-Z])', r'\1.\2', name).lower()
+
+
+def encaps_math(s):
+  if s.startswith("$") or s.endswith("$"):
+    return s
+  return "$%s$" % s
+
+
+class Algorithm(object):
+  def __init__(self, name):
+    self.name = name
+    self.label = name_to_label(name)
+    self.index = []
+    self.inputs = []
+    self.checks = []
+    self.preprocesses = []
+    self.output_pk = []
+    self.output_vk = []
+    self.interactions = []
+
+  def dumps(self):
+    if len(self.index) > 0:
+      index = "\\Index %s\\\\" % ", ".join([encaps_math(encapsulate_type(item)) for item in self.index])
+    else:
+      index = ""
+
+    inputs = ", ".join([encaps_math(encapsulate_type(item)) for item in self.inputs])
+    checks = ", ".join([encaps_math(tex(item)) for item in self.checks])
+
+    preprocesses = [pp for pp in self.preprocesses]
+    indexer_sends = ""
+    if len(self.output_pk) > 0:
+      indexer_sends = "\\indexer sends %s to \\prover" % \
+          ", ".join([encaps_math(tex(item)) for item in self.output_pk])
+
+    vector_vks = [item for item in self.output_vk
+                       if item.__class__.__name__ == "NamedVector"]
+    nonvector_vks = [item for item in self.output_vk
+                          if item.__class__.__name__ != "NamedVector"]
+    if len(nonvector_vks) > 0:
+      if len(indexer_sends) > 0:
+        indexer_sends += ", sends "
+      else:
+        indexer_sends = "\\indexer sends "
+      indexer_sends += "%s to \\verifier" % ", ".join([encaps_math(tex(item)) for item in nonvector_vks])
+
+    if len(vector_vks) > 0:
+      if len(indexer_sends) > 0:
+        indexer_sends += ", submits "
+      else:
+        indexer_sends = "\\indexer submits "
+      indexer_sends += "%s to \\cOV" % ", ".join([encaps_math(tex(item)) for item in vector_vks])
+
+    if len(indexer_sends) > 0:
+      preprocesses.append(indexer_sends)
+
+    if len(preprocesses) > 0:
+      preprocessing = """
+  \\Preprocessing
+  \\begin{algorithmic}[1]
+    \\State %s
+  \\end{algorithmic}
+  \\Online
+""" % "\n    \\State ".join([tex(item) for item in preprocesses])
+    else:
+      preprocessing = ""
+
+    interactions = "\n    \\State ".join([tex(item) for item in self.interactions])
+
+    return """\\begin{algorithm}[ht!]
+  \\caption{$\\mathsf{%s}$ Protocol}
+  \\label{alg:%s}
+  %s %% Index
+  \\Input %s\\\\
+  \\Check %s\\\\
+  %s %% Preprocessing
+  \\begin{algorithmic}[1]
+    \\State %s
+  \\end{algorithmic}
+\\end{algorithm}
+""" % (self.name, self.label, index, inputs, checks, preprocessing, interactions)
 
 
 class LaTeXBuilder(object):
@@ -136,6 +233,13 @@ class LaTeXBuilder(object):
     if right is not None:
       self.append(right)
     self.append("\\right)")
+    return self
+
+  def bracket(self, right=None):
+    self.append("\\left[")
+    if right is not None:
+      self.append(right)
+    self.append("\\right]")
     return self
   
   def text(self, right):

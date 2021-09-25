@@ -6,7 +6,7 @@ from vector_symbol import NamedVector, PowerVector, UnitVector, \
                    get_named_polynomial, PolynomialCommitment
 from latex_builder import tex, LaTeXBuilder, AccumulationVector, \
                           ExpressionVector, Math, Enumerate, Itemize, \
-                          add_paren_if_add
+                          add_paren_if_add, Algorithm
 from rust_builder import rust, RustBuilder, AccumulationVectorRust, mut, ref, \
                          Samples, SumAccumulationVectorRust
 from sympy import Symbol, Integer, UnevaluatedExpr, Expr, Max, simplify, \
@@ -104,6 +104,26 @@ class IndexerSubmitVectors(SubmitVectors):
     super(IndexerSubmitVectors, self).__init__("indexer", vector, size)
 
 
+class InvokeSubprotocol(object):
+  def __init__(self, name, *args):
+    self.args = args
+    self.name = name
+
+  def dumps(self):
+    return "\\prover and \\verifier invokes protocol $\\mathsf{%s}$ with inputs %s" % \
+           (self.name, ", ".join(["$%s$" % tex(arg) for arg in self.args]))
+
+
+class IndexerInvokeSubprotocol(object):
+  def __init__(self, name, *args):
+    self.args = args
+    self.name = name
+
+  def dumps(self):
+    return "\\indexer invokes the indexer of protocol $\\mathsf{%s}$ with inputs %s" % \
+           (self.name, ", ".join(["$%s$" % tex(arg) for arg in self.args]))
+
+
 class SendPolynomials(object):
   def __init__(self, sender, polynomial, degree):
     self.sender = sender
@@ -162,6 +182,9 @@ class PublicCoinProtocolExecution(object):
 
   def verifier_computes(self, latex_builder, rust_builder):
     self.verifier_computations.append(VerifierComputes(latex_builder, rust_builder))
+
+  def invoke_subprotocol(self, name, *args):
+    self.interactions.append(InvokeSubprotocol(name, *args))
 
   def verifier_send_randomness(self, *args):
     # If the verifier already sent some randomnesses in the last step,
@@ -307,16 +330,23 @@ class VOProtocolExecution(PublicCoinProtocolExecution):
     protocol.execute(self, *args)
 
   def dumps(self):
-    ret = Enumerate()
+    ret = Algorithm(self.name)
+    if hasattr(self, 'index'):
+      ret.index = self.index
+    ret.inputs = self.inputs
+    ret.checks = self.checks
     for pp in self.preprocessings:
-      ret.append(pp.dumps())
-    ret.append(self.indexer_vectors.dumps())
+      ret.preprocesses.append(pp)
+    if self.indexer_vectors is not None:
+      for v, size in self.indexer_vectors.vectors:
+        ret.output_pk.append(v)
+        ret.output_vk.append(v)
     for interaction in self.interactions:
-      ret.append(interaction.dumps())
+      ret.interactions.append(interaction)
     for had in self.hadamards:
-      ret.append(had.dumps())
+      ret.interactions.append(had.dumps())
     for inner in self.inner_products:
-      ret.append(inner.dumps())
+      ret.interactions.append(inner.dumps())
     return ret.dumps()
 
 
@@ -552,6 +582,8 @@ class PIOPFromVOProtocol(object):
               RustBuilder())
           piopexec.prover_send_polynomial(poly, self.vector_size + q)
           vec_to_poly_dict[v.key()] = poly
+      else:
+        raise ValueError("Interaction of type %s should not appear" % type(interaction))
 
     self.debug("Prepare extended hadamard")
     alpha = Symbol(get_name('alpha'))
