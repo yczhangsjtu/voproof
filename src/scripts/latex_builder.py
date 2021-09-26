@@ -135,6 +135,18 @@ class Algorithm(object):
 """ % (self.name, self.label, index, inputs, checks, preprocessing, interactions)
 
 
+class Condition(object):
+  def __init__(self, first, second, condition):
+    self.first = first
+    self.second = second
+    self.condition = condition
+
+  def dumps(self):
+    return """\\left\\{\\begin{array}{ll}\
+  %s, & \\text{if}\\quad %s \\\\
+  %s, & \\text{otherwise}
+\\end{array}\\right.""" % (tex(self.first), tex(self.condition), tex(self.second))
+
 class LaTeXBuilder(object):
   def __init__(self, *args):
     self.items = list(args)
@@ -271,6 +283,18 @@ class LaTeXBuilder(object):
 
   def end_math(self):
     return self.end_env("math", "$")
+
+  def start_paren(self):
+    return self.start_env("paren", "(")
+
+  def end_paren(self):
+    return self.end_env("paren", ")")
+
+  def sup(self, right):
+    return self.append("^{").append(right).append("}")
+
+  def sub(self, right):
+    return self.append("_{").append(right).append("}")
 
   def math(self, right):
     self.append("$")

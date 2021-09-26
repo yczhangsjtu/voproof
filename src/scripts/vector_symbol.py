@@ -161,6 +161,10 @@ def get_named_vector(name, modifier=None, has_prime=False):
   return NamedVector(name, modifier=modifier, has_prime=has_prime)
 
 
+def get_named_vectors(names, modifier=None, has_prime=False):
+  return [get_named_vector(name, modifier=modifier, has_prime=has_prime) for name in names]
+
+
 class VectorSlice(object):
   def __init__(self, named_vector, start, end=None):
     super(VectorSlice, self).__init__()
