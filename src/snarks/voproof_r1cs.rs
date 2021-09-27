@@ -95,9 +95,16 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let H=size.nrows;
         let K=size.ncols;
         let S=size.density;
-        let H=size.nrows;
-        let K=size.ncols;
-        let S=size.density;
+        let gamma=F::GENERATOR;
+        let M=(cs.arows.iter().chain(cs.brows.iter().map(|i| i + H)).chain(cs.crows.iter().map(|i| i + H * 2)).collect::<Vec<u64>>(), cs.acols.iter().chain(cs.bcols).chain(cs.ccols).collect::<Vec<u64>>(), cs.avals.iter().chain(cs.bvals).chain(cs.cvals).collect::<Vec<F>>());
+        let u_vec=(1..=3*S).map(|i| power(gamma, M.0[i] as i64)).collect::<Vec<F>>();
+        let w_vec=(1..=3*S).map(|i| power(gamma, M.1[i] as i64)).collect::<Vec<F>>();
+        let v_vec=M.2;
+        let y_vec=u_vec.iter().zip(w_vec).map(|a, b| a * b).collect::<Vec<F>>();
+        let cm_u_vec=vector_to_commitment(u_vec);
+        let cm_w_vec=vector_to_commitment(w_vec);
+        let cm_v_vec=vector_to_commitment(v_vec);
+        let cm_y_vec=vector_to_commitment(y_vec);
         
         let verifier_key = R1CSVerifierKey::<E> {
             cm_u_vec: cm_u_vec,
@@ -129,12 +136,20 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let H=size.nrows;
         let K=size.ncols;
         let S=size.density;
+        let gamma=F::GENERATOR;
         let delta=sample_field::<F, _>(rng);
         let delta_1=sample_field::<F, _>(rng);
         let delta_2=sample_field::<F, _>(rng);
         let delta_3=sample_field::<F, _>(rng);
         let u_vec_1=sparse_mvp(H, K);
+        let cm_u_vec_1=KZG10::commit(u_vec_1_poly);
+        let cm_s_vec=KZG10::commit(s_vec_poly);
+        let cm_h_vec=KZG10::commit(h_vec_poly);
         let r_vec_tilde=(1..=K + 3*S).scan(F::zero(), |acc, &mut i| {*acc = *acc + (r_vec_1[i - 1]); Some(*acc)}).collect::<Vec<F>>();
+        let cm_r_vec_tilde=KZG10::commit(r_vec_tilde_poly);
+        let cm_t=KZG10::commit(t_poly);
+        let cm_h_1=KZG10::commit(h_1_poly);
+        let cm_h_2=KZG10::commit(h_2_poly);
         
         Ok(R1CSProof::<E> {
             cm_u_vec_1: cm_u_vec_1,
@@ -156,6 +171,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let H=size.nrows;
         let K=size.ncols;
         let S=size.density;
+        let gamma=F::GENERATOR;
         
     }
 }

@@ -6,7 +6,7 @@ from vector_symbol import get_named_vector, PowerVector, UnitVector, \
 from latex_builder import Math, AccumulationVector, ExpressionVector, \
                           LaTeXBuilder, ProductAccumulationDivideVector, \
                           add_paren_if_not_atom
-from rust_builder import RustBuilder
+from rust_builder import RustBuilder, Tuple, ExpressionVectorRust
 
 class SparseMVP(VOProtocol):
   def __init__(self):
@@ -20,14 +20,23 @@ class SparseMVP(VOProtocol):
     y = get_named_vector("y")
     voexec.preprocess(Math(u).assign(
       ExpressionVector("\\gamma^{\\mathsf{row}_i}", ell)
-    ), RustBuilder())
+    ), RustBuilder().let(u).assign(
+      ExpressionVectorRust(
+        "power(gamma, M.0[i] as i64)", ell)).end())
     voexec.preprocess(Math(w).assign(
       ExpressionVector("\\gamma^{\\mathsf{col}_i}", ell)
-    ), RustBuilder())
+    ), RustBuilder().let(w).assign(
+      ExpressionVectorRust(
+        "power(gamma, M.1[i] as i64)", ell)).end())
     voexec.preprocess(Math(v).assign(
       ExpressionVector("\\mathsf{val}_i", ell)
-    ), RustBuilder())
-    voexec.preprocess(Math(y).assign(u).circ(w), RustBuilder())
+    ), RustBuilder().let(v).assign("M.2").end())
+    voexec.preprocess(Math(y).assign(u).circ(w),
+        RustBuilder().let(y)
+        .assign(u).invoke_method("iter").invoke_method("zip").append_to_last(w)
+        .invoke_method("map").append_to_last("|a, b| a * b")
+        .invoke_method("collect::<Vec<F>>")
+        .end())
     voexec.preprocess_vector(u, ell)
     voexec.preprocess_vector(w, ell)
     voexec.preprocess_vector(v, ell)
@@ -218,6 +227,13 @@ class R1CS(VOProtocol):
     super(R1CS, self).__init__("R1CS")
 
   def preprocess(self, voexec, H, K, s):
+    voexec.preprocess(LaTeXBuilder(),
+        RustBuilder().let("M").assign(Tuple())
+        .append_to_last("cs.arows.iter()"
+          ".chain(cs.brows.iter().map(|i| i + H))"
+          ".chain(cs.crows.iter().map(|i| i + H * 2)).collect::<Vec<u64>>()")
+        .append_to_last("cs.acols.iter().chain(cs.bcols).chain(cs.ccols).collect::<Vec<u64>>()")
+        .append_to_last("cs.avals.iter().chain(cs.bvals).chain(cs.cvals).collect::<Vec<F>>()").end())
     SparseMVP().preprocess(voexec, H * 3, K, s)
     voexec.r1cs_H = H
     voexec.r1cs_K = K

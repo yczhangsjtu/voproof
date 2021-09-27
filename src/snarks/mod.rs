@@ -23,6 +23,11 @@ pub trait SNARKProverKey<E: PairingEngine> {}
 pub trait SNARKVerifierKey<E: PairingEngine> {}
 pub trait SNARKProof<E: PairingEngine> {}
 
+pub fn vector_to_commitment<E: PairingEngine>(vec: &Vec<E::Fr>)
+        -> Result<Commitment<E>, Error> {
+    KZG10::<E, DensePoly<E::Fr>>::commit_with_coefficients(vec)
+}
+
 pub trait SNARK<E: PairingEngine, F: Field> {
     type Size: CSSize;
     type CS: ConstraintSystem<F, E::Fr>;

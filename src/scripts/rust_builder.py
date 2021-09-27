@@ -75,6 +75,14 @@ class FunctionCall(RustList):
     return "%s(%s)" % (self.func_name, super(FunctionCall, self).dumpr())
 
 
+class Tuple(RustList):
+  def __init__(self):
+    super(Tuple, self).__init__()
+
+  def dumpr(self):
+    return "(%s)" % super(Tuple, self).dumpr()
+
+
 class RustBuilder(object):
   def __init__(self, *args):
     self.items = list(args)
@@ -114,6 +122,19 @@ class RustBuilder(object):
     elif isinstance(right, FunctionCall):
       return self.append(right)
     raise Exception("Cannot call type %s" % type(right))
+
+  def invoke_method(self, right):
+    self.append(".")
+    if isinstance(right, str):
+      return self.append(FunctionCall(right))
+    elif isinstance(right, FunctionCall):
+      return self.append(right)
+    raise Exception("Cannot call type %s" % type(right))
+
+  def attribute(self, right):
+    self.append(".")
+    if right is not None:
+      self.append(right)
 
   def assign_func(self, right):
     return self.assign().func(right)

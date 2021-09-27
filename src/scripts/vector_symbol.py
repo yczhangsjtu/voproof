@@ -753,6 +753,9 @@ class NamedPolynomial(_NamedBasic):
   def to_comm(self):
     return PolynomialCommitment(self)
 
+  def dumpr(self):
+    return "%s_poly" % super(NamedPolynomial, self).dumpr()
+
 
 # TODO: Define a class particularly for polynomial commitment
 class PolynomialCommitment(object):
@@ -797,6 +800,9 @@ class NamedVectorPolynomial(object):
 
   def to_comm(self):
     return PolynomialCommitment(self)
+
+  def dumpr(self):
+    return "%s_poly" % self.vector.dumpr()
 
 
 class PolynomialCombination(CoeffMap):

@@ -959,7 +959,10 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     for poly, degree in piopexec.indexer_polynomials.polynomials:
       self.preprocess(Math(poly.to_comm())
                       .assign("\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
-                              % poly.dumps()), RustBuilder())
+                              % poly.dumps()),
+                      RustBuilder().let(poly.to_comm())
+                      .assign_func("vector_to_commitment")
+                      .append_to_last(poly.vector).end())
       self.preprocess_output_vk(poly.to_comm())
       transcript.append(poly.to_comm())
 
@@ -986,7 +989,8 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           self.prover_computes(Math(poly.to_comm()).assign(
             "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
             % (poly.dumps())
-          ), RustBuilder())
+            ), RustBuilder().let(poly.to_comm())
+            .assign_func("KZG10::commit").append_to_last(poly).end())
           transcript.append(poly.to_comm())
           self.proof.append(poly.to_comm())
 
