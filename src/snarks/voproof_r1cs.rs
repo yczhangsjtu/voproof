@@ -142,9 +142,15 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let delta_2=sample_field::<F, _>(rng);
         let delta_3=sample_field::<F, _>(rng);
         let u_vec_1=sparse_mvp(H, K);
+        let u_vec_1_poly=fixed_length_vector_iter(u_vec_1, K + 3*S).chain(delta).collect::<Vec<F>>()();
         let cm_u_vec_1=KZG10::commit(u_vec_1_poly);
+        let u_vec_1_poly=poly_from_vec(u_vec_1);
+        let s_vec_poly=fixed_length_vector_iter(s_vec, K + 3*S).chain(delta_1).collect::<Vec<F>>()();
         let cm_s_vec=KZG10::commit(s_vec_poly);
+        let s_vec_poly=poly_from_vec(s_vec);
+        let h_vec_poly=fixed_length_vector_iter(h_vec, K + 3*S).chain(delta_2).collect::<Vec<F>>()();
         let cm_h_vec=KZG10::commit(h_vec_poly);
+        let h_vec_poly=poly_from_vec(h_vec);
         let r_vec_tilde=(1..=K + 3*S).scan(F::zero(), |acc, &mut i| {*acc = *acc + (r_vec_1[i - 1]); Some(*acc)}).collect::<Vec<F>>();
         let cm_r_vec_tilde=KZG10::commit(r_vec_tilde_poly);
         let cm_t=KZG10::commit(t_poly);

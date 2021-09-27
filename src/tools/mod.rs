@@ -154,6 +154,29 @@ pub fn power_iter<F: Field>(start: u64, end: u64, alpha: F, length: u64, shifted
     }
 }
 
+pub struct FixedLengthVectorIterator<'a, F: Field> {
+    v: &'a Vec<F>,
+    i: usize,
+    n: usize,
+}
+
+impl<'a, F: Field> Iterator for FixedLengthVectorIterator<'a, F> {
+    type Item = F;
+    fn next(&mut self) -> Option<F> {
+        match self.i {
+            i if i >= 0 && i < self.v.len() => self.v[i],
+            i if i >= self.v.len() && i < self.n => F::zero(),
+            _ => None,
+        }
+    }
+}
+
+pub fn fixed_length_vector_iter<'a, F: Field>(v: &'a Vec<F>, n: usize) {
+    FixedLengthVectorIterator {
+        v, i: 0, n,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

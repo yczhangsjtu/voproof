@@ -579,8 +579,13 @@ class PIOPFromVOProtocol(object):
           piopexec.prover_computes(
               Math(randomizer).sample(Ftoq).comma(Math(v))
                               .assign(v).double_bar(randomizer),
-              RustBuilder())
+              RustBuilder().let(poly).assign_func("fixed_length_vector_iter")
+                           .append_to_last([v, n]).invoke_method("chain")
+                           .append_to_last(delta).invoke_method("collect::<Vec<F>>()").end())
           piopexec.prover_send_polynomial(poly, self.vector_size + q)
+          piopexec.prover_computes(
+              LaTeXBuilder(),
+              RustBuilder().let(poly).assign_func("poly_from_vec").append_to_last(v).end())
           vec_to_poly_dict[v.key()] = poly
       else:
         raise ValueError("Interaction of type %s should not appear" % type(interaction))
