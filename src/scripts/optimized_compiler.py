@@ -3,7 +3,8 @@ from vector_symbol import NamedVector, PowerVector, UnitVector, \
                    SparseVector, get_name, reset_name_counters, \
                    StructuredVector, VectorCombination, get_named_vector, \
                    PolynomialCombination, simplify_max_with_hints, \
-                   get_named_polynomial, PolynomialCommitment
+                   get_named_polynomial, PolynomialCommitment, Matrix, \
+                   rust_pk_vk, rust_vk
 from latex_builder import tex, LaTeXBuilder, AccumulationVector, \
                           ExpressionVector, Math, Enumerate, Itemize, \
                           add_paren_if_add, Algorithm
@@ -24,6 +25,9 @@ def get_rust_type(expr):
     return "Commitment<E>"
   if isinstance(expr, NamedVector):
     return "Vec<E::Fr>"
+  if isinstance(expr, Matrix):
+    # Sparse representation of a matrix
+    return "(Vec<u64>, Vec<u64>, Vec<E::Fr>)"
   if isinstance(expr, Symbol):
     if str(expr).startswith("W"):
       return "KZGProof<E>"
@@ -454,6 +458,7 @@ class PIOPExecution(PublicCoinProtocolExecution):
     self._auto_vector_dict = {}
 
   def preprocess_polynomial(self, polynomial, degree):
+    polynomial._is_preprocessed = True
     if self.indexer_polynomials is not None:
       self.indexer_polynomials.add_polynomial(polynomial, degree)
     else:
@@ -987,8 +992,14 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
             "\\mathsf{H}_{%d}(%s)"
             % (i+1, ",".join([tex(x) for x in transcript]))
           )
-          self.prover_computes(compute_hash, RustBuilder())
-          self.verifier_computes(compute_hash, RustBuilder())
+          self.prover_computes(compute_hash,
+              RustBuilder().let(r).assign().func("hash_to_field")
+              .append_to_last(RustBuilder().func("to_bytes!")
+                .append_to_last([rust_pk_vk(x) for x in transcript])).end())
+          self.verifier_computes(compute_hash,
+              RustBuilder().let(r).assign().func("hash_to_field")
+              .append_to_last(RustBuilder().func("to_bytes!")
+                .append_to_last([rust_vk(x) for x in transcript])).end())
       if isinstance(interaction, ProverSendPolynomials):
         for poly, degree in interaction.polynomials:
           self.prover_computes(Math(poly.to_comm()).assign(

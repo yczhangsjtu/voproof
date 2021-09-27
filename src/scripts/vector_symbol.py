@@ -3,7 +3,7 @@ from sympy import Symbol, latex, sympify, Integer, Expr,\
 from sympy.abc import alpha, X
 from sympy.core.numbers import Infinity
 from latex_builder import tex
-from rust_builder import keep_alpha_number
+from rust_builder import keep_alpha_number, rust
 
 
 class _NamedBasic(object):
@@ -736,10 +736,16 @@ class StructuredVector(CoeffMap):
     return sum(items)
 
 
+class Matrix(_NamedBasic):
+  def __init__(self, name, modifier=None, subscript=None, has_prime=False):
+    super(Matrix, self).__init__(name, modifier, subscript, has_prime, _type = "mat")
+
+
 class NamedPolynomial(_NamedBasic):
   def __init__(self, name, modifier=None, subscript=None, has_prime=False):
     super(NamedPolynomial, self).__init__(name, modifier, subscript, has_prime)
     self._local_evaluate = False
+    self._is_preprocessed = False
 
   def local_evaluate(self):
     return self._local_evaluate
@@ -757,11 +763,11 @@ class NamedPolynomial(_NamedBasic):
     return "%s_poly" % super(NamedPolynomial, self).dumpr()
 
 
-# TODO: Define a class particularly for polynomial commitment
 class PolynomialCommitment(object):
   def __init__(self, polynomial):
     # Must be named polynomial or named vector polynomial
     self.polynomial = polynomial
+    self._is_preprocessed = polynomial._is_preprocessed
 
   def dumps(self):
     if isinstance(self.polynomial, NamedPolynomial):
@@ -781,10 +787,29 @@ def get_named_polynomial(name, modifier=None, has_prime=False):
   return NamedPolynomial(name, modifier=modifier, has_prime=has_prime)
 
 
+def rust_vk(comm):
+  if hasattr(comm, "_is_preprocessed"):
+    return "vk.%s" % rust(comm)
+  return rust(comm)
+
+
+def rust_pk(comm):
+  if hasattr(comm, "_is_preprocessed"):
+    return "pk.%s" % rust(comm)
+  return rust(comm)
+
+
+def rust_pk_vk(comm):
+  if hasattr(comm, "_is_preprocessed"):
+    return "pk.verifier_key.%s" % rust(comm)
+  return rust(comm)
+
+
 class NamedVectorPolynomial(object):
   def __init__(self, named_vector):
     super(NamedVectorPolynomial, self).__init__()
     self.vector = named_vector
+    self._is_preprocessed = False
 
   def local_evaluate(self):
     return self.vector.local_evaluate
@@ -957,4 +982,5 @@ def simplify_max_with_hints(expr, hints):
 if __name__ == "__main__":
   v = (NamedVector("a") + NamedVector("b").shift(2) + NamedVector("c").shift(Symbol("n"))).shift(1)
   print(v.dumps())
+
 

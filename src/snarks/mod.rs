@@ -4,7 +4,12 @@ mod voproof_pov;
 mod template;
 
 use ark_ec::PairingEngine;
-use ark_ff::PrimeField as Field;
+use ark_ff::{
+    PrimeField as Field,
+    fields::batch_inversion
+};
+#[macro_use]
+use ark_ff::to_bytes;
 use ark_poly::univariate::DensePolynomial as DensePoly;
 use ark_std::{test_rng, Zero, vec::Vec};
 use crate::kzg::{

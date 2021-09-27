@@ -200,6 +200,12 @@ class RustBuilder(object):
     self.append(marker)
     return self
 
+  def start_paren(self):
+    return self.start_env("paren", "(")
+
+  def end_paren(self):
+    return self.end_env("paren", ")")
+
   def assign(self, right=None):
     self.append("=")
     if right is not None:
