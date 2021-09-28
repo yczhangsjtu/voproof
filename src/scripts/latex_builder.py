@@ -363,13 +363,14 @@ class Math(LaTeXBuilder):
 
 
 class ExpressionVector(object):
-  def __init__(self, expr, length):
+  def __init__(self, expr, length, variant=None):
     self.expr = expr
     self.length = sympify(length)
+    self.variant = Symbol("i") if variant is None else variant
 
   def dumps(self):
-    return "\\left(%s\\right)_{i=1}^{%s}" \
-           % (tex(self.expr), latex(self.length))
+    return "\\left(%s\\right)_{%s=1}^{%s}" \
+           % (tex(self.expr), latex(self.variant), latex(self.length))
 
 
 class AccumulationVector(object):
