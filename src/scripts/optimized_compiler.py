@@ -3,12 +3,13 @@ from vector_symbol import NamedVector, PowerVector, UnitVector, \
                    SparseVector, get_name, reset_name_counters, \
                    StructuredVector, VectorCombination, get_named_vector, \
                    PolynomialCombination, simplify_max_with_hints, \
-                   get_named_polynomial, PolynomialCommitment
+                   get_named_polynomial, PolynomialCommitment, Matrix, \
+                   rust_pk_vk, rust_vk
 from latex_builder import tex, LaTeXBuilder, AccumulationVector, \
                           ExpressionVector, Math, Enumerate, Itemize, \
                           add_paren_if_add, Algorithm
 from rust_builder import rust, RustBuilder, AccumulationVectorRust, mut, ref, \
-                         Samples, SumAccumulationVectorRust
+                         Samples, SumAccumulationVectorRust, RustMacro
 from sympy import Symbol, Integer, UnevaluatedExpr, Expr, Max, simplify, \
                   latex, srepr, Add, Mul
 from sympy.core.numbers import Infinity
@@ -24,6 +25,9 @@ def get_rust_type(expr):
     return "Commitment<E>"
   if isinstance(expr, NamedVector):
     return "Vec<E::Fr>"
+  if isinstance(expr, Matrix):
+    # Sparse representation of a matrix
+    return "(Vec<u64>, Vec<u64>, Vec<E::Fr>)"
   if isinstance(expr, Symbol):
     if str(expr).startswith("W"):
       return "KZGProof<E>"
@@ -224,6 +228,11 @@ class VOQuerySide(object):
   def __neg__(self):
     return VOQuerySide(-self.a, self.b)
 
+  def dumpr_at_index(self, index):
+    return "(%s)*(%s)" % (
+        self.a.dumpr_at_index(index),
+        self.b.dumpr_at_index(index))
+
 
 class VOQuery(object):
   def __init__(self, a, b, c=None, d=None):
@@ -250,6 +259,13 @@ class VOQuery(object):
     if self.one_sided:
       return self.dump_left_side()
     return "%s-%s" % (self.dump_left_side(), self.dump_right_side())
+
+  def dumpr_at_index(self, index):
+    if self.one_sided:
+      return self.left_side.dumpr_at_index(index)
+    return "(%s)-(%s)" % (
+        self.left_side.dumpr_at_index(index),
+        self.right_side.dumpr_at_index(index))
 
   def dump_hadamard_difference(self):
     tmp, self.oper = self.oper, "circ"
@@ -454,6 +470,7 @@ class PIOPExecution(PublicCoinProtocolExecution):
     self._auto_vector_dict = {}
 
   def preprocess_polynomial(self, polynomial, degree):
+    polynomial._is_preprocessed = True
     if self.indexer_polynomials is not None:
       self.indexer_polynomials.add_polynomial(polynomial, degree)
     else:
@@ -579,8 +596,13 @@ class PIOPFromVOProtocol(object):
           piopexec.prover_computes(
               Math(randomizer).sample(Ftoq).comma(Math(v))
                               .assign(v).double_bar(randomizer),
-              RustBuilder())
+              RustBuilder().let(poly).assign_func("fixed_length_vector_iter")
+                           .append_to_last([v, n]).invoke_method("chain")
+                           .append_to_last(delta).invoke_method("collect::<Vec<F>>()").end())
           piopexec.prover_send_polynomial(poly, self.vector_size + q)
+          piopexec.prover_computes(
+              LaTeXBuilder(),
+              RustBuilder().let(poly).assign_func("poly_from_vec").append_to_last(v).end())
           vec_to_poly_dict[v.key()] = poly
       else:
         raise ValueError("Interaction of type %s should not appear" % type(interaction))
@@ -615,10 +637,13 @@ class PIOPFromVOProtocol(object):
 
       rcomputes = LaTeXBuilder().start_math().append(r).assign().end_math() \
                                 .space("the sum of:").eol()
-      rcomputes_rust = RustBuilder()
+      rcomputes_rust = RustMacro("define_vec").append(r)
+      expression_vector = RustMacro("expression_vector").append(Symbol("i"))
+      linear_combination = RustMacro("power_linear_combination").append(beta)
       r_items = Itemize()
       for i, inner in enumerate(voexec.inner_products):
         difference = inner.dump_hadamard_difference()
+        linear_combination.append(inner.dumpr_at_index(Symbol("i")))
         beta_power = beta ** i
         if not inner.one_sided or difference.startswith("-"):
           difference = "\\left(%s\\right)" % difference
@@ -637,7 +662,9 @@ class PIOPFromVOProtocol(object):
         shifts += inner.shifts()
       rcomputes.append(r_items)
 
-      piopexec.prover_computes(rcomputes, rcomputes_rust)
+      expression_vector.append([linear_combination, n])
+      rcomputes_rust.append(expression_vector)
+      piopexec.prover_computes(rcomputes, RustBuilder(rcomputes_rust).end())
 
       randomizer = get_named_vector("delta")
       rtilde = get_named_vector("r", modifier="tilde")
@@ -959,7 +986,10 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     for poly, degree in piopexec.indexer_polynomials.polynomials:
       self.preprocess(Math(poly.to_comm())
                       .assign("\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
-                              % poly.dumps()), RustBuilder())
+                              % poly.dumps()),
+                      RustBuilder().let(poly.to_comm())
+                      .assign_func("vector_to_commitment")
+                      .append_to_last(poly.vector).end())
       self.preprocess_output_vk(poly.to_comm())
       transcript.append(poly.to_comm())
 
@@ -979,14 +1009,21 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
             "\\mathsf{H}_{%d}(%s)"
             % (i+1, ",".join([tex(x) for x in transcript]))
           )
-          self.prover_computes(compute_hash, RustBuilder())
-          self.verifier_computes(compute_hash, RustBuilder())
+          self.prover_computes(compute_hash,
+              RustBuilder().let(r).assign().func("hash_to_field")
+              .append_to_last(RustBuilder().func("to_bytes!")
+                .append_to_last([rust_pk_vk(x) for x in transcript])).end())
+          self.verifier_computes(compute_hash,
+              RustBuilder().let(r).assign().func("hash_to_field")
+              .append_to_last(RustBuilder().func("to_bytes!")
+                .append_to_last([rust_vk(x) for x in transcript])).end())
       if isinstance(interaction, ProverSendPolynomials):
         for poly, degree in interaction.polynomials:
           self.prover_computes(Math(poly.to_comm()).assign(
             "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
             % (poly.dumps())
-          ), RustBuilder())
+            ), RustBuilder().let(poly.to_comm())
+            .assign_func("KZG10::commit").append_to_last(poly).end())
           transcript.append(poly.to_comm())
           self.proof.append(poly.to_comm())
 

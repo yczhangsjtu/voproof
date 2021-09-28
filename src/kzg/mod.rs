@@ -100,6 +100,34 @@ where
     }
 
     /// Outputs a commitment to `polynomial`.
+    pub fn commit_with_coefficients(
+        powers: &Powers<E>,
+        coeffs: &Vec<E::Fr>,
+    ) -> Result<Commitment<E>, Error> {
+        Self::check_degree_is_too_large(coeffs.len() - 1, powers.size())?;
+
+        let commit_time = start_timer!(|| format!(
+            // "Committing to polynomial of degree {} with hiding_bound: {:?}",
+            "Committing to polynomial of degree {}",
+            coeffs.len() - 1,
+            // hiding_bound,
+        ));
+        end_timer!(commit_time);
+
+        let (num_leading_zeros, plain_coeffs) =
+            skip_leading_zeros_and_convert_to_bigints_vec(coeffs);
+
+        let msm_time = start_timer!(|| "MSM to compute commitment to plaintext poly");
+        let commitment = VariableBaseMSM::multi_scalar_mul(
+            &powers.powers_of_g[num_leading_zeros..],
+            &plain_coeffs,
+        );
+        end_timer!(msm_time);
+
+        Ok(Commitment(commitment.into()))
+    }
+
+    /// Outputs a commitment to `polynomial`.
     pub fn commit(
         powers: &Powers<E>,
         polynomial: &P,
@@ -393,6 +421,17 @@ where
             Ok(())
         }
     }
+}
+
+fn skip_leading_zeros_and_convert_to_bigints_vec<F: PrimeField>(
+    coeffs: &Vec<F>,
+) -> (usize, Vec<F::BigInt>) {
+    let mut num_leading_zeros = 0;
+    while num_leading_zeros < coeffs.len() && coeffs[num_leading_zeros].is_zero() {
+        num_leading_zeros += 1;
+    }
+    let coeffs = convert_to_bigints(&coeffs[num_leading_zeros..]);
+    (num_leading_zeros, coeffs)
 }
 
 fn skip_leading_zeros_and_convert_to_bigints<F: PrimeField, P: UVPolynomial<F>>(

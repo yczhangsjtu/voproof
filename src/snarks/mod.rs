@@ -4,7 +4,12 @@ mod voproof_pov;
 mod template;
 
 use ark_ec::PairingEngine;
-use ark_ff::PrimeField as Field;
+use ark_ff::{
+    PrimeField as Field,
+    fields::batch_inversion
+};
+#[macro_use]
+use ark_ff::to_bytes;
 use ark_poly::univariate::DensePolynomial as DensePoly;
 use ark_std::{test_rng, Zero, vec::Vec};
 use crate::kzg::{
@@ -17,11 +22,18 @@ use crate::cs::{
     r1cs::{R1CS, R1CSSize, R1CSInstance, R1CSWitness}
 };
 use crate::tools::*;
+#[macro_use]
+use crate::*;
 use crate::kzg::*;
 
 pub trait SNARKProverKey<E: PairingEngine> {}
 pub trait SNARKVerifierKey<E: PairingEngine> {}
 pub trait SNARKProof<E: PairingEngine> {}
+
+pub fn vector_to_commitment<E: PairingEngine>(vec: &Vec<E::Fr>)
+        -> Result<Commitment<E>, Error> {
+    KZG10::<E, DensePoly<E::Fr>>::commit_with_coefficients(vec)
+}
 
 pub trait SNARK<E: PairingEngine, F: Field> {
     type Size: CSSize;

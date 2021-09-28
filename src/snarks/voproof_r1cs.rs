@@ -12,6 +12,7 @@ pub struct R1CSProverKey<'a, E: PairingEngine> {
     pub verifier_key: R1CSVerifierKey<E>,
     pub powers: Powers<'a, E>,
     pub max_degree: u64,
+    pub M_mat: (Vec<u64>, Vec<u64>, Vec<E::Fr>),
     pub u_vec: Vec<E::Fr>,
     pub w_vec: Vec<E::Fr>,
     pub v_vec: Vec<E::Fr>,
@@ -95,9 +96,16 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let H=size.nrows;
         let K=size.ncols;
         let S=size.density;
-        let H=size.nrows;
-        let K=size.ncols;
-        let S=size.density;
+        let gamma=F::GENERATOR;
+        let M_mat=(cs.arows.iter().chain(cs.brows.iter().map(|i| i + H)).chain(cs.crows.iter().map(|i| i + H * 2)).collect::<Vec<u64>>(), cs.acols.iter().chain(cs.bcols).chain(cs.ccols).collect::<Vec<u64>>(), cs.avals.iter().chain(cs.bvals).chain(cs.cvals).collect::<Vec<F>>());
+        let u_vec=(1..=3*S).map(|i| power(gamma, M_mat.0[i] as i64)).collect::<Vec<F>>();
+        let w_vec=(1..=3*S).map(|i| power(gamma, M_mat.1[i] as i64)).collect::<Vec<F>>();
+        let v_vec=M_mat.2;
+        let y_vec=u_vec.iter().zip(w_vec).map(|a, b| a * b).collect::<Vec<F>>();
+        let cm_u_vec=vector_to_commitment(u_vec);
+        let cm_w_vec=vector_to_commitment(w_vec);
+        let cm_v_vec=vector_to_commitment(v_vec);
+        let cm_y_vec=vector_to_commitment(y_vec);
         
         let verifier_key = R1CSVerifierKey::<E> {
             cm_u_vec: cm_u_vec,
@@ -117,6 +125,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
             verifier_key,
             powers: powers_of_g,
             max_degree,
+            M_mat: M_mat,
             u_vec: u_vec,
             w_vec: w_vec,
             v_vec: v_vec,
@@ -129,12 +138,40 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let H=size.nrows;
         let K=size.ncols;
         let S=size.density;
+        let gamma=F::GENERATOR;
         let delta=sample_field::<F, _>(rng);
         let delta_1=sample_field::<F, _>(rng);
         let delta_2=sample_field::<F, _>(rng);
         let delta_3=sample_field::<F, _>(rng);
         let u_vec_1=sparse_mvp(H, K);
+        let u_vec_1_poly=fixed_length_vector_iter(u_vec_1, K + 3*S).chain(delta).collect::<Vec<F>>()();
+        let cm_u_vec_1=KZG10::commit(u_vec_1_poly);
+        let u_vec_1_poly=poly_from_vec(u_vec_1);
+        let mu=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1));
+        let mut r_vec=(1..=3*H).map(|i| mu-power(gamma, i)).collect::<Vec<F>>();
+        batch_inversion(r_vec);
+        let c_vec=sparse_mvp(K, 3*H, pk.M_mat.1, pk.M_mat.0, pk.M_mat.2, r_vec);
+        let s_vec=r_vec.iter().chain(r_vec.iter().map(|a| -a)).collect::<Vec<F>>()();
+        let s_vec_poly=fixed_length_vector_iter(s_vec, K + 3*S).chain(delta_1).collect::<Vec<F>>()();
+        let cm_s_vec=KZG10::commit(s_vec_poly);
+        let s_vec_poly=poly_from_vec(s_vec);
+        let nu=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec));
+        let mut rnu_vec=(1..=K).map(|i| nu-power(gamma, i)).collect::<Vec<F>>();
+        batch_inversion(rnu_vec);
+        let h_vec=rnu_vec.iter().chain(pk.u_vec.iter().zip(pk.w_vec).map(|u, w| (mu - u) * (nu - w))).collect::<Vec<F>>();
+        let h_vec_poly=fixed_length_vector_iter(h_vec, K + 3*S).chain(delta_2).collect::<Vec<F>>()();
+        let cm_h_vec=KZG10::commit(h_vec_poly);
+        let h_vec_poly=poly_from_vec(h_vec);
+        let beta=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec, pk.verifier_key.cm_h_vec));
+        define_vec!(r_vec_1, expression_vector!(i, power_linear_combination!(beta, (linear_combination!(F::zero(), 1, vector_index!(u_vec_1, i-(-3*H + 3*S + 1)+1)))*(linear_combination!(F::zero(), 1, vector_index!(s_vec, i-(-3*H + 3*S + 1)+1))), ((linear_combination!(F::zero(), -1, vector_index!(h_vec, i-(3*S + 1)+1)))*(linear_combination!(F::zero(), 1, vector_index!(s_vec, i-(-3*H + 3*S + 1)+1))))-((linear_combination!(F::zero(), 1, vector_index!(h_vec, i-(1)+1)))*(linear_combination!(F::zero(), 1, vector_index!(pk.v_vec, i-(K + 1)+1))))), K + 3*S));
         let r_vec_tilde=(1..=K + 3*S).scan(F::zero(), |acc, &mut i| {*acc = *acc + (r_vec_1[i - 1]); Some(*acc)}).collect::<Vec<F>>();
+        let cm_r_vec_tilde=KZG10::commit(r_vec_tilde_poly);
+        let alpha=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec, pk.verifier_key.cm_h_vec, pk.verifier_key.cm_r_vec_tilde));
+        let cm_t=KZG10::commit(t_poly);
+        let omega=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec, pk.verifier_key.cm_h_vec, pk.verifier_key.cm_r_vec_tilde, pk.verifier_key.cm_t));
+        let cm_h_1=KZG10::commit(h_1_poly);
+        let cm_h_2=KZG10::commit(h_2_poly);
+        let z=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec, pk.verifier_key.cm_h_vec, pk.verifier_key.cm_r_vec_tilde, pk.verifier_key.cm_t, pk.verifier_key.cm_h_1, pk.verifier_key.cm_h_2));
         
         Ok(R1CSProof::<E> {
             cm_u_vec_1: cm_u_vec_1,
@@ -156,6 +193,13 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let H=size.nrows;
         let K=size.ncols;
         let S=size.density;
+        let gamma=F::GENERATOR;
+        let mu=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1));
+        let nu=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1, vk.cm_s_vec));
+        let beta=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1, vk.cm_s_vec, vk.cm_h_vec));
+        let alpha=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1, vk.cm_s_vec, vk.cm_h_vec, vk.cm_r_vec_tilde));
+        let omega=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1, vk.cm_s_vec, vk.cm_h_vec, vk.cm_r_vec_tilde, vk.cm_t));
+        let z=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1, vk.cm_s_vec, vk.cm_h_vec, vk.cm_r_vec_tilde, vk.cm_t, vk.cm_h_1, vk.cm_h_2));
         
     }
 }

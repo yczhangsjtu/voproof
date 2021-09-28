@@ -65,7 +65,8 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
   size_init = RustBuilder()
   for size, value in size_map:
     size_init.let(size).assign("size.%s" % value).end()
-  piopexec.preprocess(LaTeXBuilder(), size_init)
+
+  compute_init = RustBuilder().let(gamma).assign("F::GENERATOR").end()
   piop.preprocess(piopexec, *ppargs)
   piopexec.reference_to_voexec._simplify_max_hints = simplify_hints
   debug("Start executing...")
@@ -74,9 +75,15 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
 
   debug("Start compiling to zkSNARK...")
   zkSNARK = ZKSNARKFromPIOPExecKZG(piopexec)
-  zkSNARK.indexer_computations =  [VerifierComputes(LaTeXBuilder(), size_init)] + zkSNARK.indexer_computations
-  zkSNARK.verifier_computations = [VerifierComputes(LaTeXBuilder(), size_init)] + zkSNARK.verifier_computations
-  zkSNARK.prover_computations = [ProverComputes(LaTeXBuilder(), size_init)] + zkSNARK.prover_computations
+  zkSNARK.indexer_computations =  [
+      VerifierComputes(LaTeXBuilder(), size_init),
+      VerifierComputes(LaTeXBuilder(), compute_init)] + zkSNARK.indexer_computations
+  zkSNARK.verifier_computations = [
+      VerifierComputes(LaTeXBuilder(), size_init),
+      VerifierComputes(LaTeXBuilder(), compute_init)] + zkSNARK.verifier_computations
+  zkSNARK.prover_computations = [
+      ProverComputes(LaTeXBuilder(), size_init),
+      ProverComputes(LaTeXBuilder(), compute_init)] + zkSNARK.prover_computations
   debug()
   dump_performance(piopexec, zkSNARK, name)
 

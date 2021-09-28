@@ -29,7 +29,7 @@ impl<F: Field> ConstraintSystem<F, R1CSSize> for R1CS<F> {
         R1CSSize {
             nrows: self.nrows,
             ncols: self.ncols,
-            density,
+            density: density as u64,
         }
     }
 }

@@ -11,7 +11,7 @@ pub struct POV<F: Field> {
 impl<F: Field> ConstraintSystem<F, POVSize> for POV<F> {
     fn get_size(&self) -> POVSize {
         POVSize {
-            nconsts: self.consts.len(),
+            nconsts: self.consts.len() as u64,
             nmul: self.nmul,
             nadd: self.nadd,
         }
