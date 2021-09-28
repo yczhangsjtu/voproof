@@ -9,7 +9,7 @@ from latex_builder import tex, LaTeXBuilder, AccumulationVector, \
                           ExpressionVector, Math, Enumerate, Itemize, \
                           add_paren_if_add, Algorithm
 from rust_builder import rust, RustBuilder, AccumulationVectorRust, mut, ref, \
-                         Samples, SumAccumulationVectorRust
+                         Samples, SumAccumulationVectorRust, RustMacro
 from sympy import Symbol, Integer, UnevaluatedExpr, Expr, Max, simplify, \
                   latex, srepr, Add, Mul
 from sympy.core.numbers import Infinity
@@ -228,6 +228,11 @@ class VOQuerySide(object):
   def __neg__(self):
     return VOQuerySide(-self.a, self.b)
 
+  def dumpr_at_index(self, index):
+    return "(%s)*(%s)" % (
+        self.a.dumpr_at_index(index),
+        self.b.dumpr_at_index(index))
+
 
 class VOQuery(object):
   def __init__(self, a, b, c=None, d=None):
@@ -254,6 +259,13 @@ class VOQuery(object):
     if self.one_sided:
       return self.dump_left_side()
     return "%s-%s" % (self.dump_left_side(), self.dump_right_side())
+
+  def dumpr_at_index(self, index):
+    if self.one_sided:
+      return self.left_side.dumpr_at_index(index)
+    return "(%s)-(%s)" % (
+        self.left_side.dumpr_at_index(index),
+        self.right_side.dumpr_at_index(index))
 
   def dump_hadamard_difference(self):
     tmp, self.oper = self.oper, "circ"
@@ -625,10 +637,13 @@ class PIOPFromVOProtocol(object):
 
       rcomputes = LaTeXBuilder().start_math().append(r).assign().end_math() \
                                 .space("the sum of:").eol()
-      rcomputes_rust = RustBuilder()
+      rcomputes_rust = RustMacro("define_vec").append(r)
+      expression_vector = RustMacro("expression_vector").append(Symbol("i"))
+      linear_combination = RustMacro("power_linear_combination").append(beta)
       r_items = Itemize()
       for i, inner in enumerate(voexec.inner_products):
         difference = inner.dump_hadamard_difference()
+        linear_combination.append(inner.dumpr_at_index(Symbol("i")))
         beta_power = beta ** i
         if not inner.one_sided or difference.startswith("-"):
           difference = "\\left(%s\\right)" % difference
@@ -647,7 +662,9 @@ class PIOPFromVOProtocol(object):
         shifts += inner.shifts()
       rcomputes.append(r_items)
 
-      piopexec.prover_computes(rcomputes, rcomputes_rust)
+      expression_vector.append([linear_combination, n])
+      rcomputes_rust.append(expression_vector)
+      piopexec.prover_computes(rcomputes, RustBuilder(rcomputes_rust).end())
 
       randomizer = get_named_vector("delta")
       rtilde = get_named_vector("r", modifier="tilde")

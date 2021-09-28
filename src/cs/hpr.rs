@@ -30,12 +30,12 @@ impl<F: Field> ConstraintSystem<F, HPRSize> for HPR<F> {
         assert_eq!(density, self.cvals.len());
         let d_density = self.drows.len();
         assert_eq!(d_density, self.dvals.len());
-        assert!(self.nrows >= d_density);
+        assert!(self.nrows >= d_density as u64);
         HPRSize {
             nrows: self.nrows,
             ncols: self.ncols,
-            density,
-            d_density,
+            density: density as u64,
+            d_density: d_density as u64,
         }
     }
 }

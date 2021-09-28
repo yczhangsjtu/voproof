@@ -102,7 +102,7 @@ where
     /// Outputs a commitment to `polynomial`.
     pub fn commit_with_coefficients(
         powers: &Powers<E>,
-        coeffs: &Vec<E>,
+        coeffs: &Vec<E::Fr>,
     ) -> Result<Commitment<E>, Error> {
         Self::check_degree_is_too_large(coeffs.len() - 1, powers.size())?;
 
@@ -430,7 +430,7 @@ fn skip_leading_zeros_and_convert_to_bigints_vec<F: PrimeField>(
     while num_leading_zeros < coeffs.len() && coeffs[num_leading_zeros].is_zero() {
         num_leading_zeros += 1;
     }
-    let coeffs = convert_to_bigints(coeffs[num_leading_zeros..]);
+    let coeffs = convert_to_bigints(&coeffs[num_leading_zeros..]);
     (num_leading_zeros, coeffs)
 }
 

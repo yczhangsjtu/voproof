@@ -164,17 +164,145 @@ impl<'a, F: Field> Iterator for FixedLengthVectorIterator<'a, F> {
     type Item = F;
     fn next(&mut self) -> Option<F> {
         match self.i {
-            i if i >= 0 && i < self.v.len() => self.v[i],
-            i if i >= self.v.len() && i < self.n => F::zero(),
+            i if i >= 0 && i < self.v.len() => Some(self.v[i]),
+            i if i >= self.v.len() && i < self.n => Some(F::zero()),
             _ => None,
         }
     }
 }
 
-pub fn fixed_length_vector_iter<'a, F: Field>(v: &'a Vec<F>, n: usize) {
+pub fn fixed_length_vector_iter<'a, F: Field>(v: &'a Vec<F>, n: usize) -> FixedLengthVectorIterator<'a, F> {
     FixedLengthVectorIterator {
         v, i: 0, n,
     }
+}
+
+#[macro_export]
+macro_rules! to_int {
+    ( $v: expr) => {
+        $v.iter().map(|e| to_int::<F>(*e)).collect::<Vec<_>>()
+    };
+}
+
+#[macro_export]
+macro_rules! to_field {
+    ( $v: expr) => {
+        $v.iter().map(|e| to_field::<F>(*e)).collect::<Vec<_>>()
+    };
+}
+
+#[macro_export]
+macro_rules! define_vec {
+    ( $v: ident, $expr: expr ) => {
+        let $v: Vec<F> = $expr;
+    };
+}
+
+#[macro_export]
+macro_rules! delta {
+    ( $i: expr, $j: expr ) => {
+        {
+            if $i == $j {
+                F::one()
+            } else {
+                F::zero()
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! multi_delta {
+    ( $i: expr, $( $c:expr, $j:expr ),+ ) => {
+        {
+            let mut s = F::zero();
+            $( s = s + $c * delta!($i, $j); )+
+            s
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! linear_combination {
+    ( $i: expr ) => {
+        linear_combination!($i, )
+    };
+
+    ( $i: expr, $( $c:expr, $j:expr ),* ) => {
+        {
+            let mut s = $i;
+            $( s = s + $c * $j; )*
+            s
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! power_linear_combination {
+    ( $alpha: expr, $( $a:expr ),+ ) => {
+        {
+            let mut s = F::zero();
+            let mut c = F::one();
+            $(
+                s = s + c * $a;
+                c = c * $alpha;
+            )+
+            s
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! vector_index {
+    ( $v: expr, $i: expr ) => {
+        {
+            if $i >= 1 && ($i as i64) <= $v.len() as i64 {
+                $v[$i as usize-1]
+            } else {
+                F::zero()
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! power_vector_index {
+    ( $a: expr, $n: expr, $i: expr ) => {
+        {
+            if $i >= 1 && ($i as i64) <= ($n as i64) {
+                power::<F>($a, $i-1)
+            } else {
+                F::zero()
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! expression_vector {
+    ( $i: ident, $v: expr, $n: expr) => {
+         (1..=$n).map(|$i| $v).collect::<Vec<_>>()
+    };
+}
+
+#[macro_export]
+macro_rules! accumulate_vector {
+    ( $i: ident, $init: expr, $v: expr, $n: expr, $op: tt ) => {
+         (1..=$n).scan($init, |acc, $i| {*acc = *acc $op ($v); Some(*acc)})
+                 .collect::<Vec<_>>()
+    };
+
+    ( $i: ident, $v: expr, $n: expr, $op: tt ) => {
+        accumulate_vector!($i, F::zero(), $v, $n, $op)
+    };
+
+    ( $v: expr, $init: expr, $op: tt ) => {
+        accumulate_vector!(i, $init, $v[i-1], $v.len(), $op)
+    };
+
+    ( $v: expr, $op: tt ) => {
+        accumulate_vector!(i, F::zero(), $v[i-1], $v.len(), $op)
+    };
 }
 
 #[cfg(test)]
@@ -216,5 +344,56 @@ mod tests {
                    vec![to_field(4), F::zero(), F::zero(), F::zero()]);
         assert_eq!(power_iter::<F>(2, 6, to_field(2), 3, 3).collect::<Vec<F>>(),
                    vec![F::zero(), to_field(1), to_field(2), to_field(4)]);
+    }
+
+    #[test]
+    fn test_linear_combination() {
+        assert_eq!(linear_combination!(1), 1);
+        assert_eq!(linear_combination!(1, 2, 3), 7);
+        assert_eq!(linear_combination!(1, 2, 3, 4, 5), 27);
+    }
+
+    #[test]
+    fn test_multi_delta() {
+        define_vec!(v, expression_vector!(i,
+                multi_delta!(i, to_field::<F>(3), 5, to_field::<F>(2), 6), 10));
+        assert_eq!(v.iter().map(|e| to_int::<F>(*e)).collect::<Vec<_>>(), vec![0, 0, 0, 0, 3, 2, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_delta() {
+        define_vec!(v, expression_vector!(i, delta!(i, 5), 10));
+        assert_eq!(v.iter().map(|e| to_int::<F>(*e)).collect::<Vec<_>>(), vec![0, 0, 0, 0, 1, 0, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_accumulate_vector() {
+        define_vec!(v, accumulate_vector!(i, to_field::<F>(i*i), 10, +));
+        assert_eq!(v.iter().map(|e| to_int::<F>(*e)).collect::<Vec<_>>(), vec![1, 5, 14, 30, 55, 91, 140, 204, 285, 385]);
+    }
+
+    #[test]
+    fn test_vector_index() {
+        let v = to_field!(vec![1, 2, 3, 4]);
+        define_vec!(v, expression_vector!(i, vector_index!(v, i as i64-3), 10));
+        assert_eq!(to_int!(v), vec![0, 0, 0, 1, 2, 3, 4, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_power_vector_index() {
+        define_vec!(v, expression_vector!(i, power_vector_index!(to_field::<F>(2), 9, i as i64-3), 10));
+        assert_eq!(to_int!(v), vec![0, 0, 0, 1, 2, 4, 8, 16, 32, 64]);
+        define_vec!(v, expression_vector!(i, power_vector_index!(to_field::<F>(2), 4, i as i64-3), 10));
+        assert_eq!(to_int!(v), vec![0, 0, 0, 1, 2, 4, 8, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_power_linear_combination() {
+        assert_eq!(power_linear_combination!(to_field::<F>(2), to_field::<F>(1)), to_field::<F>(1));
+        assert_eq!(power_linear_combination!(to_field::<F>(2),
+                                             to_field::<F>(1), to_field::<F>(2),
+                                             to_field::<F>(3), to_field::<F>(4)),
+                                             to_field::<F>(1 + 2 * 2 + 2 * 2 * 3 +
+                                                           2 * 2 * 2 * 4));
     }
 }

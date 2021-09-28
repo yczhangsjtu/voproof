@@ -163,6 +163,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let cm_h_vec=KZG10::commit(h_vec_poly);
         let h_vec_poly=poly_from_vec(h_vec);
         let beta=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec, pk.verifier_key.cm_h_vec));
+        define_vec!(r_vec_1, expression_vector!(i, power_linear_combination!(beta, (linear_combination!(F::zero(), 1, vector_index!(u_vec_1, i-(-3*H + 3*S + 1)+1)))*(linear_combination!(F::zero(), 1, vector_index!(s_vec, i-(-3*H + 3*S + 1)+1))), ((linear_combination!(F::zero(), -1, vector_index!(h_vec, i-(3*S + 1)+1)))*(linear_combination!(F::zero(), 1, vector_index!(s_vec, i-(-3*H + 3*S + 1)+1))))-((linear_combination!(F::zero(), 1, vector_index!(h_vec, i-(1)+1)))*(linear_combination!(F::zero(), 1, vector_index!(pk.v_vec, i-(K + 1)+1))))), K + 3*S));
         let r_vec_tilde=(1..=K + 3*S).scan(F::zero(), |acc, &mut i| {*acc = *acc + (r_vec_1[i - 1]); Some(*acc)}).collect::<Vec<F>>();
         let cm_r_vec_tilde=KZG10::commit(r_vec_tilde_poly);
         let alpha=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec, pk.verifier_key.cm_h_vec, pk.verifier_key.cm_r_vec_tilde));

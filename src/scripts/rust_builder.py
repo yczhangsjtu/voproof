@@ -75,6 +75,11 @@ class FunctionCall(RustList):
     return "%s(%s)" % (self.func_name, super(FunctionCall, self).dumpr())
 
 
+class RustMacro(FunctionCall):
+  def __init__(self, macro_name):
+    super(RustMacro, self).__init__("%s!" % macro_name)
+
+
 class Tuple(RustList):
   def __init__(self):
     super(Tuple, self).__init__()

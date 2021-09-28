@@ -22,6 +22,8 @@ use crate::cs::{
     r1cs::{R1CS, R1CSSize, R1CSInstance, R1CSWitness}
 };
 use crate::tools::*;
+#[macro_use]
+use crate::*;
 use crate::kzg::*;
 
 pub trait SNARKProverKey<E: PairingEngine> {}

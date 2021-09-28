@@ -3,7 +3,7 @@ from sympy import Symbol, latex, sympify, Integer, Expr,\
 from sympy.abc import alpha, X
 from sympy.core.numbers import Infinity
 from latex_builder import tex
-from rust_builder import keep_alpha_number, rust
+from rust_builder import keep_alpha_number, rust, RustMacro
 
 
 class _NamedBasic(object):
@@ -155,6 +155,9 @@ class NamedVector(_NamedBasic):
   def shift(self, length):
     return self.__mul__(UnitVector(length + 1))
 
+  def dumpr_at_index(self, index):
+    return rust(RustMacro("vector_index").append([rust_pk(self), rust(index)]))
+
 
 def get_named_vector(name, modifier=None, has_prime=False):
   name = get_name(name, modifier=modifier, has_prime=has_prime, _type="vec")
@@ -235,6 +238,9 @@ class UnitVector(object):
 
   def __div__(self, other):
     return SparseVector._from(self).__div__(other)
+  
+  def dumpr_at_index(self, index):
+    return rust(RustMacro("delta").append([rust(index), rust(self.position)]))
 
 
 class CoeffMap(object):
@@ -470,6 +476,13 @@ class SparseVector(CoeffMap):
       items.append(unit_vector.to_poly_expr(var) * coeff)
     return sum(items)
 
+  def dumpr_at_index(self, index):
+    ret = RustMacro("muti_delta").append(rust(index))
+    for key, uv_coeff in self.items():
+      unit_vector, coeff = uv_coeff
+      ret.append([coeff, unit_vector.position])
+    return rust(ret)
+
 
 def _shift_if_not_zero(vec, shifted):
   if simplify(shifted) == 0:
@@ -603,6 +616,20 @@ class VectorCombination(CoeffMap):
   def dumps(self):
     return _dump_coeff_map_with_sparse_coeff(self)
 
+  def dumpr_at_index(self, index):
+    ret = RustMacro("linear_combination")
+    ret.append(self._dict["one"].dumpr_at_index()
+        if "one" in self._dict else "F::zero()")
+    for key, vec_value in self.items():
+      if key == "one":
+        continue
+      vec, value = vec_value
+      for key2, uv_coeff in value.items():
+        unit_vector, coeff = uv_coeff
+        ret.append([coeff, vec.dumpr_at_index(
+          "%s-(%s)+1" % (rust(index), rust(unit_vector.position)))])
+    return rust(ret)
+
 class PowerVector(object):
   def __init__(self, alpha, size):
     # alpha and size can be Symbol or Integer
@@ -650,6 +677,9 @@ class PowerVector(object):
 
   def to_poly_expr(self, var):
     return ((self.alpha * var) ** self.size - 1) / (self.alpha * var - 1)
+  
+  def dumpr_at_index(self, index):
+    return rust(RustMacro("power_vector_index").append([self.alpha, self.size, index]));
 
 class StructuredVector(CoeffMap):
   def __init__(self):
@@ -734,6 +764,20 @@ class StructuredVector(CoeffMap):
       else:
         items.append(vector.to_poly_expr(var) * value.to_poly_expr(var))
     return sum(items)
+
+  def dumpr_at_index(self, index):
+    ret = RustMacro("linear_combination")
+    ret.append(self._dict["one"].dumpr_at_index()
+        if "one" in self._dict else "F::zero()")
+    for key, vec_value in self.items():
+      if key == "one":
+        continue
+      vec, value = vec_value
+      for key2, uv_coeff in value.items():
+        unit_vector, coeff = uv_coeff
+        ret.append([coeff, vec.dumpr_at_index(
+          "%s-(%s)+1" % (rust(index), rust(unit_vector.position)))])
+    return rust(ret)
 
 
 class Matrix(_NamedBasic):
