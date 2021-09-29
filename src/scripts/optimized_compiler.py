@@ -4,7 +4,7 @@ from vector_symbol import NamedVector, PowerVector, UnitVector, \
                    StructuredVector, VectorCombination, get_named_vector, \
                    PolynomialCombination, simplify_max_with_hints, \
                    get_named_polynomial, PolynomialCommitment, Matrix, \
-                   rust_pk_vk, rust_vk
+                   rust_pk_vk, rust_vk, convolution, NamedVectorPairCombination
 from latex_builder import tex, LaTeXBuilder, AccumulationVector, \
                           ExpressionVector, Math, Enumerate, Itemize, \
                           add_paren_if_add, Algorithm
@@ -591,7 +591,7 @@ class PIOPFromVOProtocol(object):
           piopexec.prover_send_polynomial(poly, self.vector_size + q)
           piopexec.prover_computes(
               LaTeXBuilder(),
-              RustBuilder().let(poly).assign_func("poly_from_vec").append_to_last(v).end())
+              RustBuilder().let(poly).assign_func("poly_from_vec!").append_to_last(v).end())
           vec_to_poly_dict[v.key()] = poly
       else:
         raise ValueError("Interaction of type %s should not appear" % type(interaction))
@@ -725,10 +725,12 @@ class PIOPFromVOProtocol(object):
                                .space("the sum of:").eol()
     hx_items = Itemize()
 
+    hx_vector_combination = NamedVectorPairCombination()
     for i, side in enumerate(extended_hadamard):
       self.debug("  Extended Hadamard %d" % (i + 1))
       a = VectorCombination._from(side.a)
       b = VectorCombination._from(side.b)
+      hx_vector_combination += convolution(a, b)
       for key1, vec_value1 in a.items():
         vec1, value1 = vec_value1
         for key2, vec_value2 in b.items():
@@ -763,7 +765,9 @@ class PIOPFromVOProtocol(object):
               vec_to_poly_dict[vec2.key()].dumps_var(X)))
 
     hxcomputes.append(hx_items)
-    piopexec.prover_computes(hxcomputes, RustBuilder())
+    h = get_named_vector("h")
+    hxcomputes_rust = RustBuilder().let(h).assign()
+    piopexec.prover_computes(hxcomputes, hxcomputes_rust)
 
     self.debug("Compute h1 and h2")
     h_degree, h_inverse_degree = n + max_shift + q, n + max_shift + q

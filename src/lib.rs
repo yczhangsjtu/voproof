@@ -8,4 +8,4 @@ pub mod tools;
 mod error;
 mod cs;
 
-mod snarks;
+// mod snarks;

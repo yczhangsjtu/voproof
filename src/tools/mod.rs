@@ -1,9 +1,11 @@
-use ark_ff::PrimeField as Field;
+use ark_ff::{
+    PrimeField as Field
+};
 use ark_std::{vec, vec::Vec};
 use ark_std::{
     rand::RngCore,
     iter::Iterator,
-    One, Zero,
+    One, Zero, ops::Mul
 };
 use ark_poly::{UVPolynomial,
     univariate::DensePolynomial
@@ -67,10 +69,6 @@ pub fn sample_vec<F: Field, R: RngCore>(rng: &mut R, k: u64) -> Vec<F> {
         res.push(sample_field(rng));
     }
     res
-}
-
-pub fn poly_from_vec<F: Field>(v: Vec<F>) -> DensePolynomial<F> {
-    DensePolynomial::from_coefficients_vec(v)
 }
 
 /// Note: use the macro to_bytes![a, b, c] to convert any collection
@@ -320,6 +318,25 @@ macro_rules! sum {
     };
 }
 
+#[macro_export]
+macro_rules! poly_from_vec {
+    ($v: expr) => {
+        DensePolynomial::from_coefficients_vec($v)
+    };
+}
+
+#[macro_export]
+macro_rules! vector_poly_mul {
+    // Given vectors u, v and field element omega, compute
+    // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
+    ($u:expr, $v:expr, $omega:expr) => {
+        poly_from_vec!($u.iter()
+                        .enumerate()
+                        .map(|(i,c)| *c*power($omega, i as i64))
+                        .rev().collect::<Vec<_>>()).mul(&poly_from_vec!($v))
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -423,5 +440,14 @@ mod tests {
                    vec![1, 2, 3, 4, 5, 6u64]);
         assert_eq!(vector_concat!(vec![1, 2, 3u64], vec![4, 5, 6u64], vec![7, 8, 9]),
                    vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    }
+
+    #[test]
+    fn test_vector_poly_mul() {
+        let u = to_field!(vec![1, 1, 1, 1]);
+        let v = to_field!(vec![1, 2, 3, 4]);
+        let omega = to_field::<F>(2);
+        let poly = vector_poly_mul!(u, v, omega);
+        assert_eq!(to_int!(poly.coeffs), vec![8, 20, 34, 49, 24, 11, 4]);
     }
 }

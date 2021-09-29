@@ -241,6 +241,9 @@ class UnitVector(object):
   
   def dumpr_at_index(self, index):
     return rust(RustMacro("delta").append([rust(index), rust(self.position)]))
+  
+  def reverse_omega(self, omega):
+    return SparseVector._from(self).reverse_omega(omega)
 
 
 class CoeffMap(object):
@@ -483,6 +486,14 @@ class SparseVector(CoeffMap):
       ret.append([to_field(coeff), unit_vector.position])
     return rust(ret)
 
+  def reverse_omega(self):
+    # f_v(X) => f_v(omega X^{-1})
+    v = SparseVector()
+    for key, uv_coeff in self.items():
+      unit_vector, coeff = uv_coeff
+      v.set(2 - unit_vector.position, coeff * (omega ** (unit_vector.position - 1)))
+    return v
+
 
 def _shift_if_not_zero(vec, shifted):
   if simplify(shifted) == 0:
@@ -664,6 +675,10 @@ class PowerVector(object):
     return StructuredVector._from(self).__rsub__(other)
 
   def __mul__(self, other):
+    if isinstance(other, StructuredVector):
+      raise Exception("StructuredVector cannot be multiplied with power vector")
+    if isinstance(other, PowerVector):
+      raise Exception("PowerVectors cannot be multiplied together")
     return StructuredVector._from(self).__mul__(other)
 
   def __rmul__(self, other):
@@ -680,6 +695,9 @@ class PowerVector(object):
   
   def dumpr_at_index(self, index):
     return rust(RustMacro("power_vector_index").append([self.alpha, self.size, index]));
+
+  def reverse_omega(self, omega):
+    return StructuredVector._from(self).reverse_omega(omega)
 
 class StructuredVector(CoeffMap):
   def __init__(self):
@@ -727,6 +745,10 @@ class StructuredVector(CoeffMap):
     return self.__neg__().__add__(other)
 
   def __mul__(self, other):
+    if isinstance(other, StructuredVector):
+      raise Exception("Structured vectors cannot be multiplied together")
+    if isinstance(other, PowerVector):
+      raise Exception("Structured vector cannot be multiplied with a PowerVector")
     return StructuredVector._from(super(StructuredVector, self).__mul__(other))
 
   def __rmul__(self, other):
@@ -778,6 +800,23 @@ class StructuredVector(CoeffMap):
         ret.append([to_field(coeff), vec.dumpr_at_index(
           "%s-(%s)+1" % (rust(index), rust(unit_vector.position)))])
     return rust(ret)
+
+  def reverse_omega(self, omega):
+    ret = StructuredVector()
+    for key, power_value in self.items():
+      vector, value = power_value
+      if key == "one":
+        ret._dict[key] = value.reverse_omega(omega)
+      else:
+        # f(X) => f(omega X^{-1}) transforms the power vector to the coefficients of
+        # (X^{-(k-1)}(alpha omega)^{k-1}) * (1 + (alpha omega)^{-1} X + ...)
+        # which is a transformed power vector. The transformation is then applied
+        # to the coefficient for this power vector
+        ret._dict[key] = (PowerVector(1/(vector.alpha * omega), vector.length),
+                          (value.reverse_omega(omega) *
+                          ((vector.alpha * omega) ** (vector.length - 1)))
+                            .shift(-vector.length + 1))
+    return ret
 
 
 class Matrix(_NamedBasic):
@@ -1021,6 +1060,221 @@ def simplify_max_with_hints(expr, hints):
   for larger, smaller in hints:
     expr = simplify_max(expr, larger, smaller)
   return expr
+
+
+class NamedVectorPair(object):
+  def __init__(self, u, v):
+    if not isinstance(u, NamedVector) and not isinstance(v, NamedVector):
+      raise Exception("At least one of u, v should be NamedVector")
+    if not isinstance(u, NamedVector) and u is not None:
+      raise Exception("u should be either NamedVector or None")
+    if not isinstance(v, NamedVector) and v is not None:
+      raise Exception("v should be either NamedVector or None")
+    self.u = u
+    self.v = v
+
+  def key(self):
+    left = self.u.key() if self.u is not None else "one"
+    right = self.v.key() if self.v is not None else "one"
+    return left + ":vector_pair:" + right
+
+
+class StructuredVectorPair(object):
+  def __init__(self, u, v):
+    if not isinstance(u, StructuredVector) and not isinstance(v, StructuredVector):
+      raise Exception("At least one of u, v should be StructuredVector")
+    if not isinstance(u, StructuredVector) and u is not None:
+      raise Exception("u should be either StructuredVector or None")
+    if not isinstance(v, StructuredVector) and v is not None:
+      raise Exception("v should be either StructuredVector or None")
+    self.u = u
+    self.v = v
+
+  def key(self):
+    left = self.u.key() if self.u is not None else "one"
+    right = self.v.key() if self.v is not None else "one"
+    return left + ":struct_vector_pair:" + right
+
+  def _from(other):
+    if isinstance(other, int) or isinstance(other, str) or \
+       isinstance(other, Expr) or isinstance(other, UnitVector) or \
+       isinstance(other, SparseVector) or isinstance(other, PowerVector):
+      other = StructuredVector._from(other)
+    if isinstance(other, StructuredVector):
+      return StructuredVectorPair(None, other)
+
+  def copy(self):
+    left = self.u.copy() if self.u is not None else None
+    right = self.v.copy() if self.v is not None else None
+    return StructuredVectorPair(left, right)
+
+  def __neg__(self):
+    if self.u is not None:
+      return StructuredVectorPair(-self.u, self.v)
+    return StructuredVectorPair(self.u, -self.v)
+
+
+class StructuredVectorPairCombination(object):
+  def __init__(self):
+    self.pairs = []
+    self.one = None
+
+  def copy(self):
+    return StructuredVectorPairCombination._from(self)
+
+  def add_pair(self, pair):
+    self.pairs.append(pair)
+    return self
+
+  def add_structured_vector(self, vec):
+    if self.one is not None:
+      self.one = self.one + vec
+    else:
+      self.one = vec
+    return self
+
+  def _from(other):
+    v = StructuredVectorPairCombination()
+    if isinstance(other, int) or isinstance(other, str) or \
+       isinstance(other, Expr) or isinstance(other, UnitVector) or \
+       isinstance(other, SparseVector) or isinstance(other, PowerVector) or \
+       isinstance(other, StructuredVector):
+      return v.add_structured_vector(StructuredVector._from(other))
+    if isinstance(other, StructuredVectorPair):
+      return v.add_pair(other)
+    if isinstance(other, tuple) and isinstance(other[0], StructuredVector) and \
+       isinstance(other[1], StructuredVector):
+      return v.add_pair(StructuredVectorPair(other[0], other[1]))
+    if isinstance(other, StructuredVectorPairCombination):
+      v.pairs = [pair for pair in other.pairs]
+      v.one = other.one
+      return v
+    raise Exception("Cannot convert %s to StructuredVectorPairCombination" % (type(other)))
+
+  def __add__(self, other):
+    if not isinstance(other, StructuredVectorPairCombination):
+      other = StructuredVectorPairCombination._from(other)
+
+    ret = StructuredVectorPairCombination()
+    ret.pairs = self.pairs + other.pairs
+    ret.one = None if self.one is None and other.one is None \
+                   else (StructuredVector._from(0) if self.one is None else self.one) + \
+                        (StructuredVector._from(0) if other.one is None else other.one)
+    return ret
+
+  def __radd__(self, other):
+    return self.__add__(other)
+
+  def __neg__(self):
+    ret = StructuredVectorPairCombination()
+    ret.pairs = [-pair for pair in self.pairs]
+    ret.one = None if self.one is None else -self.one
+    return ret
+
+  def __sub__(self, other):
+    return self.__add__(-other)
+
+  def __rsub__(self, other):
+    return self.__neg__().__add__(other)
+
+
+class NamedVectorPairCombination(CoeffMap):
+  def __init__(self):
+    super(NamedVectorPairCombination, self).__init__()
+
+  def copy(self):
+    return NamedVectorPairCombination._from(self)
+
+  def _from(other):
+    v = NamedVectorPairCombination()
+    if isinstance(other, int) or isinstance(other, str) or \
+       isinstance(other, Expr) or isinstance(other, UnitVector) or \
+       isinstance(other, SparseVector) or isinstance(other, PowerVector) or \
+       isinstance(other, StructuredVector) or isinstance(other, StructuredVectorPair):
+      return v.set("one", StructuredVectorPairCombination._from(other))
+    if isinstance(other, StructuredVectorPairCombination):
+      return v.set("one", other.copy())
+    if isinstance(other, tuple) and isinstance(other[0], NamedVector) and \
+       isinstance(other[1], NamedVector):
+      return v.set(NamedVectorPair(other[0], other[1]), StructuredVector._from(1))
+    if isinstance(other, tuple) and isinstance(other[0], NamedVectorPair) and \
+       isinstance(other[1], StructuredVector):
+      return v.set(other[0], other[1])
+    if isinstance(other, NamedVectorPair):
+      return v.set(other, StructuredVector._from(1))
+    if isinstance(other, NamedVectorPairCombination) or type(other) == CoeffMap:
+      for key, value in other.items():
+        v._dict[key] = value
+      return v
+    raise Exception("Cannot convert %s to NamedVectorPairCombination" % (type(other)))
+
+  def __add__(self, other):
+    if not isinstance(other, NamedVectorPairCombination):
+      other = NamedVectorPairCombination._from(other)
+
+    ret = super(NamedVectorPairCombination, self).__add__(other)
+    return NamedVectorPairCombination._from(ret)
+
+  def __radd__(self, other):
+    return self.__add__(other)
+
+  def __neg__(self):
+    return NamedVectorPairCombination._from(super(NamedVectorPairCombination, self).__neg__())
+
+  def __sub__(self, other):
+    return self.__add__(-other)
+
+  def __rsub__(self, other):
+    return self.__neg__().__add__(other)
+
+
+def convolution(left, right, omega):
+  if isinstance(left, VectorCombination) and isinstance(right, VectorCombination):
+    ret = NamedVectorPairCombination()
+    # Multiplying vector combinations, named vectors are combined to named vector pairs
+    # structured vectors are combined to structured vector pairs
+    # the coefficients are convoluted
+    for left_key, left_vector_coeff in left.items():
+      for right_key, right_vector_coeff in left.items():
+        left_vector, left_coeff = left_vector_coeff
+        right_vector, right_coeff = right_vector_coeff
+        coeff = convolution(left_coeff, right_coeff)
+        if left_key == "one" and right_key == "one":
+          ret += coeff
+        elif left_key != "one" and right_key == "one":
+          ret += (NamedVectorPair(left_vector, None), coeff)
+        elif left_key == "one" and right_key != "one":
+          ret += (NamedVectorPair(None, right_vector), coeff)
+        else:
+          ret += (NamedVectorPair(left_vector, right_vector), coeff)
+    return ret
+
+  if isinstance(left, VectorCombination):
+    ret = NamedVectorPairCombination()
+    for left_key, left_vector_coeff in left.items():
+      left_vector, left_coeff = left_vector_coeff
+      coeff = convolution(left_coeff, right)
+      if left_key == "one":
+        ret += coeff
+      else:
+        ret += (NamedVectorPair(left_vector, None), coeff)
+    return ret
+
+  if isinstance(right, VectorCombination):
+    ret = NamedVectorPairCombination()
+    for right_key, right_vector_coeff in right.items():
+      right_vector, right_coeff = right_vector_coeff
+      coeff = convolution(left, right_coeff)
+      if left_key == "one":
+        ret += coeff
+      else:
+        ret += (NamedVectorPair(None, right_vector), coeff)
+    return ret
+
+  if isinstance(left, StructuredVector) and isinstance(right, StructuredVector):
+    return StructuredVectorPair(left, right)
+
+  return left.reverse_omega(omega) * right
 
 
 if __name__ == "__main__":
