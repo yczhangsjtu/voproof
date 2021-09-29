@@ -326,14 +326,35 @@ macro_rules! poly_from_vec {
 }
 
 #[macro_export]
+macro_rules! vector_reverse_omega {
+    ($v: expr, $omega:expr) => {
+        $v.iter().enumerate().map(|(i,c)| *c*power($omega, i as i64))
+          .rev().collect::<Vec<_>>()
+    };
+}
+
+#[macro_export]
 macro_rules! vector_poly_mul {
     // Given vectors u, v and field element omega, compute
     // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
     ($u:expr, $v:expr, $omega:expr) => {
-        poly_from_vec!($u.iter()
-                        .enumerate()
-                        .map(|(i,c)| *c*power($omega, i as i64))
-                        .rev().collect::<Vec<_>>()).mul(&poly_from_vec!($v))
+        poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec!($v))
+    };
+}
+
+#[macro_export]
+macro_rules! vector_power_mul {
+    // Given vector v, element alpha, length n, compute
+    // the coefficient vector of v * power(alpha, n)
+    ($v:expr, $alpha:expr, $n:expr) => {
+        {
+            let alpha_power = power($alpha, $n as i64);
+            (1..($n as usize)+$v.len()).scan(F::zero(), |acc, i| {
+                *acc = *acc * $alpha + vector_index!($v, i) -
+                       vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
+                Some(*acc)
+            }).collect::<Vec<_>>()
+        }
     };
 }
 
@@ -443,11 +464,28 @@ mod tests {
     }
 
     #[test]
+    fn test_vector_reverse_omega() {
+        let omega = to_field::<F>(2);
+        let v = to_field!(vec![1, 2, 3, 1]);
+        assert_eq!(to_int!(vector_reverse_omega!(v, omega)),
+                   vec![8, 12, 4, 1]);
+    }
+
+    #[test]
     fn test_vector_poly_mul() {
         let u = to_field!(vec![1, 1, 1, 1]);
         let v = to_field!(vec![1, 2, 3, 4]);
         let omega = to_field::<F>(2);
         let poly = vector_poly_mul!(u, v, omega);
         assert_eq!(to_int!(poly.coeffs), vec![8, 20, 34, 49, 24, 11, 4]);
+    }
+
+    #[test]
+    fn test_vector_power_mul() {
+        let v = to_field!(vec![1, 2, 3, 4]);
+        let alpha = to_field::<F>(2);
+        assert_eq!(to_int!(vector_power_mul!(v, alpha, 3)), vec![1, 4, 11, 18, 20, 16]);
+        assert_eq!(to_int!(vector_power_mul!(v, alpha, 4)), vec![1, 4, 11, 26, 36, 40, 32]);
+        assert_eq!(to_int!(vector_power_mul!(v, alpha, 5)), vec![1, 4, 11, 26, 52, 72, 80, 64]);
     }
 }

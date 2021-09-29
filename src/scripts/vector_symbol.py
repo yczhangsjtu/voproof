@@ -3,7 +3,8 @@ from sympy import Symbol, latex, sympify, Integer, Expr,\
 from sympy.abc import alpha, X
 from sympy.core.numbers import Infinity
 from latex_builder import tex
-from rust_builder import keep_alpha_number, rust, RustMacro, to_field
+from rust_builder import keep_alpha_number, rust, RustMacro, to_field, \
+                         RustBuilder
 
 
 class _NamedBasic(object):
@@ -1226,6 +1227,65 @@ class NamedVectorPairCombination(CoeffMap):
 
   def __rsub__(self, other):
     return self.__neg__().__add__(other)
+
+  def dumpr_poly_mul(self, omega, length):
+    named_vector_structure_pairs = []
+    structured_vector_pair = None
+    ret = RustBuilder()
+    for key, vector_coeff in self.items():
+      vector_pair, coeff = vector_coeff
+      if key == "one":
+        structured_vector_pair = coeff
+      elif vector_pair.u is not None and vector_pair.v is not None:
+        mul = RustMacro("vector_poly_mul").append([vector_pair.u, vector_pair.v, omega])
+        v = get_named_vector("v")
+        ret.let(v).assign(mul).attribute("coeffs").end()
+        named_vector_structure_pairs.append((v, coeff))
+      elif vector_pair.u is not None:
+        v = get_named_vector("v")
+        ret.let(v).assign(
+            RustMacro("vector_reverse_omega")
+            .append([vector_pair.u, omega])).end()
+        to_shift = Symbol(get_name("shiftlength"))
+        ret.let(to_shift).assign(vector_pair.u).invoke_method("len").minus(1).end()
+        # After the reverse, the vector should be shifted left by |v|-1
+        # this shift is applied to the coefficient instead
+        named_vector_structure_pairs.append((v, coeff.shift(-to_shift)))
+      elif vector_pair.v is not None:
+        named_vector_structure_pairs.append((vector_pair.v, coeff))
+      else:
+        raise Exception("Invalid named vector pair")
+
+    named_power_sparse_tuples = []
+    vector_combination = VectorCombination()
+    power_power_sparse_tuples = []
+    for v, st in named_vector_structure_pairs:
+      for key, p_coeff in st.items():
+        p, coeff = p_coeff
+        if key == "one":
+          vector_combination += v * coeff
+        else:
+          named_power_sparse_tuples.append((v, p, coeff))
+
+    if structured_vector_pair.u is not None and structured_vector_pair.v is not None:
+      for left_key, left_p_coeff in structured_vector_pair.u.items():
+        left_p, left_coeff = left_p_coeff
+        for right_key, right_p_coeff in structured_vector_pair.v.items():
+          right_p, right_coeff = right_p_coeff
+          if left_key != "one" and right_key != "one":
+            coeff = convolution(left_coeff, right_coeff)
+            power_power_sparse_tuples.append((left_p, right_p, coeff))
+          elif left_key != "one":
+            vector_combination += convolution(left_p * left_coeff, right_coeff)
+          elif right_key != "one":
+            vector_combination += convolution(left_coeff, right_coeff * right_p)
+          else:
+            vector_combination += convolution(left_coeff, right_coeff)
+
+    for v, p, s in named_power_sparse_tuples:
+      RustMacro("vector_power_mul").append([v, p.alpha, p.length])
+
+    return rust(ret)
 
 
 def convolution(left, right, omega):
