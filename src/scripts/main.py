@@ -12,7 +12,7 @@ from pov_protocols import POV, POVProverEfficient
 from rust_builder import RustBuilder, rust
 from latex_builder import LaTeXBuilder
 
-ell = Symbol("\\ell", positive=True)
+ell = Symbol("ell", positive=True)
 m = Symbol("m", positive=True)
 # n = Symbol("n", positive=True)
 H = Symbol("H", positive=True)
@@ -140,7 +140,7 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
 
 def analyzeR1CS():
   hints = [(S, H + 1), (S, K + 1), (H, K)]
-  size_map = [(H, "nrows"), (K, "ncols"), (S, "density")]
+  size_map = [(H, "nrows"), (K, "ncols"), (S, "density"), (ell, "input_size")]
   x = get_named_vector("x")
   x.local_evaluate = True
   ppargs = (H, K, S*3)

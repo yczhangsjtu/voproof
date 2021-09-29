@@ -149,6 +149,7 @@ class RustBuilder(object):
     self.append(".")
     if right is not None:
       self.append(right)
+    return self
 
   def assign_func(self, right):
     return self.assign().func(right)

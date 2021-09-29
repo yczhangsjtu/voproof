@@ -56,6 +56,7 @@ impl VOProofR1CS {
         let H=size.nrows;
         let K=size.ncols;
         let S=size.density;
+        let ell=size.input_size;
         
         K + 6*S
     }
@@ -96,6 +97,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let H=size.nrows;
         let K=size.ncols;
         let S=size.density;
+        let ell=size.input_size;
         let gamma=F::GENERATOR;
         let M_mat=(cs.arows.iter().chain(cs.brows.iter().map(|i| i + H)).chain(cs.crows.iter().map(|i| i + H * 2)).collect::<Vec<u64>>(), cs.acols.iter().chain(cs.bcols).chain(cs.ccols).collect::<Vec<u64>>(), cs.avals.iter().chain(cs.bvals).chain(cs.cvals).collect::<Vec<F>>());
         let u_vec=(1..=3*S).map(|i| power(gamma, M_mat.0[i] as i64)).collect::<Vec<F>>();
@@ -138,6 +140,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let H=size.nrows;
         let K=size.ncols;
         let S=size.density;
+        let ell=size.input_size;
         let gamma=F::GENERATOR;
         let delta_vec=sample_vec::<F, _>(rng);
         let delta_vec_1=sample_vec::<F, _>(rng);
@@ -147,7 +150,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let u_vec_1=sparse_mvp(H, K);
         let u_vec_1=fixed_length_vector_iter(u_vec_1, K + 3*S).chain(delta_vec).collect::<Vec<F>>();
         let cm_u_vec_1=vector_to_commitment(u_vec_1);
-        let u_vec_1_poly=poly_from_vec(u_vec_1);
+        let u_vec_1_poly=poly_from_vec!(u_vec_1);
         let mu=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1));
         let mut r_vec=(1..=3*H).map(|i| mu-power(gamma, i)).collect::<Vec<F>>();
         batch_inversion(r_vec);
@@ -155,14 +158,14 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let s_vec=r_vec.iter().chain(r_vec.iter().map(|a| -a)).collect::<Vec<F>>();
         let s_vec=fixed_length_vector_iter(s_vec, K + 3*S).chain(delta_vec_1).collect::<Vec<F>>();
         let cm_s_vec=vector_to_commitment(s_vec);
-        let s_vec_poly=poly_from_vec(s_vec);
+        let s_vec_poly=poly_from_vec!(s_vec);
         let nu=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec));
         let mut rnu_vec=(1..=K).map(|i| nu-power(gamma, i)).collect::<Vec<F>>();
         batch_inversion(rnu_vec);
         let h_vec=rnu_vec.iter().chain(pk.u_vec.iter().zip(pk.w_vec).map(|u, w| (mu - u) * (nu - w))).collect::<Vec<F>>();
         let h_vec=fixed_length_vector_iter(h_vec, K + 3*S).chain(delta_vec_2).collect::<Vec<F>>();
         let cm_h_vec=vector_to_commitment(h_vec);
-        let h_vec_poly=poly_from_vec(h_vec);
+        let h_vec_poly=poly_from_vec!(h_vec);
         let beta=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec, pk.verifier_key.cm_h_vec));
         define_vec!(r_vec_1, expression_vector!(i, power_linear_combination!(beta, (linear_combination!(F::zero(), to_field::<F>(1), vector_index!(u_vec_1, (i as i64)-(-3*H + 3*S + 1) as i64+1)))*(linear_combination!(F::zero(), to_field::<F>(1), vector_index!(s_vec, (i as i64)-(-3*H + 3*S + 1) as i64+1))), ((linear_combination!(F::zero(), -to_field::<F>(1), vector_index!(h_vec, (i as i64)-(3*S + 1) as i64+1)))*(linear_combination!(F::zero(), to_field::<F>(1), vector_index!(s_vec, (i as i64)-(-3*H + 3*S + 1) as i64+1))))-((linear_combination!(F::zero(), to_field::<F>(1), vector_index!(h_vec, (i as i64)-(1) as i64+1)))*(linear_combination!(F::zero(), to_field::<F>(1), vector_index!(pk.v_vec, (i as i64)-(K + 1) as i64+1))))), K + 3*S));
         define_vec!(r_vec_tilde, vector_concat!(delta_vec_3, accumulate_vector!(r_vec_1, +)));
@@ -172,6 +175,24 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         define_vec!(t_vec_1, vector_concat!(t_vec, delta_vec_4));
         let cm_t_vec_1=vector_to_commitment(t_vec_1);
         let omega=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec, pk.verifier_key.cm_h_vec, pk.verifier_key.cm_r_vec_tilde, pk.verifier_key.cm_t_vec_1));
+        let v_vec_1=vector_poly_mul!(h_vec, h_vec, omega).coeffs;
+        let v_vec_2=vector_poly_mul!(u_vec_1, u_vec_1, omega).coeffs;
+        let v_vec_3=vector_poly_mul!(r_vec_tilde, r_vec_tilde, omega).coeffs;
+        let v_vec_4=power_power_mul!(1, 3*H, 1, 3*H);
+        let v_vec_5=power_power_mul!(1, 3*H, gamma, 3*H);
+        let v_vec_6=power_power_mul!(gamma, 3*H, 1, 3*H);
+        let v_vec_7=power_power_mul!(gamma, 3*H, gamma, 3*H);
+        let v_vec_8=power_power_mul!(1, 3*H, 1, 3*H);
+        let v_vec_9=power_power_mul!(1, K, 1, K);
+        let v_vec_10=power_power_mul!(1, K, gamma, K);
+        let v_vec_11=power_power_mul!(gamma, K, 1, K);
+        let v_vec_12=power_power_mul!(gamma, K, gamma, K);
+        let v_vec_13=power_power_mul!(1, K, 1, K);
+        let v_vec_14=power_power_mul!(1, K, 1, K);
+        let v_vec_15=power_power_mul!(1, H, 1, H);
+        let v_vec_16=power_power_mul!(1, ell + 1, 1, ell + 1);
+        let v_vec_17=power_power_mul!(1, 3*S + 1, 1, 3*S + 1);
+        let h_vec_1=expression_vector!(i, linear_combination!(F::zero(), alpha**10*beta**2*omega**(3*S) + alpha**10*beta**2 + alpha**4, vector_index!(v_vec_1, (i as i64)-(1) as i64+1), alpha**6*(alpha**4*omega**(-3*H + 3*S) + omega**(-H + K + 3*S)), vector_index!(v_vec_2, (i as i64)-(1) as i64+1), alpha**10*(alpha**2 + omega + 1), vector_index!(v_vec_3, (i as i64)-(1) as i64+1), -alpha**10, vector_index!(v_vec_3, (i as i64)-(2) as i64+1), -alpha**10*omega, vector_index!(v_vec_3, (i as i64)-(0) as i64+1), mu**2, vector_index!(v_vec_4, (i as i64)-(1) as i64+1), -mu, vector_index!(v_vec_5, (i as i64)-(1) as i64+1), -mu, vector_index!(v_vec_6, (i as i64)-(1) as i64+1), to_field::<F>(1), vector_index!(v_vec_7, (i as i64)-(1) as i64+1), to_field::<F>(1), vector_index!(v_vec_8, (i as i64)-(1) as i64+1), alpha**2*nu**2, vector_index!(v_vec_9, (i as i64)-(1) as i64+1), -alpha**2*nu, vector_index!(v_vec_10, (i as i64)-(1) as i64+1), -alpha**2*nu, vector_index!(v_vec_11, (i as i64)-(1) as i64+1), alpha**2, vector_index!(v_vec_12, (i as i64)-(1) as i64+1), alpha**2, vector_index!(v_vec_13, (i as i64)-(1) as i64+1), alpha**4, vector_index!(v_vec_14, (i as i64)-(1) as i64+1), alpha**6*omega**(-H + K + 3*S), vector_index!(v_vec_15, (i as i64)-(1) as i64+1), alpha**8*omega**(3*H), vector_index!(v_vec_16, (i as i64)-(1) as i64+1), omega**(K + 3*S), vector_index!(v_vec_17, (i as i64)-(1) as i64+1)), 2*K + 6*S + 1);
         let cm_h_1=KZG10::commit(h_1_poly);
         let cm_h_2=KZG10::commit(h_2_poly);
         let z=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec, pk.verifier_key.cm_h_vec, pk.verifier_key.cm_r_vec_tilde, pk.verifier_key.cm_t_vec_1, pk.verifier_key.cm_h_1, pk.verifier_key.cm_h_2));
@@ -196,6 +217,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let H=size.nrows;
         let K=size.ncols;
         let S=size.density;
+        let ell=size.input_size;
         let gamma=F::GENERATOR;
         let mu=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1));
         let nu=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1, vk.cm_s_vec));

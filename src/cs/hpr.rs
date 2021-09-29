@@ -15,6 +15,7 @@ pub struct HPR<F: Field> {
     pub dvals: Vec<F>,
     pub nrows: u64,
     pub ncols: u64,
+    pub input_size: u64,
 }
 
 impl<F: Field> ConstraintSystem<F, HPRSize> for HPR<F> {
@@ -36,6 +37,7 @@ impl<F: Field> ConstraintSystem<F, HPRSize> for HPR<F> {
             ncols: self.ncols,
             density: density as u64,
             d_density: d_density as u64,
+            input_size: self.input_size as u64,
         }
     }
 }
@@ -45,6 +47,7 @@ pub struct HPRSize {
     pub ncols: u64,
     pub density: u64,
     pub d_density: u64,
+    pub input_size: u64,
 }
 
 impl CSSize for HPRSize {}

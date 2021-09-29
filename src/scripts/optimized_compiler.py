@@ -42,13 +42,13 @@ class Computes(object):
     self.owner = owner
 
   def dumps(self):
-    ret = self.latex_builder.dumps()
+    ret = tex(self.latex_builder)
     if self.owner is not None:
       ret = "\\%s computes %s" % (self.owner, ret)
     return ret
 
   def dumpr(self):
-    return self.rust_builder.dumpr()
+    return rust(self.rust_builder)
 
 
 class IndexerComputes(Computes):
@@ -730,7 +730,7 @@ class PIOPFromVOProtocol(object):
       self.debug("  Extended Hadamard %d" % (i + 1))
       a = VectorCombination._from(side.a)
       b = VectorCombination._from(side.b)
-      hx_vector_combination += convolution(a, b)
+      hx_vector_combination += convolution(a, b, omega)
       for key1, vec_value1 in a.items():
         vec1, value1 = vec_value1
         for key2, vec_value2 in b.items():
@@ -766,7 +766,7 @@ class PIOPFromVOProtocol(object):
 
     hxcomputes.append(hx_items)
     h = get_named_vector("h")
-    hxcomputes_rust = RustBuilder().let(h).assign()
+    hxcomputes_rust = hx_vector_combination.dumpr_poly_mul(h, omega, n * 2 + q)
     piopexec.prover_computes(hxcomputes, hxcomputes_rust)
 
     self.debug("Compute h1 and h2")

@@ -487,7 +487,7 @@ class SparseVector(CoeffMap):
       ret.append([to_field(coeff), unit_vector.position])
     return rust(ret)
 
-  def reverse_omega(self):
+  def reverse_omega(self, omega):
     # f_v(X) => f_v(omega X^{-1})
     v = SparseVector()
     for key, uv_coeff in self.items():
@@ -1201,13 +1201,16 @@ class NamedVectorPairCombination(CoeffMap):
     if isinstance(other, tuple) and isinstance(other[0], NamedVectorPair) and \
        isinstance(other[1], StructuredVector):
       return v.set(other[0], other[1])
+    if isinstance(other, tuple) and isinstance(other[0], NamedVectorPair) and \
+       isinstance(other[1], SparseVector):
+      return v.set(other[0], StructuredVector._from(other[1]))
     if isinstance(other, NamedVectorPair):
       return v.set(other, StructuredVector._from(1))
     if isinstance(other, NamedVectorPairCombination) or type(other) == CoeffMap:
       for key, value in other.items():
         v._dict[key] = value
       return v
-    raise Exception("Cannot convert %s to NamedVectorPairCombination" % (type(other)))
+    raise Exception("Cannot convert %s to NamedVectorPairCombination" % (str(other)))
 
   def __add__(self, other):
     if not isinstance(other, NamedVectorPairCombination):
@@ -1228,14 +1231,14 @@ class NamedVectorPairCombination(CoeffMap):
   def __rsub__(self, other):
     return self.__neg__().__add__(other)
 
-  def dumpr_poly_mul(self, omega, length):
+  def dumpr_poly_mul(self, target, omega, length):
     named_vector_structure_pairs = []
-    structured_vector_pair = None
+    structured_vector_pair_combination = None
     ret = RustBuilder()
     for key, vector_coeff in self.items():
       vector_pair, coeff = vector_coeff
       if key == "one":
-        structured_vector_pair = coeff
+        structured_vector_pair_combination = coeff
       elif vector_pair.u is not None and vector_pair.v is not None:
         mul = RustMacro("vector_poly_mul").append([vector_pair.u, vector_pair.v, omega])
         v = get_named_vector("v")
@@ -1267,20 +1270,25 @@ class NamedVectorPairCombination(CoeffMap):
         else:
           named_power_sparse_tuples.append((v, p, coeff))
 
-    if structured_vector_pair.u is not None and structured_vector_pair.v is not None:
-      for left_key, left_p_coeff in structured_vector_pair.u.items():
-        left_p, left_coeff = left_p_coeff
-        for right_key, right_p_coeff in structured_vector_pair.v.items():
-          right_p, right_coeff = right_p_coeff
-          if left_key != "one" and right_key != "one":
-            coeff = convolution(left_coeff, right_coeff)
-            power_power_sparse_tuples.append((left_p, right_p, coeff))
-          elif left_key != "one":
-            vector_combination += convolution(left_p * left_coeff, right_coeff)
-          elif right_key != "one":
-            vector_combination += convolution(left_coeff, right_coeff * right_p)
-          else:
-            vector_combination += convolution(left_coeff, right_coeff)
+    if structured_vector_pair_combination is not None:
+      if structured_vector_pair_combination.one is not None:
+        vector_combination += structured_vector_pair_combination.one
+      for structured_vector_pair in structured_vector_pair_combination.pairs:
+        if structured_vector_pair.u is not None and \
+           structured_vector_pair.v is not None:
+          for left_key, left_p_coeff in structured_vector_pair.u.items():
+            left_p, left_coeff = left_p_coeff
+            for right_key, right_p_coeff in structured_vector_pair.v.items():
+              right_p, right_coeff = right_p_coeff
+              if left_key != "one" and right_key != "one":
+                coeff = convolution(left_coeff, right_coeff, omega)
+                power_power_sparse_tuples.append((left_p, right_p, coeff))
+              elif left_key != "one":
+                vector_combination += convolution(left_p * left_coeff, right_coeff, omega)
+              elif right_key != "one":
+                vector_combination += convolution(left_coeff, right_coeff * right_p, omega)
+              else:
+                vector_combination += convolution(left_coeff, right_coeff, omega)
 
     for v, p, s in named_power_sparse_tuples:
       v = get_named_vector("v")
@@ -1291,8 +1299,14 @@ class NamedVectorPairCombination(CoeffMap):
     for p1, p2, s in power_power_sparse_tuples:
       v = get_named_vector("v")
       ret.let(v).assign(RustMacro("power_power_mul")
-        .append([p1.alpha, p1.length, p2.alpha, p2.length])).end()
+        .append([p1.alpha, p1.size, p2.alpha, p2.size])).end()
       vector_combination += v * s
+
+    ret.let(target).assign(
+        RustMacro("expression_vector").append(
+          [Symbol("i"),
+           vector_combination.dumpr_at_index(Symbol("i")),
+           length])).end()
 
     return rust(ret)
 
@@ -1307,7 +1321,7 @@ def convolution(left, right, omega):
       for right_key, right_vector_coeff in left.items():
         left_vector, left_coeff = left_vector_coeff
         right_vector, right_coeff = right_vector_coeff
-        coeff = convolution(left_coeff, right_coeff)
+        coeff = convolution(left_coeff, right_coeff, omega)
         if left_key == "one" and right_key == "one":
           ret += coeff
         elif left_key != "one" and right_key == "one":
@@ -1322,7 +1336,7 @@ def convolution(left, right, omega):
     ret = NamedVectorPairCombination()
     for left_key, left_vector_coeff in left.items():
       left_vector, left_coeff = left_vector_coeff
-      coeff = convolution(left_coeff, right)
+      coeff = convolution(left_coeff, right, omega)
       if left_key == "one":
         ret += coeff
       else:
@@ -1333,7 +1347,7 @@ def convolution(left, right, omega):
     ret = NamedVectorPairCombination()
     for right_key, right_vector_coeff in right.items():
       right_vector, right_coeff = right_vector_coeff
-      coeff = convolution(left, right_coeff)
+      coeff = convolution(left, right_coeff, omega)
       if left_key == "one":
         ret += coeff
       else:

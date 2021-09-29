@@ -13,6 +13,7 @@ pub struct R1CS<F: Field> {
     pub cvals: Vec<F>,
     pub nrows: u64,
     pub ncols: u64,
+    pub input_size: u64,
 }
 
 impl<F: Field> ConstraintSystem<F, R1CSSize> for R1CS<F> {
@@ -30,6 +31,7 @@ impl<F: Field> ConstraintSystem<F, R1CSSize> for R1CS<F> {
             nrows: self.nrows,
             ncols: self.ncols,
             density: density as u64,
+            input_size: self.input_size,
         }
     }
 }
@@ -38,6 +40,7 @@ pub struct R1CSSize {
     pub nrows: u64,
     pub ncols: u64,
     pub density: u64,
+    pub input_size: u64,
 }
 
 impl CSSize for R1CSSize {}
