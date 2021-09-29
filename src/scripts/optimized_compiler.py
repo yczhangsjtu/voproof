@@ -1019,11 +1019,18 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
                 .append_to_last([rust_vk(x) for x in transcript])).end())
       if isinstance(interaction, ProverSendPolynomials):
         for poly, degree in interaction.polynomials:
-          self.prover_computes(Math(poly.to_comm()).assign(
+          commit_computation = Math(poly.to_comm()).assign(
             "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
             % (poly.dumps())
-            ), RustBuilder().let(poly.to_comm())
-            .assign_func("KZG10::commit").append_to_last(poly).end())
+            )
+          commit_rust_computation = RustBuilder().let(poly.to_comm())
+          if isinstance(poly, NamedPolynomial):
+            commit_rust_computation.assign_func("KZG10::commit").append_to_last(poly).end()
+          elif isinstance(poly, NamedVectorPolynomial):
+            commit_rust_computation.assign_func("vector_to_commitment").append_to_last(poly.vector).end()
+          else:
+            raise Exception("Unrecognized polynomial type: %s" % type(poly))
+          self.prover_computes(commit_computation, commit_rust_computation)
           transcript.append(poly.to_comm())
           self.proof.append(poly.to_comm())
 

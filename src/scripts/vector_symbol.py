@@ -3,7 +3,7 @@ from sympy import Symbol, latex, sympify, Integer, Expr,\
 from sympy.abc import alpha, X
 from sympy.core.numbers import Infinity
 from latex_builder import tex
-from rust_builder import keep_alpha_number, rust, RustMacro
+from rust_builder import keep_alpha_number, rust, RustMacro, to_field
 
 
 class _NamedBasic(object):
@@ -618,7 +618,7 @@ class VectorCombination(CoeffMap):
 
   def dumpr_at_index(self, index):
     ret = RustMacro("linear_combination")
-    ret.append(self._dict["one"].dumpr_at_index()
+    ret.append(self._dict["one"].dumpr_at_index(index)
         if "one" in self._dict else "F::zero()")
     for key, vec_value in self.items():
       if key == "one":
@@ -627,7 +627,7 @@ class VectorCombination(CoeffMap):
       for key2, uv_coeff in value.items():
         unit_vector, coeff = uv_coeff
         ret.append([to_field(coeff), vec.dumpr_at_index(
-          "%s-(%s)+1" % (rust(index), rust(unit_vector.position)))])
+          "(%s as i64)-(%s) as i64+1" % (rust(index), rust(unit_vector.position)))])
     return rust(ret)
 
 class PowerVector(object):
@@ -767,7 +767,7 @@ class StructuredVector(CoeffMap):
 
   def dumpr_at_index(self, index):
     ret = RustMacro("linear_combination")
-    ret.append(self._dict["one"].dumpr_at_index()
+    ret.append(self._dict["one"].dumpr_at_index(index)
         if "one" in self._dict else "F::zero()")
     for key, vec_value in self.items():
       if key == "one":

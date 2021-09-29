@@ -16,7 +16,11 @@ def rust(expr):
 
 def to_field(expr):
   if isinstance(expr, Integer):
-    return rust(RustBuilder().func("to_field::<F>").append_to_last(expr))
+    if expr == 0:
+      return "F::zero()"
+    if expr > 0:
+      return rust(RustBuilder().func("to_field::<F>").append_to_last(expr))
+    return rust(RustBuilder().append("-").func("to_field::<F>").append_to_last(-expr))
   return rust(expr)
 
 class Samples(object):
