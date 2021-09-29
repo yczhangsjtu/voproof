@@ -358,6 +358,35 @@ macro_rules! vector_power_mul {
     };
 }
 
+#[macro_export]
+macro_rules! power_power_mul {
+    // Given two power vector, compute the coefficient vector
+    // of their product
+    ($alpha:expr, $n:expr, $beta:expr, $m:expr) => {
+        {
+            let alpha_power = power($alpha, $n as i64);
+            let mut beta_power = F::one();
+            let mut late_beta_power = F::zero();
+            (1..($n as usize)+($m as usize)).scan(F::zero(), |acc, i| {
+                *acc = *acc * $alpha + beta_power - late_beta_power * alpha_power;
+                beta_power = if i >= $m {
+                    F::zero()
+                } else {
+                    beta_power * $beta
+                };
+                late_beta_power = if i < $n {
+                    F::zero()
+                } else if i == $n {
+                    F::one()
+                } else {
+                    late_beta_power * $beta
+                };
+                Some(*acc)
+            }).collect::<Vec<_>>()
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -487,5 +516,14 @@ mod tests {
         assert_eq!(to_int!(vector_power_mul!(v, alpha, 3)), vec![1, 4, 11, 18, 20, 16]);
         assert_eq!(to_int!(vector_power_mul!(v, alpha, 4)), vec![1, 4, 11, 26, 36, 40, 32]);
         assert_eq!(to_int!(vector_power_mul!(v, alpha, 5)), vec![1, 4, 11, 26, 52, 72, 80, 64]);
+    }
+
+    #[test]
+    fn test_power_power_mul() {
+        let alpha = to_field::<F>(2);
+        let beta = to_field::<F>(3);
+        assert_eq!(to_int!(power_power_mul!(alpha, 3, beta, 4)), vec![1, 5, 19, 57, 90, 108]);
+        assert_eq!(to_int!(power_power_mul!(alpha, 4, beta, 4)), vec![1, 5, 19, 65, 114, 180, 216]);
+        assert_eq!(to_int!(power_power_mul!(alpha, 5, beta, 4)), vec![1, 5, 19, 65, 130, 228, 360, 432]);
     }
 }
