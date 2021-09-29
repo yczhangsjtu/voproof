@@ -7,7 +7,8 @@ from vector_symbol import get_named_vector, PowerVector, UnitVector, \
 from latex_builder import Math, AccumulationVector, ExpressionVector, \
                           LaTeXBuilder, ProductAccumulationDivideVector, \
                           add_paren_if_not_atom, tex
-from rust_builder import RustBuilder, Tuple, ExpressionVectorRust, rust
+from rust_builder import RustBuilder, Tuple, ExpressionVectorRust, rust,\
+                         RustMacro
                          
 
 class SparseMVP(VOProtocol):
@@ -280,7 +281,13 @@ class R1CS(VOProtocol):
     voexec.input_instance(x)
     voexec.input_witness(w)
 
+    voexec.prover_computes(LaTeXBuilder(),
+        RustBuilder().let(x).assign("x.instance").end())
+    voexec.prover_computes(LaTeXBuilder(),
+        RustBuilder().let(w).assign("w.witness").end())
+
     H, K, s, n = voexec.r1cs_H, voexec.r1cs_K, voexec.s, voexec.vector_size
+    M = voexec.M
 
     u = get_named_vector("u")
     voexec.prover_computes(Math(u).assign().paren(
@@ -289,7 +296,11 @@ class R1CS(VOProtocol):
         )
       ).double_bar(1).double_bar(x).double_bar(w),
       RustBuilder().let(u).assign_func("sparse_mvp")
-                   .append_to_last([H, K]).end())
+                   .append_to_last([H, K, "%s.1" % rust_pk(M),
+                      "%s.0" % rust_pk(M), "%s.2" % rust_pk(M),
+                      RustMacro("vector_concat").append([
+                        "vec![F::one()]", x, w
+                        ])]).end())
     voexec.prover_submit_vector(u, 3 * H + K)
     voexec.run_subprotocol(SparseMVP(), u)
     voexec.hadamard_query(

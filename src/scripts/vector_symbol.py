@@ -1231,7 +1231,7 @@ class NamedVectorPairCombination(CoeffMap):
   def __rsub__(self, other):
     return self.__neg__().__add__(other)
 
-  def dumpr_poly_mul(self, target, omega, length):
+  def generate_vector_combination(self, omega):
     named_vector_structure_pairs = []
     structured_vector_pair_combination = None
     ret = RustBuilder()
@@ -1306,13 +1306,7 @@ class NamedVectorPairCombination(CoeffMap):
         .append([p1.alpha, p1.size, p2.alpha, p2.size])).end()
       vector_combination += v * s
 
-    ret.let(target).assign(
-        RustMacro("expression_vector").append(
-          [Symbol("i"),
-           vector_combination.dumpr_at_index(Symbol("i")),
-           length])).end()
-
-    return rust(ret)
+    return ret, vector_combination
 
 
 def convolution(left, right, omega):

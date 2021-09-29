@@ -766,24 +766,43 @@ class PIOPFromVOProtocol(object):
 
     hxcomputes.append(hx_items)
     h = get_named_vector("h")
-    hxcomputes_rust = hx_vector_combination.dumpr_poly_mul(h, omega, n * 2 + q)
+    hxcomputes_rust, h_vec_combination = hx_vector_combination.generate_vector_combination(omega)
     piopexec.prover_computes(hxcomputes, hxcomputes_rust)
 
     self.debug("Compute h1 and h2")
+
     h_degree, h_inverse_degree = n + max_shift + q, n + max_shift + q
+    h1 = get_named_vector("h")
+    h2 = get_named_vector("h")
+    h1computes_rust = RustBuilder().let(h1).assign(
+        RustMacro("expression_vector").append(
+          [Symbol("i"),
+           h_vec_combination.dumpr_at_index(Symbol("i") - h_inverse_degree),
+           h_inverse_degree])).end()
+    h2computes_rust = RustBuilder().let(h2).assign(
+        RustMacro("expression_vector").append(
+          [Symbol("i"),
+           h_vec_combination.dumpr_at_index(Symbol("i")),
+           h_degree])).end()
+
+    # For producing the latex code only
     h1x = get_named_polynomial("h")
     h2x = get_named_polynomial("h")
 
     piopexec.prover_computes(Math(h1x).assign(hx)
                              .dot(X ** self.degree_bound)
                              .append("\\bmod").append(X ** self.degree_bound),
-                             RustBuilder())
+                             h1computes_rust)
     piopexec.prover_computes(Math(h2x)
                              .assign("\\frac{%s}{X}" % hx.dumps_var(X))
                              .minus("X^{%s}\\cdot %s" %
                                     (latex(-self.degree_bound-1),
                                      h1x.dumps_var(X))),
-                             RustBuilder())
+                             h2computes_rust)
+
+    # For the rust code, use the vector instead
+    h1x = h1.to_named_vector_poly()
+    h2x = h1.to_named_vector_poly()
     piopexec.prover_send_polynomial(h1x, self.degree_bound)
     piopexec.prover_send_polynomial(h2x, h_degree - 1)
 

@@ -34,8 +34,8 @@ pub struct R1CSProof<E: PairingEngine> {
     pub cm_h_vec: Commitment<E>,
     pub cm_r_vec_tilde: Commitment<E>,
     pub cm_t_vec_1: Commitment<E>,
-    pub cm_h_1: Commitment<E>,
-    pub cm_h_2: Commitment<E>,
+    pub cm_h_vec_2: Commitment<E>,
+    pub cm_h_vec_2: Commitment<E>,
     pub y: E::Fr,
     pub y_1: E::Fr,
     pub y_2: E::Fr,
@@ -147,7 +147,9 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let delta_vec_2=sample_vec::<F, _>(rng);
         let delta_vec_3=sample_vec::<F, _>(rng);
         let delta_vec_4=sample_vec::<F, _>(rng);
-        let u_vec_1=sparse_mvp(H, K);
+        let x_vec=x.instance;
+        let w_vec=w.witness;
+        let u_vec_1=sparse_mvp(H, K, pk.M_mat.1, pk.M_mat.0, pk.M_mat.2, vector_concat!(vec![F::one()], x_vec, w_vec));
         let u_vec_1=fixed_length_vector_iter(u_vec_1, K + 3*S).chain(delta_vec).collect::<Vec<F>>();
         let cm_u_vec_1=vector_to_commitment(u_vec_1);
         let u_vec_1_poly=poly_from_vec!(u_vec_1);
@@ -206,10 +208,11 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let v_vec_20=power_power_mul!(1, 3*H, 1, 3*H);
         let v_vec_21=power_power_mul!(1, K, 1, K);
         let v_vec_22=power_power_mul!(1, K, 1, K);
-        let h_vec_1=expression_vector!(i, linear_combination!(linear_combination!(F::zero(), -alpha**4*omega**(3*H + ell), power_vector_index!(1/omega, ell + 1, i-(1 - ell)+1)), -alpha**2*mu, vector_index!(v_vec_1, (i as i64)-(K - shiftlength + 1) as i64+1), -alpha**2*nu, vector_index!(v_vec_3, (i as i64)-(K - shiftlength_2 + 1) as i64+1), alpha**2, vector_index!(v_vec_4, (i as i64)-(K - shiftlength_3 + 1) as i64+1), alpha**3*omega**(-H + K + 3*S), vector_index!(v_vec_5, (i as i64)-(-H - shiftlength_4 + 1) as i64+1), alpha**5*omega**(-3*H + 3*S), vector_index!(v_vec_6, (i as i64)-(1 - shiftlength_5) as i64+1), -alpha**5*beta*omega**(3*S), vector_index!(v_vec_7, (i as i64)-(-3*H - shiftlength_6 + 1) as i64+1), -alpha**5*beta, vector_index!(v_vec_8, (i as i64)-(K - shiftlength_7 + 1) as i64+1), alpha**6, vector_index!(v_vec_9, (i as i64)-(K + 3*S - shiftlength_8) as i64+1), mu*omega**(3*H - 1), vector_index!(v_vec_10, (i as i64)-(2 - 3*H) as i64+1), -(gamma*omega)**(3*H - 1), vector_index!(v_vec_11, (i as i64)-(2 - 3*H) as i64+1), alpha*nu*omega**(K - 1), vector_index!(v_vec_12, (i as i64)-(2 - K) as i64+1), -alpha*(gamma*omega)**(K - 1), vector_index!(v_vec_13, (i as i64)-(2 - K) as i64+1), alpha**2*mu*nu, vector_index!(v_vec_14, (i as i64)-(K - shiftlength_1 + 1) as i64+1), -alpha**3*omega**(K + 3*S - 1), vector_index!(v_vec_15, (i as i64)-(2 - 3*H) as i64+1), alpha**4*omega**(3*H + ell), vector_index!(v_vec_16, (i as i64)-(-3*H - ell + 1) as i64+1), -alpha**4*omega**(3*H + ell), vector_index!(v_vec_17, (i as i64)-(2 - ell) as i64+1), -alpha**5, vector_index!(v_vec_18, (i as i64)-(1 - shiftlength_8) as i64+1), alpha**5*omega, vector_index!(v_vec_18, (i as i64)-(-shiftlength_8) as i64+1), -omega**(K + 6*S), vector_index!(v_vec_19, (i as i64)-(-3*S) as i64+1), -to_field::<F>(1), vector_index!(v_vec_20, (i as i64)-(1) as i64+1), -alpha, vector_index!(v_vec_21, (i as i64)-(1) as i64+1), -alpha**2, vector_index!(v_vec_22, (i as i64)-(1) as i64+1)), 2*K + 6*S + 1);
-        let cm_h_1=KZG10::commit(h_1_poly);
-        let cm_h_2=KZG10::commit(h_2_poly);
-        let z=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec, pk.verifier_key.cm_h_vec, pk.verifier_key.cm_r_vec_tilde, pk.verifier_key.cm_t_vec_1, pk.verifier_key.cm_h_1, pk.verifier_key.cm_h_2));
+        let h_vec_2=expression_vector!(i, linear_combination!(linear_combination!(F::zero(), -alpha**4*omega**(3*H + ell), power_vector_index!(1/omega, ell + 1, -K - 6*S + i - 1-(1 - ell)+1)), -alpha**2*mu, vector_index!(v_vec_1, (-K - 6*S + i - 1 as i64)-(K - shiftlength + 1) as i64+1), -alpha**2*nu, vector_index!(v_vec_3, (-K - 6*S + i - 1 as i64)-(K - shiftlength_2 + 1) as i64+1), alpha**2, vector_index!(v_vec_4, (-K - 6*S + i - 1 as i64)-(K - shiftlength_3 + 1) as i64+1), alpha**3*omega**(-H + K + 3*S), vector_index!(v_vec_5, (-K - 6*S + i - 1 as i64)-(-H - shiftlength_4 + 1) as i64+1), alpha**5*omega**(-3*H + 3*S), vector_index!(v_vec_6, (-K - 6*S + i - 1 as i64)-(1 - shiftlength_5) as i64+1), -alpha**5*beta*omega**(3*S), vector_index!(v_vec_7, (-K - 6*S + i - 1 as i64)-(-3*H - shiftlength_6 + 1) as i64+1), -alpha**5*beta, vector_index!(v_vec_8, (-K - 6*S + i - 1 as i64)-(K - shiftlength_7 + 1) as i64+1), alpha**6, vector_index!(v_vec_9, (-K - 6*S + i - 1 as i64)-(K + 3*S - shiftlength_8) as i64+1), mu*omega**(3*H - 1), vector_index!(v_vec_10, (-K - 6*S + i - 1 as i64)-(2 - 3*H) as i64+1), -(gamma*omega)**(3*H - 1), vector_index!(v_vec_11, (-K - 6*S + i - 1 as i64)-(2 - 3*H) as i64+1), alpha*nu*omega**(K - 1), vector_index!(v_vec_12, (-K - 6*S + i - 1 as i64)-(2 - K) as i64+1), -alpha*(gamma*omega)**(K - 1), vector_index!(v_vec_13, (-K - 6*S + i - 1 as i64)-(2 - K) as i64+1), alpha**2*mu*nu, vector_index!(v_vec_14, (-K - 6*S + i - 1 as i64)-(K - shiftlength_1 + 1) as i64+1), -alpha**3*omega**(K + 3*S - 1), vector_index!(v_vec_15, (-K - 6*S + i - 1 as i64)-(2 - 3*H) as i64+1), alpha**4*omega**(3*H + ell), vector_index!(v_vec_16, (-K - 6*S + i - 1 as i64)-(-3*H - ell + 1) as i64+1), -alpha**4*omega**(3*H + ell), vector_index!(v_vec_17, (-K - 6*S + i - 1 as i64)-(2 - ell) as i64+1), -alpha**5, vector_index!(v_vec_18, (-K - 6*S + i - 1 as i64)-(1 - shiftlength_8) as i64+1), alpha**5*omega, vector_index!(v_vec_18, (-K - 6*S + i - 1 as i64)-(-shiftlength_8) as i64+1), -omega**(K + 6*S), vector_index!(v_vec_19, (-K - 6*S + i - 1 as i64)-(-3*S) as i64+1), -to_field::<F>(1), vector_index!(v_vec_20, (-K - 6*S + i - 1 as i64)-(1) as i64+1), -alpha, vector_index!(v_vec_21, (-K - 6*S + i - 1 as i64)-(1) as i64+1), -alpha**2, vector_index!(v_vec_22, (-K - 6*S + i - 1 as i64)-(1) as i64+1)), K + 6*S + 1);
+        let h_vec_3=expression_vector!(i, linear_combination!(linear_combination!(F::zero(), -alpha**4*omega**(3*H + ell), power_vector_index!(1/omega, ell + 1, i-(1 - ell)+1)), -alpha**2*mu, vector_index!(v_vec_1, (i as i64)-(K - shiftlength + 1) as i64+1), -alpha**2*nu, vector_index!(v_vec_3, (i as i64)-(K - shiftlength_2 + 1) as i64+1), alpha**2, vector_index!(v_vec_4, (i as i64)-(K - shiftlength_3 + 1) as i64+1), alpha**3*omega**(-H + K + 3*S), vector_index!(v_vec_5, (i as i64)-(-H - shiftlength_4 + 1) as i64+1), alpha**5*omega**(-3*H + 3*S), vector_index!(v_vec_6, (i as i64)-(1 - shiftlength_5) as i64+1), -alpha**5*beta*omega**(3*S), vector_index!(v_vec_7, (i as i64)-(-3*H - shiftlength_6 + 1) as i64+1), -alpha**5*beta, vector_index!(v_vec_8, (i as i64)-(K - shiftlength_7 + 1) as i64+1), alpha**6, vector_index!(v_vec_9, (i as i64)-(K + 3*S - shiftlength_8) as i64+1), mu*omega**(3*H - 1), vector_index!(v_vec_10, (i as i64)-(2 - 3*H) as i64+1), -(gamma*omega)**(3*H - 1), vector_index!(v_vec_11, (i as i64)-(2 - 3*H) as i64+1), alpha*nu*omega**(K - 1), vector_index!(v_vec_12, (i as i64)-(2 - K) as i64+1), -alpha*(gamma*omega)**(K - 1), vector_index!(v_vec_13, (i as i64)-(2 - K) as i64+1), alpha**2*mu*nu, vector_index!(v_vec_14, (i as i64)-(K - shiftlength_1 + 1) as i64+1), -alpha**3*omega**(K + 3*S - 1), vector_index!(v_vec_15, (i as i64)-(2 - 3*H) as i64+1), alpha**4*omega**(3*H + ell), vector_index!(v_vec_16, (i as i64)-(-3*H - ell + 1) as i64+1), -alpha**4*omega**(3*H + ell), vector_index!(v_vec_17, (i as i64)-(2 - ell) as i64+1), -alpha**5, vector_index!(v_vec_18, (i as i64)-(1 - shiftlength_8) as i64+1), alpha**5*omega, vector_index!(v_vec_18, (i as i64)-(-shiftlength_8) as i64+1), -omega**(K + 6*S), vector_index!(v_vec_19, (i as i64)-(-3*S) as i64+1), -to_field::<F>(1), vector_index!(v_vec_20, (i as i64)-(1) as i64+1), -alpha, vector_index!(v_vec_21, (i as i64)-(1) as i64+1), -alpha**2, vector_index!(v_vec_22, (i as i64)-(1) as i64+1)), K + 6*S + 1);
+        let cm_h_vec_2=vector_to_commitment(h_vec_2);
+        let cm_h_vec_2=vector_to_commitment(h_vec_2);
+        let z=hash_to_field(to_bytes!(pk.verifier_key.cm_u_vec, pk.verifier_key.cm_w_vec, pk.verifier_key.cm_v_vec, pk.verifier_key.cm_y_vec, pk.verifier_key.cm_u_vec_1, pk.verifier_key.cm_s_vec, pk.verifier_key.cm_h_vec, pk.verifier_key.cm_r_vec_tilde, pk.verifier_key.cm_t_vec_1, pk.verifier_key.cm_h_vec_2, pk.verifier_key.cm_h_vec_2));
         
         Ok(R1CSProof::<E> {
             cm_u_vec_1: cm_u_vec_1,
@@ -217,8 +220,8 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
             cm_h_vec: cm_h_vec,
             cm_r_vec_tilde: cm_r_vec_tilde,
             cm_t_vec_1: cm_t_vec_1,
-            cm_h_1: cm_h_1,
-            cm_h_2: cm_h_2,
+            cm_h_vec_2: cm_h_vec_2,
+            cm_h_vec_2: cm_h_vec_2,
             y: y,
             y_1: y_1,
             y_2: y_2,
@@ -238,7 +241,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let beta=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1, vk.cm_s_vec, vk.cm_h_vec));
         let alpha=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1, vk.cm_s_vec, vk.cm_h_vec, vk.cm_r_vec_tilde));
         let omega=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1, vk.cm_s_vec, vk.cm_h_vec, vk.cm_r_vec_tilde, vk.cm_t_vec_1));
-        let z=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1, vk.cm_s_vec, vk.cm_h_vec, vk.cm_r_vec_tilde, vk.cm_t_vec_1, vk.cm_h_1, vk.cm_h_2));
+        let z=hash_to_field(to_bytes!(vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, vk.cm_u_vec_1, vk.cm_s_vec, vk.cm_h_vec, vk.cm_r_vec_tilde, vk.cm_t_vec_1, vk.cm_h_vec_2, vk.cm_h_vec_2));
         
     }
 }
