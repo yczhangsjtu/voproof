@@ -581,24 +581,13 @@ class PIOPFromVOProtocol(object):
       elif isinstance(interaction, ProverSubmitVectors):
         for v, size in interaction.vectors:
           randomizer = get_named_vector("delta")
+          samples.append(randomizer)
           poly = v.to_named_vector_poly()
-
-          # The prover does not actually compute anything when it
-          # is expected to append randomizers to the vector. This
-          # "append" is postponed until the vector is involved in
-          # any computations. For now, just remember that this vec
-          # is randomized.
-          v.randomizers = []
-          for i in range(int(q)):
-            delta = get_name("delta")
-            samples.append(delta)
-            v.randomizers.append(delta)
           piopexec.prover_computes(
-              Math(randomizer).sample(Ftoq).comma(Math(v))
-                              .assign(v).double_bar(randomizer),
-              RustBuilder().let(poly).assign_func("fixed_length_vector_iter")
+              Math(randomizer).sample(Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
+              RustBuilder().let(v).assign_func("fixed_length_vector_iter")
                            .append_to_last([v, n]).invoke_method("chain")
-                           .append_to_last(delta).invoke_method("collect::<Vec<F>>()").end())
+                           .append_to_last(randomizer).invoke_method("collect::<Vec<F>>").end())
           piopexec.prover_send_polynomial(poly, self.vector_size + q)
           piopexec.prover_computes(
               LaTeXBuilder(),
@@ -667,17 +656,14 @@ class PIOPFromVOProtocol(object):
       piopexec.prover_computes(rcomputes, RustBuilder(rcomputes_rust).end())
 
       randomizer = get_named_vector("delta")
+      samples.append(randomizer)
       rtilde = get_named_vector("r", modifier="tilde")
-      rtilde.randomizers = []
-      for i in range(int(q)):
-        delta = get_name("delta")
-        samples.append(delta)
-        rtilde.randomizers.append(delta)
-
       piopexec.prover_computes(Math(randomizer).sample(Ftoq)
         .comma(rtilde).assign(AccumulationVector(r.slice("j"), n))
         .double_bar(randomizer),
-        RustBuilder().let(rtilde).assign(SumAccumulationVectorRust(r, n)).end())
+        RustBuilder(RustMacro("define_vec").append(rtilde).append(
+          RustMacro("vector_concat").append(randomizer).append(
+              RustMacro("accumulate_vector").append([r, "+"])))).end())
 
       fr = rtilde.to_named_vector_poly()
       piopexec.prover_send_polynomial(fr, n + q)
@@ -698,25 +684,36 @@ class PIOPFromVOProtocol(object):
     piopexec.verifier_send_randomness(alpha)
     tcomputes = LaTeXBuilder().start_math().append(t).assign().end_math() \
                               .space("the sum of:").eol()
+    tcomputes_rust = RustMacro("define_vec").append(t)
+    expression_vector = RustMacro("expression_vector").append(Symbol("i"))
+    compute_sum = RustMacro("sum")
     t_items = Itemize()
     for i, side in enumerate(extended_hadamard):
       if not i in ignore_in_t:
+        compute_sum.append(side.dumpr_at_index(simplify(Symbol("i") + n)))
         t_items.append("$%s$" % side._dumps("circ"))
+    expression_vector.append([compute_sum, 2 * q + max_shift])
+    tcomputes_rust.append(expression_vector)
+    tcomputes.append(t_items)
+    piopexec.prover_computes(tcomputes, RustBuilder(tcomputes_rust).end())
 
     randomizer = get_named_vector("delta")
-    tx = get_named_polynomial("t")
+    samples.append(randomizer)
+    original_t = t
+    t = get_named_vector("t")
+    piopexec.prover_computes(
+        Math(randomizer).sample(Ftoq).comma(t).assign(original_t).double_bar(randomizer),
+        RustBuilder(RustMacro("define_vec").append(t).append(
+          RustMacro("vector_concat").append(original_t).append(randomizer))).end())
+
+    tx = t.to_named_vector_poly()
     vec_to_poly_dict[t.key()] = tx
-    tcomputes.append(t_items)
-    piopexec.prover_computes(tcomputes, RustBuilder())
-    piopexec.prover_computes(Math(randomizer).sample(Ftoq)
-      .comma(tx).assign("f_{%s\\|%s}(X)" %
-                        (randomizer.dumps(),
-                         t.slice(n + 1, Infinity).dumps())),
-      RustBuilder())
+    # piopexec.prover_computes(Math(randomizer).sample(Ftoq)
+    #   .comma(tx).assign("f_{%s\\|%s}(X)" %
+    #                     (randomizer.dumps(),
+    #                      t.slice(n + 1, Infinity).dumps())),
+    #   RustBuilder())
     piopexec.prover_send_polynomial(tx, 2 * q + max_shift)
-    # t should be replaced by delta||t_{[n+1:]}, however, there are no more
-    # computations involving vectors, only polynomials, so neglecting this
-    # will not affect the generated latex code
     extended_hadamard.append(VOQuerySide(-PowerVector(1, max_shift + q).shift(n),
                                          t.shift(n - q)))
 

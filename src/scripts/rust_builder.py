@@ -33,7 +33,7 @@ class Samples(object):
   def dumpr(self):
     ret = RustBuilder()
     for item in self.items:
-      ret.let(item).assign_func("sample_field::<F, _>") \
+      ret.let(item).assign_func("sample_vec::<F, _>") \
          .append_to_last("rng").end()
     return rust(ret)
 

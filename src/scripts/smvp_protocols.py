@@ -88,7 +88,7 @@ class SparseMVP(VOProtocol):
         .invoke_method("chain").append_to_last(
           RustBuilder(r).invoke_method("iter").invoke_method("map")
           .append_to_last("|a| -a")
-        ).invoke_method("collect::<Vec<F>>()").end())
+        ).invoke_method("collect::<Vec<F>>").end())
     voexec.prover_submit_vector(s, H + K)
     voexec.hadamard_query(
       mu * PowerVector(1, H) - PowerVector(gamma, H),

@@ -305,6 +305,21 @@ macro_rules! accumulate_vector {
     };
 }
 
+#[macro_export]
+macro_rules! vector_concat {
+    ( $u: expr, $( $v: expr ),+ ) => {
+        $u.into_iter()$(.chain($v.into_iter()))+.collect::<Vec<_>>()
+    }
+}
+
+#[macro_export]
+macro_rules! sum {
+    ($h:expr) => ($h);
+    ($h:expr, $($v: expr),+) => {
+        ($h + sum!($($v),+))
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -395,5 +410,18 @@ mod tests {
                                              to_field::<F>(3), to_field::<F>(4)),
                                              to_field::<F>(1 + 2 * 2 + 2 * 2 * 3 +
                                                            2 * 2 * 2 * 4));
+    }
+
+    #[test]
+    fn test_sum() {
+        assert_eq!(sum!(1, 2, 3), 6);
+    }
+
+    #[test]
+    fn test_vector_concat() {
+        assert_eq!(vector_concat!(vec![1, 2, 3u64], vec![4, 5, 6u64]),
+                   vec![1, 2, 3, 4, 5, 6u64]);
+        assert_eq!(vector_concat!(vec![1, 2, 3u64], vec![4, 5, 6u64], vec![7, 8, 9]),
+                   vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
     }
 }
