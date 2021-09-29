@@ -813,10 +813,10 @@ class StructuredVector(CoeffMap):
         # (X^{-(k-1)}(alpha omega)^{k-1}) * (1 + (alpha omega)^{-1} X + ...)
         # which is a transformed power vector. The transformation is then applied
         # to the coefficient for this power vector
-        ret._dict[key] = (PowerVector(1/(vector.alpha * omega), vector.length),
+        ret._dict[key] = (PowerVector(1/(vector.alpha * omega), vector.size),
                           (value.reverse_omega(omega) *
-                          ((vector.alpha * omega) ** (vector.length - 1)))
-                            .shift(-vector.length + 1))
+                          ((vector.alpha * omega) ** (vector.size - 1)))
+                            .shift(-vector.size + 1))
     return ret
 
 
@@ -1240,10 +1240,14 @@ class NamedVectorPairCombination(CoeffMap):
       if key == "one":
         structured_vector_pair_combination = coeff
       elif vector_pair.u is not None and vector_pair.v is not None:
-        mul = RustMacro("vector_poly_mul").append([vector_pair.u, vector_pair.v, omega])
+        mul = RustMacro("vector_poly_mul").append([rust_pk(vector_pair.u), rust_pk(vector_pair.v), omega])
         v = get_named_vector("v")
         ret.let(v).assign(mul).attribute("coeffs").end()
-        named_vector_structure_pairs.append((v, coeff))
+        # After the reverse, the vector should be shifted left by |u|-1
+        # this shift is applied to the coefficient instead
+        to_shift = Symbol(get_name("shiftlength"))
+        ret.let(to_shift).assign(vector_pair.u).invoke_method("len").minus(1).end()
+        named_vector_structure_pairs.append((v, coeff.shift(-to_shift)))
       elif vector_pair.u is not None:
         v = get_named_vector("v")
         ret.let(v).assign(
@@ -1291,10 +1295,10 @@ class NamedVectorPairCombination(CoeffMap):
                 vector_combination += convolution(left_coeff, right_coeff, omega)
 
     for v, p, s in named_power_sparse_tuples:
-      v = get_named_vector("v")
-      ret.let(v).assign(RustMacro("vector_power_mul")
-        .append([v, p.alpha, p.length])).end()
-      vector_combination += v * s
+      vec = get_named_vector("v")
+      ret.let(vec).assign(RustMacro("vector_power_mul")
+        .append([rust_pk(v), p.alpha, p.size])).end()
+      vector_combination += vec * s
 
     for p1, p2, s in power_power_sparse_tuples:
       v = get_named_vector("v")
@@ -1318,7 +1322,7 @@ def convolution(left, right, omega):
     # structured vectors are combined to structured vector pairs
     # the coefficients are convoluted
     for left_key, left_vector_coeff in left.items():
-      for right_key, right_vector_coeff in left.items():
+      for right_key, right_vector_coeff in right.items():
         left_vector, left_coeff = left_vector_coeff
         right_vector, right_coeff = right_vector_coeff
         coeff = convolution(left_coeff, right_coeff, omega)
