@@ -14,6 +14,11 @@ def rust(expr):
   return str(expr)
 
 
+def to_field(expr):
+  if isinstance(expr, Integer):
+    return rust(RustBuilder().func("to_field::<F>").append_to_last(expr))
+  return rust(expr)
+
 class Samples(object):
   def __init__(self):
     self.items = []

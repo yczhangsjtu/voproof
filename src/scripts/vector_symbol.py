@@ -480,7 +480,7 @@ class SparseVector(CoeffMap):
     ret = RustMacro("muti_delta").append(rust(index))
     for key, uv_coeff in self.items():
       unit_vector, coeff = uv_coeff
-      ret.append([coeff, unit_vector.position])
+      ret.append([to_field(coeff), unit_vector.position])
     return rust(ret)
 
 
@@ -626,7 +626,7 @@ class VectorCombination(CoeffMap):
       vec, value = vec_value
       for key2, uv_coeff in value.items():
         unit_vector, coeff = uv_coeff
-        ret.append([coeff, vec.dumpr_at_index(
+        ret.append([to_field(coeff), vec.dumpr_at_index(
           "%s-(%s)+1" % (rust(index), rust(unit_vector.position)))])
     return rust(ret)
 
@@ -775,7 +775,7 @@ class StructuredVector(CoeffMap):
       vec, value = vec_value
       for key2, uv_coeff in value.items():
         unit_vector, coeff = uv_coeff
-        ret.append([coeff, vec.dumpr_at_index(
+        ret.append([to_field(coeff), vec.dumpr_at_index(
           "%s-(%s)+1" % (rust(index), rust(unit_vector.position)))])
     return rust(ret)
 
