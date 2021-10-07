@@ -162,6 +162,8 @@ class PublicCoinProtocolExecution(object):
     self.preprocessings = []
     self.indexer_output_pk = []
     self.indexer_output_vk = []
+    self.prover_preparations = []
+    self.verifier_preparations = []
     self.interactions = []
     self.verifier_computations = []
 
@@ -184,8 +186,14 @@ class PublicCoinProtocolExecution(object):
   def prover_computes(self, latex_builder, rust_builder):
     self.interactions.append(ProverComputes(latex_builder, rust_builder))
 
+  def prover_prepare(self, latex_builder, rust_builder):
+    self.prover_preparations.append(ProverComputes(latex_builder, rust_builder))
+
   def verifier_computes(self, latex_builder, rust_builder):
     self.verifier_computations.append(VerifierComputes(latex_builder, rust_builder))
+
+  def verifier_prepare(self, latex_builder, rust_builder):
+    self.verifier_preparations.append(VerifierComputes(latex_builder, rust_builder))
 
   def invoke_subprotocol(self, name, *args):
     self.interactions.append(InvokeSubprotocol(name, *args))
@@ -591,9 +599,11 @@ class PIOPFromVOProtocol(object):
 
     self.debug("Executing VO protocol")
     self.vo.execute(voexec, *args)
-    self.prover_inputs = voexec.prover_inputs
-    self.verifier_inputs = voexec.verifier_inputs
-    self.verifier_computations = voexec.verifier_computations
+    piopexec.prover_inputs = voexec.prover_inputs
+    piopexec.verifier_inputs = voexec.verifier_inputs
+    piopexec.verifier_computations = voexec.verifier_computations
+    piopexec.prover_preparations = voexec.prover_preparations
+    piopexec.verifier_preparations = voexec.verifier_preparations
 
     self.debug("Process interactions")
     for interaction in voexec.interactions:
@@ -688,7 +698,7 @@ class PIOPFromVOProtocol(object):
         RustBuilder(RustMacro("define_vec").append(rtilde).append(
           RustMacro("vector_concat").append(randomizer).append(
               RustMacro("accumulate_vector").append([r, "+"])))).end()
-          .let(fr).assign_func("poly_from_vec").append_to_last(rtilde).end())
+          .let(fr).assign_func("poly_from_vec!").append_to_last(rtilde).end())
 
       piopexec.prover_send_polynomial(fr, n + q)
       vec_to_poly_dict[rtilde.key()] = fr
@@ -954,7 +964,9 @@ class ZKSNARK(object):
   def __init__(self):
     self.indexer_computations = []
     self.prover_computations = []
+    self.prover_preparations = []
     self.verifier_computations = []
+    self.verifier_preparations = []
     self.vk = []
     self.pk = []
     self.proof = []
@@ -974,8 +986,14 @@ class ZKSNARK(object):
       raise Exception("latex_builder cannot be str: %s" % latex_builder)
     self.prover_computations.append(ProverComputes(latex_builder, rust_builder, False))
 
+  def prover_prepare(self, latex_builder, rust_builder):
+    self.prover_preparations.append(ProverComputes(latex_builder, rust_builder))
+
   def verifier_computes(self, latex_builder, rust_builder):
     self.verifier_computations.append(VerifierComputes(latex_builder, rust_builder, False))
+
+  def verifier_prepare(self, latex_builder, rust_builder):
+    self.verifier_preparations.append(VerifierComputes(latex_builder, rust_builder))
 
   def dump_indexer(self):
     enum = Enumerate()
@@ -1000,7 +1018,7 @@ class ZKSNARK(object):
     return enum.dumps()
 
   def dump_prover_rust(self):
-    return "".join(
+    return "".join([computation.dumpr() for computation in self.prover_preparations] +
         [computation.dumpr() for computation in self.prover_computations])
 
   def dump_verifier(self):
@@ -1014,7 +1032,7 @@ class ZKSNARK(object):
                                   for item in self.proof])
 
   def dump_verifier_rust(self):
-    return self.dump_proof_init() + "".join(
+    return self.dump_proof_init() + "".join([computation.dumpr() for computation in self.verifier_preparations] +
           [computation.dumpr() for computation in self.verifier_computations])
 
   def dump_vk_definition(self):
@@ -1062,6 +1080,10 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     for v in piopexec.indexer_output_vk:
       self.preprocess_output_vk(v)
       transcript.append(v)
+
+    for computation in piopexec.verifier_preparations:
+      self.prover_computes(computation.latex_builder, computation.rust_builder)
+      self.verifier_computes(computation.latex_builder, computation.rust_builder)
 
     for interaction in piopexec.interactions:
       if isinstance(interaction, ProverComputes):

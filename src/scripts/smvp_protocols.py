@@ -281,7 +281,7 @@ class R1CS(VOProtocol):
     voexec.input_instance(x)
     voexec.input_witness(w)
 
-    voexec.prover_computes(LaTeXBuilder(),
+    voexec.verifier_prepare(LaTeXBuilder(),
         RustBuilder().let(x).assign("x.instance").end())
     voexec.prover_computes(LaTeXBuilder(),
         RustBuilder().let(w).assign("w.witness").end())
