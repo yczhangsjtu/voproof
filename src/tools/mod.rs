@@ -387,6 +387,22 @@ macro_rules! power_power_mul {
     };
 }
 
+#[macro_export]
+macro_rules! eval_vector_expression {
+    // Compute f(z), where f has coefficient vector
+    // expressed by an expression
+    ($z:expr, $i:ident, $expr:expr, $n: expr) => {
+        {
+            let mut power = F::one();
+            (1..=$n).map(|$i| {
+                let ret = $expr * power;
+                power = power * $z;
+                ret
+            }).sum::<F>()
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -525,5 +541,11 @@ mod tests {
         assert_eq!(to_int!(power_power_mul!(alpha, 3, beta, 4)), vec![1, 5, 19, 57, 90, 108]);
         assert_eq!(to_int!(power_power_mul!(alpha, 4, beta, 4)), vec![1, 5, 19, 65, 114, 180, 216]);
         assert_eq!(to_int!(power_power_mul!(alpha, 5, beta, 4)), vec![1, 5, 19, 65, 130, 228, 360, 432]);
+    }
+
+    #[test]
+    fn test_eval_vector_expression() {
+        assert_eq!(eval_vector_expression!(to_field::<F>(2), i, to_field::<F>(i as u64), 4),
+                                           to_field::<F>(49));
     }
 }

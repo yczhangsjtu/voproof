@@ -802,7 +802,7 @@ class PIOPFromVOProtocol(object):
 
     # For the rust code, use the vector instead
     h1x = h1.to_named_vector_poly()
-    h2x = h1.to_named_vector_poly()
+    h2x = h2.to_named_vector_poly()
     piopexec.prover_send_polynomial(h1x, self.degree_bound)
     piopexec.prover_send_polynomial(h2x, h_degree - 1)
 
