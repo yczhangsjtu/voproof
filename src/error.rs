@@ -171,6 +171,7 @@ pub enum Error {
     },
 
     Unimplemented(String),
+    VerificationFail,
 }
 
 impl core::fmt::Display for Error {
@@ -258,6 +259,7 @@ impl core::fmt::Display for Error {
             ),
             Error::IncorrectInputLength(err) => write!(f, "{}", err),
             Error::Unimplemented(info) => write!(f, "Unimplemented {}", info),
+            Error::VerificationFail => write!(f, "VerificationFail"),
         }
     }
 }

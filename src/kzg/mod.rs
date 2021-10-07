@@ -155,6 +155,10 @@ where
         Ok(Commitment(commitment.into()))
     }
 
+    pub fn commit_single(powers: &Powers<E>, c: &E::Fr) -> Commitment<E> {
+        Commitment(powers.powers_of_g[0].mul(c.into_repr()).into())
+    }
+
     /// Compute witness polynomial.
     ///
     /// The witness polynomial w(x) the quotient of the division (p(x) - p(z)) / (x - z)

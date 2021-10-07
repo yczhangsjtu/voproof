@@ -416,26 +416,34 @@ class EvalQuery(object):
 
 
 class CombinePolynomial(object):
-  def __init__(self, poly, coeff_latex_builders):
+  def __init__(self, poly, coeff_latex_builders, length):
     self.poly = poly
     self.coeff_latex_builders = coeff_latex_builders
+    self.length = length
 
   def dump_items(self, has_commit=False, has_poly=False, has_oracle=True):
-    oralce_sum_items, poly_sum_items, commit_sum_items, items, one = \
-        [], [], [], [], None
+    oralce_sum_items, poly_sum_items, commit_sum_items, \
+        items, rust_items, poly_sum_rust_items, commit_sum_rust_items, \
+        one, rust_one = \
+        [], [], [], [], [], [], [], None, None
     for key, poly_coeff_lb in self.coeff_latex_builders.items():
       # The coeff here must be Symbol
       poly, coeff, latex_builder, rust_builder = poly_coeff_lb
       items.append(latex_builder)
+      rust_items.append(rust_builder)
       if key == "one":
         one = latex(coeff)
+        rust_one = rust(coeff)
       else:
         if has_oracle:
           oracle_sum_items.append("%s\\cdot [%s]" % (latex(coeff), poly.dumps()))
         if has_commit:
           commit_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.to_comm()))
+          commit_sum_rust_items.append("(%s).mul(%s)" % (rust_pk_vk(poly.to_comm()), rust(coeff)))
         if has_poly:
           poly_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.dumps()))
+          poly_sum_rust_items.append("(%s) * (%s)" %
+                                     (rust(coeff), poly.dumpr_at_index(Symbol("i"))))
 
     if one is not None:
       if has_oracle:
@@ -444,15 +452,30 @@ class CombinePolynomial(object):
         poly_sum_items.append("%s" % one)
       if has_commit:
         commit_sum_items.append("%s\\cdot \\mathsf{com}(1)" % one)
+        commit_sum_rust_items.append(RustBuilder()
+                                     .func("scalar_to_commitment")
+                                     .append_to_last(
+                                     ["pk.powers", rust(coeff)]))
 
     if has_oracle:
       items.append(Math("[%s]" % self.poly.dumps()).assign("+".join(oracle_sum_items)))
     if has_poly:
       items.append(Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
+      if rust_one is None:
+        rust_items.append(RustBuilder().letmut(self.poly).assign(
+          RustMacro("expression_vector").append([
+            Symbol("i"), RustMacro("sum").append(poly_sum_rust_items), self.length])))
+      else:
+        rust_items.append(RustBuilder().letmut(self.poly).assign(
+            RustMacro("expression_vector").append([
+            Symbol("i"), RustMacro("sum").append(poly_sum_rust_items), self.length])
+          ).end().append(self.poly).append("[0]").plus_assign(rust_one).end())
     if has_commit:
       items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
+      rust_items.append(RustBuilder().let(self.poly.to_comm())
+                       .assign(RustMacro("sum").append(commit_sum_rust_items)).end())
 
-    return items
+    return items, rust_items
 
 
 class PIOPExecution(PublicCoinProtocolExecution):
@@ -489,8 +512,8 @@ class PIOPExecution(PublicCoinProtocolExecution):
     self.eval_queries.append(EvalQuery(name, point, poly))
     self.distinct_points.add(tex(point))
 
-  def combine_polynomial(self, poly, coeff_latex_builders):
-    self.poly_combines.append(CombinePolynomial(poly, coeff_latex_builders))
+  def combine_polynomial(self, poly, coeff_latex_builders, length):
+    self.poly_combines.append(CombinePolynomial(poly, coeff_latex_builders, length))
 
   def eval_check(self, left, point, poly):
     # eval_check is handled differently from eval_query
@@ -522,7 +545,7 @@ class PIOPExecution(PublicCoinProtocolExecution):
     for vc in self.verifier_computations:
       ret.append(vc.dumps())
     for polycom in self.poly_combines:
-      for item in polycom.dump_items():
+      for item, rust_items in polycom.dump_items():
         ret.append(VerifierComputes(item, RustBuilder()).dumps())
     for query in self.eval_checks:
       ret.append(query.dumps_check())
@@ -658,14 +681,15 @@ class PIOPFromVOProtocol(object):
       randomizer = get_named_vector("delta")
       samples.append(randomizer)
       rtilde = get_named_vector("r", modifier="tilde")
+      fr = rtilde.to_named_vector_poly()
       piopexec.prover_computes(Math(randomizer).sample(Ftoq)
         .comma(rtilde).assign(AccumulationVector(r.slice("j"), n))
         .double_bar(randomizer),
         RustBuilder(RustMacro("define_vec").append(rtilde).append(
           RustMacro("vector_concat").append(randomizer).append(
-              RustMacro("accumulate_vector").append([r, "+"])))).end())
+              RustMacro("accumulate_vector").append([r, "+"])))).end()
+          .let(fr).assign_func("poly_from_vec").append_to_last(rtilde).end())
 
-      fr = rtilde.to_named_vector_poly()
       piopexec.prover_send_polynomial(fr, n + q)
       vec_to_poly_dict[rtilde.key()] = fr
 
@@ -827,10 +851,16 @@ class PIOPFromVOProtocol(object):
       y = Symbol(get_name("y"))
       if not vec.local_evaluate:
         piopexec.eval_query(y, omega/z, vec_to_poly_dict[key])
+        piopexec.prover_computes(
+          LaTeXBuilder(),
+          RustBuilder().let(y).assign(RustMacro("eval_vector_expression").append([
+            omega/z, Symbol("i"), vec.dumpr_at_index(Symbol("i")), n + q
+          ])).end()
+        )
       else:
         piopexec.verifier_computes(
             Math(y).assign(vec_to_poly_dict[key].dumps_var(omega/z)),
-            RustBuilder()
+            RustBuilder.let(y).assign(vec.hint_computation(omega/z))
         )
       query_results[key] = y
 
@@ -863,10 +893,12 @@ class PIOPFromVOProtocol(object):
         if (isinstance(vec, NamedVector) and not vec.local_evaluate) or key == "one":
           _key = key
           poly = "one" if key == "one" else vec_to_poly_dict[vec.key()]
+          rust_value = rust(value)
           value = latex(value)
         else: # In case it is locally evaluatable polynomial
           _key = "one"
           poly = "one"
+          rust_value = "(%s) * (%s)" % (rust(value), rust(vec.hint_computation(z)))
           value = "%s\\cdot %s" \
                   % (latex(value), vec_to_poly_dict[vec.key()].dumps_var(z))
 
@@ -874,38 +906,44 @@ class PIOPFromVOProtocol(object):
           c = Symbol(get_name("c"))
           # Temporarily use list, because the format depends on whether
           # this list size is > 1
-          coeff_builders[_key] = (poly, c, [value])
+          coeff_builders[_key] = (poly, c, [value], [rust_value])
         else:
-          _poly, c, items = coeff_builders[_key]
+          _poly, c, items, rust_items = coeff_builders[_key]
           if _poly != poly:
             raise Exception("%s != %s" % (_poly.dumps(), poly.dumps()))
           items.append(value)
+          rust_items.append(rust_value)
     
     # 2. The part contributed by h1(X) and h2(X)
     c = Symbol(get_name("c"))
-    coeff_builders[h1x.key()] = (h1x, c, [- z ** self.degree_bound])
+    coeff_builders[h1x.key()] = (h1x, c, [- z ** self.degree_bound], [- z ** self.degree_bound])
     c = Symbol(get_name("c"))
-    coeff_builders[h2x.key()] = (h2x, c, [- z])
+    coeff_builders[h2x.key()] = (h2x, c, [- z], [- z])
 
-    # Transform the lists into latex builders
+    # Transform the lists into latex and rust builders
     _coeff_builders = {}
     for key, poly_coeff_lb in coeff_builders.items():
-      poly, coeff, coeff_list = poly_coeff_lb
+      poly, coeff, coeff_list, rust_coeff_list = poly_coeff_lb
       if len(coeff_list) > 1:
         latex_builder = LaTeXBuilder().start_math().append(coeff).assign() \
                                       .end_math().space("the sum of:")
+        sum_macro = RustMacro("sum")
+        rust_builder = RustBuilder().let(coeff).assign(sum_macro).end()
         items = Itemize()
         for item in coeff_list:
           items.append("$%s$" % item)
+        for item in rust_coeff_list:
+          sum_macro.append(item)
         latex_builder.append(items)
       else:
         latex_builder = Math(coeff).assign(coeff_list[0])
+        rust_builder = RustBuilder().let(coeff).assign(rust_coeff_list[0]).end()
 
-      _coeff_builders[key] = (poly, coeff, latex_builder, RustBuilder())
+      _coeff_builders[key] = (poly, coeff, latex_builder, rust_builder)
 
     coeff_builders = _coeff_builders
 
-    piopexec.combine_polynomial(gx, coeff_builders)
+    piopexec.combine_polynomial(gx, coeff_builders, n + q)
 
     self.debug("Combine polynomial")
     piopexec.eval_check(0, z, gx)
@@ -971,9 +1009,13 @@ class ZKSNARK(object):
       enum.append(computation.dumps())
     return enum.dumps()
 
+  def dump_proof_init(self):
+    return ("\n" + " " * 8).join(["let %s = proof.%s;" % (rust(item), rust(item))
+                                  for item in self.proof])
+
   def dump_verifier_rust(self):
-    return "".join(
-        [computation.dumpr() for computation in self.verifier_computations])
+    return self.dump_proof_init() + "".join(
+          [computation.dumpr() for computation in self.verifier_computations])
 
   def dump_vk_definition(self):
     return "\n    ".join(["pub %s: %s," % (rust(item), get_rust_type(item)) for item in self.vk])
@@ -1009,6 +1051,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
                               % poly.dumps()),
                       RustBuilder().let(poly.to_comm())
                       .assign_func("vector_to_commitment")
+                      .append_to_last("powers_of_g")
                       .append_to_last(poly.vector).end())
       self.preprocess_output_vk(poly.to_comm())
       transcript.append(poly.to_comm())
@@ -1047,7 +1090,9 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           if isinstance(poly, NamedPolynomial):
             commit_rust_computation.assign_func("KZG10::commit").append_to_last(poly).end()
           elif isinstance(poly, NamedVectorPolynomial):
-            commit_rust_computation.assign_func("vector_to_commitment").append_to_last(poly.vector).end()
+            commit_rust_computation.assign_func("vector_to_commitment") \
+              .append_to_last("pk.powers") \
+              .append_to_last(poly.vector).end()
           else:
             raise Exception("Unrecognized polynomial type: %s" % type(poly))
           self.prover_computes(commit_computation, commit_rust_computation)
@@ -1065,12 +1110,15 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       self.verifier_computes(computation.latex_builder, computation.rust_builder)
 
     for poly_combine in piopexec.poly_combines:
-      prover_items = poly_combine.dump_items(has_oracle=False, has_commit=True, has_poly=True)
-      verifier_items = poly_combine.dump_items(has_oracle=False, has_commit=True, has_poly=False)
-      for item in prover_items:
-        self.prover_computes(item, RustBuilder())
-      for item in verifier_items:
-        self.verifier_computes(item, RustBuilder())
+      prover_items, prover_rust_items = poly_combine.dump_items(
+          has_oracle=False, has_commit=True, has_poly=True)
+      verifier_items, verifier_rust_items = poly_combine.dump_items(
+          has_oracle=False, has_commit=True, has_poly=False)
+      for item, rust_item in zip(prover_items, prover_rust_items):
+        self.prover_computes(item, rust_item)
+      for item, rust_item in zip(verifier_items, verifier_rust_items):
+        self.verifier_computes(item, rust_item)
+      transcript.append(poly_combine.poly.to_comm())
 
     queries = piopexec.eval_queries + piopexec.eval_checks
     points_poly_dict = {}
@@ -1080,13 +1128,24 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         points_poly_dict[key] = []
       points_poly_dict[key].append(query)
 
-    open_proof, open_points, query_tuple_lists = [], [], []
+    open_proof, open_points, query_tuple_lists, ffs, fcomms, fvals = \
+        [], [], [], [], [], []
     for point, queries in points_poly_dict.items():
       open_proof.append(Symbol(get_name("W")))
       open_points.append(queries[0].point)
+      transcript.append(queries[0].point)
       query_tuple_lists.append([(query.poly.to_comm(),
                                  query.name, query.poly.dumps())
                                 for query in queries])
+      for query in queries:
+        transcript.append(query.name)
+      ffs.append([rust(query.poly) for query in queries])
+      fcomms.append([rust_vk(query.poly.to_comm()) for query in queries])
+      fvals.append([query.name for query in queries])
+
+    fs, gs = ffs
+    fcomms, gcomms = fcomms
+    fvals, gvals = fvals
 
     self.proof += open_proof
 
@@ -1103,6 +1162,19 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     array = "\\begin{array}{l}\n%s\\\\\n%s\n\\end{array}" % (lists, points)
     open_computation.paren(array)
 
+    open_computation_rust = RustBuilder()
+    open_computation_rust.let("fs").assign(RustMacro("vec").append(fs)).end()
+    open_computation_rust.let("gs").assign(RustMacro("vec").append(gs)).end()
+    open_computation_rust.let("zz").assign(open_points[1]).end()
+    open_computation_rust.let("z").assign(open_points[0]).end()
+
+    open_computation_rust.let("rand_xi").assign().func("hash_to_field") \
+      .append_to_last(RustBuilder().func("to_bytes!") \
+      .append_to_last([rust_pk_vk(x) for x in transcript])).end()
+    open_computation_rust.let("rand_xi_2").assign().func("hash_to_field") \
+      .append_to_last(RustBuilder().func("to_bytes!") \
+      .append_to_last([rust_pk_vk(x) for x in transcript])).end()
+
     lists = "\\\\\n".join([("\\left\\{%s\\right\\}," % (
                             ",".join([("\\left(%s,%s\\right)" %
                                        (tex(query[0]), tex(query[1])))
@@ -1111,6 +1183,21 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     array = "\\begin{array}{l}\n%s\\\\\n%s\n\\left\\{%s\\right\\},[x]_2\\end{array}" \
             % (lists, points, proof_str)
     verify_computation = Math("\\mathsf{vrfy}").paren(array).equals(1)
-    self.prover_computes(open_computation, RustBuilder())
-    self.verifier_computes(verify_computation, RustBuilder())
+    verify_computation_rust = RustBuilder()
+
+    verify_computation_rust.let("rand_xi").assign().func("hash_to_field") \
+      .append_to_last(RustBuilder().func("to_bytes!") \
+        .append_to_last([rust_vk(x) for x in transcript])).end()
+    verify_computation_rust.let("rand_xi_2").assign().func("hash_to_field") \
+      .append_to_last(RustBuilder().func("to_bytes!") \
+        .append_to_last([rust_vk(x) for x in transcript])).end()
+    verify_computation_rust.let("zz").assign(open_points[1]).end()
+    verify_computation_rust.let("z").assign(open_points[0]).end()
+    verify_computation_rust.let("f_commitments").assign(RustMacro("vec").append(fcomms)).end()
+    verify_computation_rust.let("g_commitments").assign(RustMacro("vec").append(gcomms)).end()
+    verify_computation_rust.let("f_values").assign(RustMacro("vec").append(fvals)).end()
+    verify_computation_rust.let("g_values").assign(RustMacro("vec").append(gvals)).end()
+
+    self.prover_computes(open_computation, open_computation_rust)
+    self.verifier_computes(verify_computation, verify_computation_rust)
 

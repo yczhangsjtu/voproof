@@ -830,6 +830,7 @@ class NamedPolynomial(_NamedBasic):
     super(NamedPolynomial, self).__init__(name, modifier, subscript, has_prime)
     self._local_evaluate = False
     self._is_preprocessed = False
+    self._vector = None
 
   def local_evaluate(self):
     return self._local_evaluate
@@ -845,6 +846,9 @@ class NamedPolynomial(_NamedBasic):
 
   def dumpr(self):
     return "%s_poly" % super(NamedPolynomial, self).dumpr()
+
+  def dumpr_at_index(self, index):
+    return self._vector.dumpr_at_index(index)
 
 
 class PolynomialCommitment(object):
@@ -872,19 +876,19 @@ def get_named_polynomial(name, modifier=None, has_prime=False):
 
 
 def rust_vk(comm):
-  if hasattr(comm, "_is_preprocessed"):
+  if hasattr(comm, "_is_preprocessed") and comm._is_preprocessed:
     return "vk.%s" % rust(comm)
   return rust(comm)
 
 
 def rust_pk(comm):
-  if hasattr(comm, "_is_preprocessed"):
+  if hasattr(comm, "_is_preprocessed") and comm._is_preprocessed:
     return "pk.%s" % rust(comm)
   return rust(comm)
 
 
 def rust_pk_vk(comm):
-  if hasattr(comm, "_is_preprocessed"):
+  if hasattr(comm, "_is_preprocessed") and comm._is_preprocessed:
     return "pk.verifier_key.%s" % rust(comm)
   return rust(comm)
 
@@ -912,6 +916,9 @@ class NamedVectorPolynomial(object):
 
   def dumpr(self):
     return "%s_poly" % self.vector.dumpr()
+
+  def dumpr_at_index(self, index):
+    return self.vector.dumpr_at_index(index)
 
 
 class PolynomialCombination(CoeffMap):

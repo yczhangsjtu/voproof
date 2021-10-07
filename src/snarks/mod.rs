@@ -1,7 +1,7 @@
 mod voproof_r1cs;
 mod voproof_hpr;
 mod voproof_pov;
-mod template;
+// mod template;
 
 use ark_ec::PairingEngine;
 use ark_ff::{
@@ -30,9 +30,14 @@ pub trait SNARKProverKey<E: PairingEngine> {}
 pub trait SNARKVerifierKey<E: PairingEngine> {}
 pub trait SNARKProof<E: PairingEngine> {}
 
-pub fn vector_to_commitment<E: PairingEngine>(vec: &Vec<E::Fr>)
+pub fn vector_to_commitment<E: PairingEngine>(powers: &Powers<E>, vec: &Vec<E::Fr>)
         -> Result<Commitment<E>, Error> {
-    KZG10::<E, DensePoly<E::Fr>>::commit_with_coefficients(vec)
+    KZG10::<E, DensePoly<E::Fr>>::commit_with_coefficients(powers, vec)
+}
+
+pub fn scalar_to_commitment<E: PairingEngine>(powers: &Powers<E>, c: &E::Fr)
+        -> Result<Commitment<E>, Error> {
+    KZG10::<E, DensePoly<E::Fr>>::commit_single(powers, c)
 }
 
 pub trait SNARK<E: PairingEngine, F: Field> {

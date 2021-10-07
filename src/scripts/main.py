@@ -9,7 +9,7 @@ from smvp_protocols import SparseMVP, SparseMVPProverEfficient, \
                            R1CS, R1CSProverEfficient, \
                            HPR, HPRProverEfficient
 from pov_protocols import POV, POVProverEfficient
-from rust_builder import RustBuilder, rust
+from rust_builder import RustBuilder, rust, RustMacro
 from latex_builder import LaTeXBuilder
 
 ell = Symbol("ell", positive=True)
@@ -90,8 +90,7 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
   if filename is not None:
     with open("../snarks/template.rs") as template:
       temp = template.readlines()
-    temp = [line.replace("__NAME__", name)
-            for line in temp if "/*{Remove this line}*/" not in line]
+    temp = [line.replace("__NAME__", name) for line in temp]
     size_mark = "/*{size}*/"
     vk_definition_mark, vk_return_mark = "/*{VerifierKey}*/", "/*{index verifier key}*/"
     pk_definition_mark, pk_return_mark = "/*{ProverKey}*/", "/*{index prover key}*/"
@@ -143,6 +142,9 @@ def analyzeR1CS():
   size_map = [(H, "nrows"), (K, "ncols"), (S, "density"), (ell, "input_size")]
   x = get_named_vector("x")
   x.local_evaluate = True
+  x.hint_computation = lambda z: RustMacro("eval_vector_expression").append([
+        z, Symbol("i"), x.slice(Symbol("i")), ell
+      ])
   ppargs = (H, K, S*3)
   execargs = (x, get_named_vector("w"), ell)
   analyzeProtocol(R1CS(), ppargs, execargs, hints, size_map, filename="voproof_r1cs")

@@ -178,6 +178,12 @@ class RustBuilder(object):
       self.append(right)
     return self
 
+  def plus_assign(self, right=None):
+    self.append("+=")
+    if right is not None:
+      self.append(right)
+    return self
+
   def minus(self, right=None, align=False):
     self.append("-")
     if right is not None:
