@@ -5,10 +5,7 @@ use ark_std::{vec, vec::Vec};
 use ark_std::{
     rand::RngCore,
     iter::Iterator,
-    One, Zero, ops::Mul
-};
-use ark_poly::{UVPolynomial,
-    univariate::DensePolynomial
+    Zero
 };
 use ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
 use sha2::{Sha256, Digest};
@@ -321,7 +318,7 @@ macro_rules! sum {
 #[macro_export]
 macro_rules! poly_from_vec {
     ($v: expr) => {
-        DensePolynomial::from_coefficients_vec($v)
+        DensePoly::from_coefficients_vec($v)
     };
 }
 
@@ -405,6 +402,7 @@ macro_rules! eval_vector_expression {
 
 #[cfg(test)]
 mod tests {
+    use ark_poly::univariate::DensePolynomial as DensePoly;
     use super::*;
     use ark_bls12_381::Fr as F;
 

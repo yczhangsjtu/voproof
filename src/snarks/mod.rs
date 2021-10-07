@@ -40,16 +40,16 @@ pub fn scalar_to_commitment<E: PairingEngine>(g: &E, c: &E::Fr)
     KZG10::<E, DensePoly<E::Fr>>::commit_single(g, c)
 }
 
-pub trait SNARK<E: PairingEngine, F: Field> {
+pub trait SNARK<'a, E: PairingEngine, F: Field> {
     type Size: CSSize;
-    type CS: ConstraintSystem<F, E::Fr>;
+    type CS: ConstraintSystem<E::Fr, Self::Size>;
     type PK: SNARKProverKey<E>;
     type VK: SNARKVerifierKey<E>;
     type Ins: Instance<E::Fr>;
     type Wit: Witness<E::Fr>;
     type Pf: SNARKProof<E>;
 
-    fn setup(size: &Self::Size) -> UniversalParams<E>;
+    fn setup(size: usize) -> Result<UniversalParams<E>, Error>;
     fn index(pp: &UniversalParams<E>, cs: &Self::CS)
         -> Result<(Self::PK, Self::VK), Error>;
     fn prove(pk: &Self::PK, x: &Self::Ins, w: &Self::Wit) -> Result<Self::Pf, Error>;

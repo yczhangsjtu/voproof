@@ -32,7 +32,7 @@ impl VOProof__NAME__ {
     }
 }
 
-impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProof__NAME__ {
+impl<'a, E: PairingEngine, F: Field> SNARK<'a, E, F> for VOProof__NAME__ {
     type Size = __NAME__Size;
     type CS = __NAME__<E::Fr>;
     type PK = __NAME__ProverKey<'a, E>;
@@ -41,8 +41,9 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProof__NAME__ {
     type Wit = __NAME__Witness<E::Fr>;
     type Pf = __NAME__Proof<E>;
 
-    fn setup(size: usize) -> UniversalParams<E> {
-        KZG10::<E, DensePoly<E::Fr>>::setup(size)
+    fn setup(size: usize) -> Result<UniversalParams<E>, Error> {
+        let rng = &mut test_rng();
+        KZG10::<E, DensePoly<E::Fr>>::setup(size, rng)
     }
 
     fn index(pp: &UniversalParams<E>, cs: &__NAME__<F>)

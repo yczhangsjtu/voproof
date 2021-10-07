@@ -56,7 +56,7 @@ impl VOProofR1CS {
     }
 }
 
-impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
+impl<'a, E: PairingEngine, F: Field> SNARK<'a, E, F> for VOProofR1CS {
     type Size = R1CSSize;
     type CS = R1CS<E::Fr>;
     type PK = R1CSProverKey<'a, E>;
@@ -65,8 +65,9 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
     type Wit = R1CSWitness<E::Fr>;
     type Pf = R1CSProof<E>;
 
-    fn setup(size: usize) -> UniversalParams<E> {
-        KZG10::<E, DensePoly<E::Fr>>::setup(size)
+    fn setup(size: usize) -> Result<UniversalParams<E>, Error> {
+        let rng = &mut test_rng();
+        KZG10::<E, DensePoly<E::Fr>>::setup(size, rng)
     }
 
     fn index(pp: &UniversalParams<E>, cs: &R1CS<F>)
