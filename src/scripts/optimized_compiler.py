@@ -447,7 +447,7 @@ class CombinePolynomial(object):
           oracle_sum_items.append("%s\\cdot [%s]" % (latex(coeff), poly.dumps()))
         if has_commit:
           commit_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.to_comm()))
-          commit_sum_rust_items.append("(%s).mul(%s)" % (rust_pk_vk(poly.to_comm()), rust(coeff)))
+          commit_sum_rust_items.append("(%s).mul(%s)" % (rust_vk(poly.to_comm()), rust(coeff)))
         if has_poly:
           poly_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.dumps()))
           poly_sum_rust_items.append("(%s) * (%s)" %
@@ -463,7 +463,7 @@ class CombinePolynomial(object):
         commit_sum_rust_items.append(RustBuilder()
                                      .func("scalar_to_commitment")
                                      .append_to_last(
-                                     ["pk.powers", rust(coeff)]))
+                                     ["vk.g", rust(coeff)]))
 
     if has_oracle:
       items.append(Math("[%s]" % self.poly.dumps()).assign("+".join(oracle_sum_items)))
@@ -576,7 +576,7 @@ class PIOPFromVOProtocol(object):
       piopexec.preprocess(pp.latex_builder, pp.rust_builder)
     for vector, size in voexec.indexer_vectors.vectors:
       poly = vector.to_named_vector_poly()
-      piopexec.preprocess_polynomial(vector.to_named_vector_poly(), size)
+      piopexec.preprocess_polynomial(poly, size)
       vec_to_poly_dict[vector.key()] = poly
     piopexec.indexer_output_pk = voexec.indexer_output_pk
     piopexec.indexer_output_vk = voexec.indexer_output_vk

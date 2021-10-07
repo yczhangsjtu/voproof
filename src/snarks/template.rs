@@ -86,6 +86,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProof__NAME__ {
     }
     fn prove(pk: &Self::PK, x: &Self::Ins, w: &Self::Wit) -> Result<Self::Pf, Error> {
         let size = pk.verifier_key.size;
+        let vk = pk.verifier_key;
         let D = pk.verifier_key.D;
         let rng = &mut test_rng();
         /*{prove}*/

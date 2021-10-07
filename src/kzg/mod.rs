@@ -155,8 +155,8 @@ where
         Ok(Commitment(commitment.into()))
     }
 
-    pub fn commit_single(powers: &Powers<E>, c: &E::Fr) -> Commitment<E> {
-        Commitment(powers.powers_of_g[0].mul(c.into_repr()).into())
+    pub fn commit_single(g: &E, c: &E::Fr) -> Commitment<E> {
+        Commitment(g.mul(c.into_repr()).into())
     }
 
     /// Compute witness polynomial.

@@ -131,6 +131,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
     }
     fn prove(pk: &Self::PK, x: &Self::Ins, w: &Self::Wit) -> Result<Self::Pf, Error> {
         let size = pk.verifier_key.size;
+        let vk = pk.verifier_key;
         let D = pk.verifier_key.D;
         let rng = &mut test_rng();
         let H=size.nrows;
@@ -226,7 +227,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let c_10=-z;
         let mut g_poly=expression_vector!(i, sum!((c) * (vector_index!(s_vec, i)), (c_2) * (vector_index!(h_vec, i)), (c_3) * (vector_index!(pk.w_vec, i)), (c_4) * (vector_index!(pk.u_vec, i)), (c_5) * (vector_index!(pk.y_vec, i)), (c_6) * (vector_index!(u_vec_1, i)), (c_7) * (vector_index!(pk.v_vec, i)), (c_8) * (vector_index!(t_vec_1, i)), (c_9) * (vector_index!(h_vec_2, i)), (c_10) * (vector_index!(h_vec_3, i))), K + 3*S + 1);
         g_poly[0]+=c_1;
-        let cm_g=sum!((cm_s_vec).mul(c), (cm_h_vec).mul(c_2), (cm_w_vec).mul(c_3), (cm_u_vec).mul(c_4), (cm_y_vec).mul(c_5), (cm_u_vec_1).mul(c_6), (cm_v_vec).mul(c_7), (cm_t_vec_1).mul(c_8), (cm_h_vec_2).mul(c_9), (cm_h_vec_3).mul(c_10), scalar_to_commitment(pk.powers, c_10));
+        let cm_g=sum!((cm_s_vec).mul(c), (cm_h_vec).mul(c_2), (vk.cm_w_vec).mul(c_3), (vk.cm_u_vec).mul(c_4), (vk.cm_y_vec).mul(c_5), (cm_u_vec_1).mul(c_6), (vk.cm_v_vec).mul(c_7), (cm_t_vec_1).mul(c_8), (cm_h_vec_2).mul(c_9), (cm_h_vec_3).mul(c_10), scalar_to_commitment(vk.g, c_10));
         let fs=vec!(h_vec_poly, u_vec_1_poly, r_vec_tilde_poly);
         let gs=vec!(g_poly);
         let zz=z;
@@ -296,7 +297,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProofR1CS {
         let c_8=z**(K + 3*S)*(omega/z)**(K + 3*S)*(1 - (omega/z)**(3*S + 1))/(omega - z);
         let c_9=-z**D;
         let c_10=-z;
-        let cm_g=sum!((cm_s_vec).mul(c), (cm_h_vec).mul(c_2), (cm_w_vec).mul(c_3), (cm_u_vec).mul(c_4), (cm_y_vec).mul(c_5), (cm_u_vec_1).mul(c_6), (cm_v_vec).mul(c_7), (cm_t_vec_1).mul(c_8), (cm_h_vec_2).mul(c_9), (cm_h_vec_3).mul(c_10), scalar_to_commitment(pk.powers, c_10));
+        let cm_g=sum!((cm_s_vec).mul(c), (cm_h_vec).mul(c_2), (vk.cm_w_vec).mul(c_3), (vk.cm_u_vec).mul(c_4), (vk.cm_y_vec).mul(c_5), (cm_u_vec_1).mul(c_6), (vk.cm_v_vec).mul(c_7), (cm_t_vec_1).mul(c_8), (cm_h_vec_2).mul(c_9), (cm_h_vec_3).mul(c_10), scalar_to_commitment(vk.g, c_10));
         let rand_xi=hash_to_field(to_bytes!(x_vec, vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, cm_u_vec_1, cm_s_vec, cm_h_vec, cm_r_vec_tilde, cm_t_vec_1, cm_h_vec_2, cm_h_vec_3, cm_g, omega/z, y, y_1, y_2, z, 0));
         let rand_xi_2=hash_to_field(to_bytes!(x_vec, vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, cm_u_vec_1, cm_s_vec, cm_h_vec, cm_r_vec_tilde, cm_t_vec_1, cm_h_vec_2, cm_h_vec_3, cm_g, omega/z, y, y_1, y_2, z, 0));
         let zz=z;

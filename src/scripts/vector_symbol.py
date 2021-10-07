@@ -111,6 +111,7 @@ class NamedVector(_NamedBasic):
     self.local_evaluate = False
     self.hint_computation = None
     self.randomizers = None
+    self._is_preprocessed = False
 
   def slice(self, start, end=None):
     return VectorSlice(self, start, end)
@@ -122,7 +123,9 @@ class NamedVector(_NamedBasic):
     return []
 
   def to_named_vector_poly(self):
-    return NamedVectorPolynomial(self)
+    ret = NamedVectorPolynomial(self)
+    ret._is_preprocessed = self._is_preprocessed
+    return ret
 
   def get_poly_with_same_name(self):
     return get_named_polynomial(self.name,
