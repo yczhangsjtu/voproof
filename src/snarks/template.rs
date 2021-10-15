@@ -1,26 +1,5 @@
 use super::*;
 
-pub struct __NAME__<F: Field> { /*{Remove this line}*/
-    a: F, /*{Remove this line}*/
-} /*{Remove this line}*/
-
-impl<F: Field> ConstraintSystem<F, __NAME__Size> for __NAME__<F> {} /*{Remove this line}*/
-
-pub struct __NAME__Size {} /*{Remove this line}*/
-
-impl CSSize for __NAME__Size {} /*{Remove this line}*/
-
-pub struct __NAME__Instance<F: Field> { /*{Remove this line}*/
-    a: F, /*{Remove this line}*/
-} /*{Remove this line}*/
-
-pub struct __NAME__Witness<F: Field> { /*{Remove this line}*/
-    a: F, /*{Remove this line}*/
-} /*{Remove this line}*/
-
-impl<F: Field> Instance<F> for __NAME__Instance<F> {} /*{Remove this line}*/
-impl<F: Field> Witness<F> for __NAME__Witness<F> {} /*{Remove this line}*/
-
 pub struct __NAME__ProverKey<'a, E: PairingEngine> {
     pub verifier_key: __NAME__VerifierKey<E>,
     pub powers: Powers<'a, E>,
@@ -29,16 +8,14 @@ pub struct __NAME__ProverKey<'a, E: PairingEngine> {
 }
 
 pub struct __NAME__VerifierKey<E: PairingEngine> {
-    pub comms: Vec<E::G1Affine>, /*{Remove this line}*/
     /*{VerifierKey}*/
     pub kzg_vk: VerifierKey<E>,
     pub size: __NAME__Size,
+    pub D: u64,
 }
 
 pub struct __NAME__Proof<E: PairingEngine> {
     /*{Proof}*/
-    pub comms: Vec<E::G1Affine>, /*{Remove this line}*/
-    pub kzg_proofs: Vec<KZGProof<E>>, /*{Remove this line}*/
 }
 
 pub struct VOProof__NAME__ {}
@@ -50,13 +27,12 @@ impl<E: PairingEngine> SNARKVerifierKey<E> for __NAME__VerifierKey<E> {}
 impl<E: PairingEngine> SNARKProof<E> for __NAME__Proof<E> {}
 
 impl VOProof__NAME__ {
-    fn get_max_degree(size: __NAME__Size) -> usize {
+    fn get_max_degree(size: &__NAME__Size) -> usize {
         /*{size}*/
-        0 /*{Remove this line}*/
     }
 }
 
-impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProof__NAME__ {
+impl<'a, E: PairingEngine, F: Field> SNARK<'a, E, F> for VOProof__NAME__ {
     type Size = __NAME__Size;
     type CS = __NAME__<E::Fr>;
     type PK = __NAME__ProverKey<'a, E>;
@@ -65,7 +41,9 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProof__NAME__ {
     type Wit = __NAME__Witness<E::Fr>;
     type Pf = __NAME__Proof<E>;
 
-    fn setup(size: usize) -> UniversalParams<E> { KZG10::<E, DensePoly<E::Fr>>::setup(size)
+    fn setup(size: usize) -> Result<UniversalParams<E>, Error> {
+        let rng = &mut test_rng();
+        KZG10::<E, DensePoly<E::Fr>>::setup(size, rng)
     }
 
     fn index(pp: &UniversalParams<E>, cs: &__NAME__<E::Fr>)
@@ -98,6 +76,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProof__NAME__ {
                 prepared_beta_h: pp.prepared_beta_h.clone(),
             },
             size,
+            D: pp.powers_of_g.len(),
         };
         Ok((__NAME__ProverKey::<E> {
             verifier_key,
@@ -108,16 +87,46 @@ impl<'a, E: PairingEngine, F: Field> SNARK<E, F> for VOProof__NAME__ {
     }
     fn prove(pk: &Self::PK, x: &Self::Ins, w: &Self::Wit) -> Result<Self::Pf, Error> {
         let size = pk.verifier_key.size;
+        let vk = pk.verifier_key;
+        let D = pk.verifier_key.D;
         let rng = &mut test_rng();
         /*{prove}*/
+        let (W, W_1) = KZG10::batch_open(
+            pk.powers,
+            fs,
+            gs,
+            z,
+            zz,
+            rand_xi,
+            rand_xi_2,
+        )?;
         Ok(__NAME__Proof::<E> {
             /*{proof}*/
         })
     }
     fn verify(vk: &Self::VK, x: &Self::Ins, proof: &Self::Pf) -> Result<(), Error> {
         let size = vk.size;
+        let D = vk.D;
+        let rng = &mut test_rng();
         /*{verify}*/
-        Err(Error::Unimplemented("__NAME__ verify".into())) /*{Remove this line}*/
+        if KZG10::batch_check(
+            vk.kzg_vk,
+            f_commitments,
+            g_commitments,
+            z,
+            zz,
+            rand_xi,
+            rand_xi_2,
+            f_values,
+            g_values,
+            proof.W,
+            proof.W_1,
+            rng,
+        )? {
+            Ok(())
+        } else {
+            Err(Error::VerificationFail)
+        }
     }
 }
 
