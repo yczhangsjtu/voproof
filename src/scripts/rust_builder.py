@@ -17,10 +17,10 @@ def rust(expr):
 def to_field(expr):
   if isinstance(expr, Integer):
     if expr == 0:
-      return "F::zero()"
+      return "E::Fr::zero()"
     if expr > 0:
-      return rust(RustBuilder().func("to_field::<F>").append_to_last(expr))
-    return rust(RustBuilder().append("-").func("to_field::<F>").append_to_last(-expr))
+      return rust(RustBuilder().func("to_field::<E::Fr>").append_to_last(expr))
+    return rust(RustBuilder().append("-").func("to_field::<E::Fr>").append_to_last(-expr))
   return rust(expr)
 
 class Samples(object):
@@ -251,7 +251,7 @@ class ExpressionVectorRust(object):
     self.length = sympify(length)
 
   def dumpr(self):
-    return "(1..=%s).map(|i| %s).collect::<Vec<F>>()" \
+    return "(1..=%s).map(|i| %s).collect::<Vec<E::Fr>>()" \
            % (rust(self.length), rust(self.expr))
 
 
@@ -263,8 +263,8 @@ class AccumulationVectorRust(object):
     self.accumulator = accumulator
 
   def dumpr(self):
-    return "(1..=%s).scan(F::zero(), |acc, &mut i| {*acc = *acc %s (%s); Some(*acc)})" \
-           ".collect::<Vec<F>>()" % (rust(self.length), self.accumulator, rust(self.expr))
+    return "(1..=%s).scan(E::Fr::zero(), |acc, &mut i| {*acc = *acc %s (%s); Some(*acc)})" \
+        ".collect::<Vec<E::Fr>>()" % (rust(self.length), self.accumulator, rust(self.expr))
 
 
 class SumAccumulationVectorRust(AccumulationVectorRust):

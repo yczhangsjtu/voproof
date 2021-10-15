@@ -38,7 +38,7 @@ class SparseMVP(VOProtocol):
         RustBuilder().let(y)
         .assign(u).invoke_method("iter").invoke_method("zip").append_to_last(w)
         .invoke_method("map").append_to_last("|a, b| a * b")
-        .invoke_method("collect::<Vec<F>>")
+        .invoke_method("collect::<Vec<E::Fr>>")
         .end())
     voexec.preprocess_vector(u, ell)
     voexec.preprocess_vector(w, ell)
@@ -89,7 +89,7 @@ class SparseMVP(VOProtocol):
         .invoke_method("chain").append_to_last(
           RustBuilder(r).invoke_method("iter").invoke_method("map")
           .append_to_last("|a| -a")
-        ).invoke_method("collect::<Vec<F>>").end())
+          ).invoke_method("collect::<Vec<E::Fr>>").end())
     voexec.prover_submit_vector(s, H + K)
     voexec.hadamard_query(
       mu * PowerVector(1, H) - PowerVector(gamma, H),
@@ -123,7 +123,7 @@ class SparseMVP(VOProtocol):
                       .invoke_method("zip").append_to_last(rust_pk(voexec.w))
                       .invoke_method("map")
                       .append_to_last("|u, w| (%s - u) * (%s - w)" % (rust(mu), rust(nu))))
-                    .invoke_method("collect::<Vec<F>>").end())
+                    .invoke_method("collect::<Vec<E::Fr>>").end())
     voexec.prover_submit_vector(h, ell + K)
 
     voexec.hadamard_query(
@@ -266,7 +266,7 @@ class R1CS(VOProtocol):
           ".chain(cs.brows.iter().map(|i| i + H))"
           ".chain(cs.crows.iter().map(|i| i + H * 2)).collect::<Vec<u64>>()")
         .append_to_last("cs.acols.iter().chain(cs.bcols).chain(cs.ccols).collect::<Vec<u64>>()")
-        .append_to_last("cs.avals.iter().chain(cs.bvals).chain(cs.cvals).collect::<Vec<F>>()").end())
+        .append_to_last("cs.avals.iter().chain(cs.bvals).chain(cs.cvals).collect::<Vec<E::Fr>>()").end())
     voexec.preprocess_output_pk(M)
     voexec.M = M
     M._is_preprocessed = True
@@ -299,7 +299,7 @@ class R1CS(VOProtocol):
                    .append_to_last([H, K, "%s.1" % rust_pk(M),
                       "%s.0" % rust_pk(M), "%s.2" % rust_pk(M),
                       RustMacro("vector_concat").append([
-                        "vec![F::one()]", x, w
+                        "vec![E::Fr::one()]", x, w
                         ])]).end())
     voexec.prover_submit_vector(u, 3 * H + K)
     voexec.run_subprotocol(SparseMVP(), u)

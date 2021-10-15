@@ -620,7 +620,7 @@ class PIOPFromVOProtocol(object):
               Math(randomizer).sample(Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
               RustBuilder().let(v).assign_func("fixed_length_vector_iter")
                            .append_to_last([v, n]).invoke_method("chain")
-                           .append_to_last(randomizer).invoke_method("collect::<Vec<F>>").end())
+                           .append_to_last(randomizer).invoke_method("collect::<Vec<E::Fr>>").end())
           piopexec.prover_send_polynomial(poly, self.vector_size + q)
           piopexec.prover_computes(
               LaTeXBuilder(),

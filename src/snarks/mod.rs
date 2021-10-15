@@ -40,7 +40,7 @@ pub fn scalar_to_commitment<E: PairingEngine>(g: &E::G1Affine, c: &E::Fr)
     KZG10::<E, DensePoly<E::Fr>>::commit_single(g, c)
 }
 
-pub trait SNARK<'a, E: PairingEngine, F: Field> {
+pub trait SNARK<'a, E: PairingEngine> {
     type Size: CSSize;
     type CS: ConstraintSystem<E::Fr, Self::Size>;
     type PK: SNARKProverKey<E>;

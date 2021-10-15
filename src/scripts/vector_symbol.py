@@ -634,7 +634,7 @@ class VectorCombination(CoeffMap):
   def dumpr_at_index(self, index):
     ret = RustMacro("linear_combination")
     ret.append(self._dict["one"][1].dumpr_at_index(index)
-        if "one" in self._dict else "F::zero()")
+        if "one" in self._dict else "E::Fr::zero()")
     for key, vec_value in self.items():
       if key == "one":
         continue
@@ -794,7 +794,7 @@ class StructuredVector(CoeffMap):
   def dumpr_at_index(self, index):
     ret = RustMacro("linear_combination")
     ret.append(self._dict["one"].dumpr_at_index(index)
-        if "one" in self._dict else "F::zero()")
+        if "one" in self._dict else "E::Fr::zero()")
     for key, vec_value in self.items():
       if key == "one":
         continue

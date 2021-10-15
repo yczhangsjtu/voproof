@@ -1,11 +1,10 @@
 use ark_ff::{
-    PrimeField as Field
+    PrimeField as Field,
 };
 use ark_std::{vec, vec::Vec};
 use ark_std::{
     rand::RngCore,
     iter::Iterator,
-    Zero
 };
 use ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
 use sha2::{Sha256, Digest};
@@ -175,21 +174,21 @@ pub fn fixed_length_vector_iter<'a, F: Field>(v: &'a Vec<F>, n: usize) -> FixedL
 #[macro_export]
 macro_rules! to_int {
     ( $v: expr) => {
-        $v.iter().map(|e| to_int::<F>(*e)).collect::<Vec<_>>()
+        $v.iter().map(|e| to_int::<E::Fr>(*e)).collect::<Vec<_>>()
     };
 }
 
 #[macro_export]
 macro_rules! to_field {
     ( $v: expr) => {
-        $v.iter().map(|e| to_field::<F>(*e)).collect::<Vec<_>>()
+        $v.iter().map(|e| to_field::<E::Fr>(*e)).collect::<Vec<_>>()
     };
 }
 
 #[macro_export]
 macro_rules! define_vec {
     ( $v: ident, $expr: expr ) => {
-        let $v: Vec<F> = $expr;
+        let $v: Vec<E::Fr> = $expr;
     };
 }
 
@@ -265,7 +264,7 @@ macro_rules! power_vector_index {
     ( $a: expr, $n: expr, $i: expr ) => {
         {
             if $i >= 1 && ($i as i64) <= ($n as i64) {
-                power::<F>($a, $i-1)
+                power::<E::Fr>($a, $i-1)
             } else {
                 F::zero()
             }
@@ -395,16 +394,19 @@ macro_rules! eval_vector_expression {
                 let ret = $expr * power;
                 power = power * $z;
                 ret
-            }).sum::<F>()
+            }).sum::<E::Fr>()
         }
     };
 }
 
 #[cfg(test)]
 mod tests {
+    use ark_poly_commit::UVPolynomial;
+    use ark_std::{Zero, One, ops::Mul};
     use ark_poly::univariate::DensePolynomial as DensePoly;
     use super::*;
     use ark_bls12_381::Fr as F;
+    use ark_bls12_381 as E;
 
     #[test]
     fn test_int_field_transform() {

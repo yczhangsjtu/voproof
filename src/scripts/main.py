@@ -66,7 +66,7 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
   for size, value in size_map:
     size_init.let(size).assign("size.%s" % value).end()
 
-  compute_init = RustBuilder().let(gamma).assign("F::GENERATOR").end()
+  compute_init = RustBuilder().let(gamma).assign("E::Fr::GENERATOR").end()
   piop.preprocess(piopexec, *ppargs)
   piopexec.reference_to_voexec._simplify_max_hints = simplify_hints
   debug("Start executing...")
@@ -107,7 +107,7 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
     proof_construction = zkSNARK.dump_proof_construction()
     for i in range(len(temp)):
       if size_mark in temp[i]:
-        temp[i] = temp[i].replace(size_mark, "%s\n        %s" % 
+        temp[i] = temp[i].replace(size_mark, "%s\n        (%s) as usize" % 
                                              (rust(size_init), str(piopexec.max_degree)))
       if vk_definition_mark in temp[i]:
         temp[i] = temp[i].replace(vk_definition_mark, verifier_key_definition)

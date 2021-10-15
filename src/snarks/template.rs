@@ -27,12 +27,12 @@ impl<E: PairingEngine> SNARKVerifierKey<E> for __NAME__VerifierKey<E> {}
 impl<E: PairingEngine> SNARKProof<E> for __NAME__Proof<E> {}
 
 impl VOProof__NAME__ {
-    fn get_max_degree(size: &__NAME__Size) -> usize {
+    fn get_max_degree(size: __NAME__Size) -> usize {
         /*{size}*/
     }
 }
 
-impl<'a, E: PairingEngine, F: Field> SNARK<'a, E, F> for VOProof__NAME__ {
+impl<'a, E: PairingEngine> SNARK<'a, E> for VOProof__NAME__ {
     type Size = __NAME__Size;
     type CS = __NAME__<E::Fr>;
     type PK = __NAME__ProverKey<'a, E>;
