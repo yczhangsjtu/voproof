@@ -35,7 +35,7 @@ pub fn vector_to_commitment<E: PairingEngine>(powers: &Powers<E>, vec: &Vec<E::F
     KZG10::<E, DensePoly<E::Fr>>::commit_with_coefficients(powers, vec)
 }
 
-pub fn scalar_to_commitment<E: PairingEngine>(g: &E, c: &E::Fr)
+pub fn scalar_to_commitment<E: PairingEngine>(g: &E::G1Affine, c: &E::Fr)
         -> Result<Commitment<E>, Error> {
     KZG10::<E, DensePoly<E::Fr>>::commit_single(g, c)
 }

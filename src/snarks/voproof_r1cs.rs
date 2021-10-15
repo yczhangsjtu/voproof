@@ -46,7 +46,7 @@ impl<E: PairingEngine> SNARKVerifierKey<E> for R1CSVerifierKey<E> {}
 impl<E: PairingEngine> SNARKProof<E> for R1CSProof<E> {}
 
 impl VOProofR1CS {
-    fn get_max_degree(size: &R1CSSize) -> usize {
+    fn get_max_degree(size: R1CSSize) -> usize {
         let H=size.nrows;
         let K=size.ncols;
         let S=size.density;
@@ -70,7 +70,7 @@ impl<'a, E: PairingEngine, F: Field> SNARK<'a, E, F> for VOProofR1CS {
         KZG10::<E, DensePoly<E::Fr>>::setup(size, rng)
     }
 
-    fn index(pp: &UniversalParams<E>, cs: &R1CS<F>)
+    fn index(pp: &UniversalParams<E>, cs: &R1CS<E::Fr>)
         -> Result<(R1CSProverKey<'a, E>, R1CSVerifierKey<E>), Error> {
         let max_degree = Self::get_max_degree(cs.get_size());
         assert!(pp.powers_of_g.len() > max_degree);

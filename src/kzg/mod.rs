@@ -7,7 +7,6 @@
 
 use ark_poly_commit::{
     Polynomial,
-    Error,
     LabeledPolynomial,
     // PCRandomness,
     PCCommitment};
@@ -30,6 +29,7 @@ use ark_std::ops::Mul;
 use rayon::prelude::*;
 
 mod data_structures;
+use crate::error::Error;
 pub use data_structures::*;
 
 /// `KZG10` is an implementation of the polynomial commitment scheme of
@@ -155,8 +155,8 @@ where
         Ok(Commitment(commitment.into()))
     }
 
-    pub fn commit_single(g: &E, c: &E::Fr) -> Commitment<E> {
-        Commitment(g.mul(c.into_repr()).into())
+    pub fn commit_single(g: &E::G1Affine, c: &E::Fr) -> Result<Commitment<E>, Error> {
+        Ok(Commitment(g.into_projective().mul(c.into_repr()).into()))
     }
 
     /// Compute witness polynomial.
