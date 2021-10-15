@@ -45,7 +45,7 @@ def encapsulate_type(item):
   if isinstance(item, Symbol):
     return "%s\\in\\mathbb{N}" % tex(item)
   if isinstance(item, tuple) and len(item) == 2:
-    return "%s\\in%s" % (tex(item[0]), tex(item[1]))
+    return "%s\\in %s" % (tex(item[0]), tex(item[1]))
   raise Exception("Unknown type: %s (%s)" % (type(item), tex(item)))
 
 
@@ -203,6 +203,12 @@ class LaTeXBuilder(object):
       self.append(right)
     return self
 
+  def sim(self, right=None):
+    self.append("\\sim")
+    if right is not None:
+      self.append(right)
+    return self
+
   def plus(self, right=None, align=False):
     self.append("&+&" if align else "+")
     if right is not None:
@@ -330,6 +336,12 @@ class LaTeXBuilder(object):
 
   def align(self):
     return self.append("&&")
+
+  def subset(self, right):
+    self.append("\\subset")
+    if right is not None:
+      self.append(right)
+    return self
 
   def dumps(self):
     if len(self.stack) > 0:
