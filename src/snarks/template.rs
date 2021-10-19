@@ -1,8 +1,8 @@
 use super::*;
 
-pub struct __NAME__ProverKey<'a, E: PairingEngine> {
+pub struct __NAME__ProverKey<E: PairingEngine> {
     pub verifier_key: __NAME__VerifierKey<E>,
-    pub powers: Powers<'a, E>,
+    pub powers: Vec<E::G1Affine>,
     pub max_degree: u64,
     /*{ProverKey}*/
 }
@@ -20,7 +20,7 @@ pub struct __NAME__Proof<E: PairingEngine> {
 
 pub struct VOProof__NAME__ {}
 
-impl<'a, E: PairingEngine> SNARKProverKey<E> for __NAME__ProverKey<'a, E> {}
+impl<E: PairingEngine> SNARKProverKey<E> for __NAME__ProverKey<E> {}
 
 impl<E: PairingEngine> SNARKVerifierKey<E> for __NAME__VerifierKey<E> {}
 
@@ -32,10 +32,10 @@ impl VOProof__NAME__ {
     }
 }
 
-impl<'a, E: PairingEngine> SNARK<'a, E> for VOProof__NAME__ {
+impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
     type Size = __NAME__Size;
     type CS = __NAME__<E::Fr>;
-    type PK = __NAME__ProverKey<'a, E>;
+    type PK = __NAME__ProverKey<E>;
     type VK = __NAME__VerifierKey<E>;
     type Ins = __NAME__Instance<E::Fr>;
     type Wit = __NAME__Witness<E::Fr>;
@@ -47,11 +47,11 @@ impl<'a, E: PairingEngine> SNARK<'a, E> for VOProof__NAME__ {
     }
 
     fn index(pp: &UniversalParams<E>, cs: &__NAME__<E::Fr>)
-        -> Result<(__NAME__ProverKey<'a, E>, __NAME__VerifierKey<E>), Error> {
+        -> Result<(__NAME__ProverKey<E>, __NAME__VerifierKey<E>), Error> {
         let max_degree = Self::get_max_degree(cs.get_size());
         assert!(pp.powers_of_g.len() > max_degree);
 
-        let mut powers_of_g = Vec::new();
+        let mut powers_of_g = Vec::<E::G1Affine>::new();
         // The prover needs both the lowest `max_degree` powers of g,
         // and the highest `max_degree` powers of g, to make sure that
         // some polynomials are bounded by particular degree bounds
@@ -76,12 +76,12 @@ impl<'a, E: PairingEngine> SNARK<'a, E> for VOProof__NAME__ {
                 prepared_beta_h: pp.prepared_beta_h.clone(),
             },
             size,
-            D: pp.powers_of_g.len(),
+            D: pp.powers_of_g.len() as u64,
         };
         Ok((__NAME__ProverKey::<E> {
             verifier_key,
             powers: powers_of_g,
-            max_degree,
+            max_degree: max_degree as u64,
             /*{index prover key}*/
         }, verifier_key))
     }

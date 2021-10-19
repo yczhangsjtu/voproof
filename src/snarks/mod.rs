@@ -30,7 +30,7 @@ pub trait SNARKProverKey<E: PairingEngine> {}
 pub trait SNARKVerifierKey<E: PairingEngine> {}
 pub trait SNARKProof<E: PairingEngine> {}
 
-pub fn vector_to_commitment<E: PairingEngine>(powers: &Powers<E>, vec: &Vec<E::Fr>)
+pub fn vector_to_commitment<E: PairingEngine>(powers: &Vec<E::G1Affine>, vec: &Vec<E::Fr>)
         -> Result<Commitment<E>, Error> {
     KZG10::<E, DensePoly<E::Fr>>::commit_with_coefficients(powers, vec)
 }

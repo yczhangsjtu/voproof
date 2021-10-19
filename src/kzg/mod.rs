@@ -101,10 +101,10 @@ where
 
     /// Outputs a commitment to `polynomial`.
     pub fn commit_with_coefficients(
-        powers: &Powers<E>,
+        powers: &Vec<E::G1Affine>,
         coeffs: &Vec<E::Fr>,
     ) -> Result<Commitment<E>, Error> {
-        Self::check_degree_is_too_large(coeffs.len() - 1, powers.size())?;
+        Self::check_degree_is_too_large(coeffs.len() - 1, powers.len())?;
 
         let commit_time = start_timer!(|| format!(
             // "Committing to polynomial of degree {} with hiding_bound: {:?}",
@@ -119,7 +119,7 @@ where
 
         let msm_time = start_timer!(|| "MSM to compute commitment to plaintext poly");
         let commitment = VariableBaseMSM::multi_scalar_mul(
-            &powers.powers_of_g[num_leading_zeros..],
+            &powers[num_leading_zeros..],
             &plain_coeffs,
         );
         end_timer!(msm_time);

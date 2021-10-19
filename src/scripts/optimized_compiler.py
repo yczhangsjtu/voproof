@@ -1069,8 +1069,9 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
                               % poly.dumps()),
                       RustBuilder().let(poly.to_comm())
                       .assign_func("vector_to_commitment")
-                      .append_to_last("powers_of_g")
-                      .append_to_last(poly.vector).end())
+                      .append_to_last("&powers_of_g")
+                      .append_to_last("&%s" % rust(poly.vector))
+                      .invoke_method("unwrap").end())
       self.preprocess_output_vk(poly.to_comm())
       transcript.append(poly.to_comm())
 
@@ -1113,8 +1114,9 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
             commit_rust_computation.assign_func("KZG10::commit").append_to_last(poly).end()
           elif isinstance(poly, NamedVectorPolynomial):
             commit_rust_computation.assign_func("vector_to_commitment") \
-              .append_to_last("pk.powers") \
-              .append_to_last(poly.vector).end()
+              .append_to_last("&pk.powers") \
+              .append_to_last("&%s" % rust(poly.vector)) \
+              .invoke_method("unwrap").end()
           else:
             raise Exception("Unrecognized polynomial type: %s" % type(poly))
           self.prover_computes(commit_computation, commit_rust_computation)

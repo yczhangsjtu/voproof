@@ -25,19 +25,19 @@ class SparseMVP(VOProtocol):
       ExpressionVector("\\gamma^{\\mathsf{row}_i}", ell)
     ), RustBuilder().let(u).assign(
       ExpressionVectorRust(
-        "power(gamma, %s.0[i] as i64)" % rust(voexec.M), ell)).end())
+        "power(gamma, %s.0[i as usize] as i64)" % rust(voexec.M), ell)).end())
     voexec.preprocess(Math(w).assign(
       ExpressionVector("\\gamma^{\\mathsf{col}_i}", ell)
     ), RustBuilder().let(w).assign(
       ExpressionVectorRust(
-        "power(gamma, %s.1[i] as i64)" % rust(voexec.M), ell)).end())
+        "power(gamma, %s.1[i as usize] as i64)" % rust(voexec.M), ell)).end())
     voexec.preprocess(Math(v).assign(
       ExpressionVector("\\mathsf{val}_i", ell)
-    ), RustBuilder().let(v).assign("%s.2" % rust(voexec.M)).end())
+    ), RustBuilder().let(v).assign("%s.2.to_vec()" % rust(voexec.M)).end())
     voexec.preprocess(Math(y).assign(u).circ(w),
         RustBuilder().let(y)
         .assign(u).invoke_method("iter").invoke_method("zip").append_to_last(w)
-        .invoke_method("map").append_to_last("|a, b| a * b")
+        .invoke_method("map").append_to_last("|(a, b)| *a * b")
         .invoke_method("collect::<Vec<E::Fr>>")
         .end())
     voexec.preprocess_vector(u, ell)
@@ -262,11 +262,11 @@ class R1CS(VOProtocol):
     M = Matrix("M")
     voexec.preprocess(LaTeXBuilder(),
         RustBuilder().let(M).assign(Tuple())
-        .append_to_last("cs.arows.iter()"
-          ".chain(cs.brows.iter().map(|i| i + H))"
-          ".chain(cs.crows.iter().map(|i| i + H * 2)).collect::<Vec<u64>>()")
-        .append_to_last("cs.acols.iter().chain(cs.bcols).chain(cs.ccols).collect::<Vec<u64>>()")
-        .append_to_last("cs.avals.iter().chain(cs.bvals).chain(cs.cvals).collect::<Vec<E::Fr>>()").end())
+        .append_to_last("cs.arows.iter().map(|a| *a)"
+          ".chain(cs.brows.iter().map(|&i| i + H))"
+          ".chain(cs.crows.iter().map(|&i| i + H * 2)).collect::<Vec<u64>>()")
+        .append_to_last("cs.acols.iter().chain(cs.bcols.iter()).chain(cs.ccols.iter()).map(|a| *a).collect::<Vec<u64>>()")
+        .append_to_last("cs.avals.iter().chain(cs.bvals.iter()).chain(cs.cvals.iter()).map(|a| *a).collect::<Vec<E::Fr>>()").end())
     voexec.preprocess_output_pk(M)
     voexec.M = M
     M._is_preprocessed = True
