@@ -60,7 +60,7 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
         // common powers of g.
         if pp.powers_of_g.len() >= 2 * (max_degree + 1) {
             powers_of_g = pp.powers_of_g[..=max_degree].to_vec();
-            powers_of_g.append(pp.powers_of_g[pp.powers_of_g.len()-max_degree-1..]);
+            powers_of_g.append(&mut pp.powers_of_g[pp.powers_of_g.len()-max_degree-1..].to_vec());
         } else {
             powers_of_g = pp.powers_of_g[..].to_vec();
         }
@@ -110,17 +110,17 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
         let rng = &mut test_rng();
         /*{verify}*/
         if KZG10::batch_check(
-            vk.kzg_vk,
-            f_commitments,
-            g_commitments,
-            z,
-            zz,
-            rand_xi,
-            rand_xi_2,
-            f_values,
-            g_values,
-            proof.W,
-            proof.W_1,
+            &vk.kzg_vk,
+            &f_commitments,
+            &g_commitments,
+            &z,
+            &zz,
+            &rand_xi,
+            &rand_xi_2,
+            &f_values,
+            &g_values,
+            &proof.W,
+            &proof.W_1,
             rng,
         )? {
             Ok(())

@@ -447,7 +447,7 @@ class CombinePolynomial(object):
           oracle_sum_items.append("%s\\cdot [%s]" % (latex(coeff), poly.dumps()))
         if has_commit:
           commit_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.to_comm()))
-          commit_sum_rust_items.append("(%s).mul(%s)" % (rust_vk(poly.to_comm()), rust(coeff)))
+          commit_sum_rust_items.append("(%s.0.into_projective()).mul(%s)" % (rust_vk(poly.to_comm()), rust(coeff)))
         if has_poly:
           poly_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.dumps()))
           poly_sum_rust_items.append("(%s) * (%s)" %
@@ -463,7 +463,7 @@ class CombinePolynomial(object):
         commit_sum_rust_items.append(RustBuilder()
                                      .func("scalar_to_commitment")
                                      .append_to_last(
-                                     ["vk.g", rust(coeff)]))
+                                     ["&vk.kzg_vk.g", rust(coeff)]))
 
     if has_oracle:
       items.append(Math("[%s]" % self.poly.dumps()).assign("+".join(oracle_sum_items)))
@@ -481,7 +481,9 @@ class CombinePolynomial(object):
     if has_commit:
       items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
       rust_items.append(RustBuilder().let(self.poly.to_comm())
-                       .assign(RustMacro("sum").append(commit_sum_rust_items)).end())
+                       .assign_func("Commitment::<E>")
+                       .append_to_last(RustMacro("sum").append(commit_sum_rust_items))
+                       .end())
 
     return items, rust_items
 
@@ -1165,7 +1167,8 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         transcript.append(query.name)
       ffs.append([rust(query.poly) for query in queries])
       fcomms.append([rust_vk(query.poly.to_comm()) for query in queries])
-      fvals.append([query.name for query in queries])
+      fvals.append(["E::Fr::zero()" if query.name == 0 else query.name
+                    for query in queries])
 
     fs, gs = ffs
     fcomms, gcomms = fcomms

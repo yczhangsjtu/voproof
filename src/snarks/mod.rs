@@ -3,15 +3,18 @@ mod voproof_hpr;
 mod voproof_pov;
 // mod template;
 
-use ark_ec::PairingEngine;
+use ark_ec::{
+    PairingEngine, AffineCurve, ProjectiveCurve
+};
 use ark_ff::{
     PrimeField as Field,
+    FftField, FpParameters,
     fields::batch_inversion
 };
 #[macro_use]
 use ark_ff::to_bytes;
 use ark_poly::univariate::DensePolynomial as DensePoly;
-use ark_std::{test_rng, Zero, vec::Vec};
+use ark_std::{test_rng, Zero, vec::Vec, ops::Mul};
 use crate::kzg::{
     UniversalParams, Powers, VerifierKey,
     Proof as KZGProof

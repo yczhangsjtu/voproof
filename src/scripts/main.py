@@ -66,7 +66,7 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
   for size, value in size_map:
     size_init.let(size).assign("size.%s" % value).end()
 
-  compute_init = RustBuilder().let(gamma).assign("E::Fr::GENERATOR").end()
+  compute_init = RustBuilder().let(gamma).assign("generator_of!(E)").end()
   piop.preprocess(piopexec, *ppargs)
   piopexec.reference_to_voexec._simplify_max_hints = simplify_hints
   debug("Start executing...")

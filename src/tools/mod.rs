@@ -399,6 +399,13 @@ macro_rules! eval_vector_expression {
     };
 }
 
+#[macro_export]
+macro_rules! generator_of {
+    ($e:ident) => {
+        $e::Fr::from_repr(<<<E as ark_ec::PairingEngine>::Fr as FftField>::FftParams as FpParameters>::GENERATOR).unwrap()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use ark_poly_commit::UVPolynomial;

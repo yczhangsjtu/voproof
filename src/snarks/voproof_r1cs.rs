@@ -84,7 +84,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         // common powers of g.
         if pp.powers_of_g.len() >= 2 * (max_degree + 1) {
             powers_of_g = pp.powers_of_g[..=max_degree].to_vec();
-            powers_of_g.append(pp.powers_of_g[pp.powers_of_g.len()-max_degree-1..]);
+            powers_of_g.append(&mut pp.powers_of_g[pp.powers_of_g.len()-max_degree-1..].to_vec());
         } else {
             powers_of_g = pp.powers_of_g[..].to_vec();
         }
@@ -93,7 +93,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let K=size.ncols;
         let S=size.density;
         let ell=size.input_size;
-        let gamma=E::Fr::GENERATOR;
+        let gamma=generator_of!(E);
         let M_mat=(cs.arows.iter().map(|a| *a).chain(cs.brows.iter().map(|&i| i + H)).chain(cs.crows.iter().map(|&i| i + H * 2)).collect::<Vec<u64>>(), cs.acols.iter().chain(cs.bcols.iter()).chain(cs.ccols.iter()).map(|a| *a).collect::<Vec<u64>>(), cs.avals.iter().chain(cs.bvals.iter()).chain(cs.cvals.iter()).map(|a| *a).collect::<Vec<E::Fr>>());
         let u_vec=(1..=3*S).map(|i| power(gamma, M_mat.0[i as usize] as i64)).collect::<Vec<E::Fr>>();
         let w_vec=(1..=3*S).map(|i| power(gamma, M_mat.1[i as usize] as i64)).collect::<Vec<E::Fr>>();
@@ -139,7 +139,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let K=size.ncols;
         let S=size.density;
         let ell=size.input_size;
-        let gamma=E::Fr::GENERATOR;
+        let gamma=generator_of!(E);
         let x_vec=x.instance;
         let delta_vec=sample_vec::<F, _>(rng);
         let delta_vec_1=sample_vec::<F, _>(rng);
@@ -228,7 +228,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let c_10=-z;
         let mut g_poly=expression_vector!(i, sum!((c) * (vector_index!(s_vec, i)), (c_2) * (vector_index!(h_vec, i)), (c_3) * (vector_index!(pk.w_vec, i)), (c_4) * (vector_index!(pk.u_vec, i)), (c_5) * (vector_index!(pk.y_vec, i)), (c_6) * (vector_index!(u_vec_1, i)), (c_7) * (vector_index!(pk.v_vec, i)), (c_8) * (vector_index!(t_vec_1, i)), (c_9) * (vector_index!(h_vec_2, i)), (c_10) * (vector_index!(h_vec_3, i))), K + 3*S + 1);
         g_poly[0]+=c_1;
-        let cm_g=sum!((cm_s_vec).mul(c), (cm_h_vec).mul(c_2), (vk.cm_w_vec).mul(c_3), (vk.cm_u_vec).mul(c_4), (vk.cm_y_vec).mul(c_5), (cm_u_vec_1).mul(c_6), (vk.cm_v_vec).mul(c_7), (cm_t_vec_1).mul(c_8), (cm_h_vec_2).mul(c_9), (cm_h_vec_3).mul(c_10), scalar_to_commitment(vk.g, c_10));
+        let cm_g=Commitment::<E>(sum!((cm_s_vec.0.into_projective()).mul(c), (cm_h_vec.0.into_projective()).mul(c_2), (vk.cm_w_vec.0.into_projective()).mul(c_3), (vk.cm_u_vec.0.into_projective()).mul(c_4), (vk.cm_y_vec.0.into_projective()).mul(c_5), (cm_u_vec_1.0.into_projective()).mul(c_6), (vk.cm_v_vec.0.into_projective()).mul(c_7), (cm_t_vec_1.0.into_projective()).mul(c_8), (cm_h_vec_2.0.into_projective()).mul(c_9), (cm_h_vec_3.0.into_projective()).mul(c_10), scalar_to_commitment(&vk.kzg_vk.g, c_10)));
         let fs=vec!(h_vec_poly, u_vec_1_poly, r_vec_tilde_poly);
         let gs=vec!(g_poly);
         let zz=z;
@@ -279,7 +279,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let K=size.ncols;
         let S=size.density;
         let ell=size.input_size;
-        let gamma=E::Fr::GENERATOR;
+        let gamma=generator_of!(E);
         let x_vec=x.instance;
         let mu=hash_to_field(to_bytes!(x_vec, vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, cm_u_vec_1));
         let nu=hash_to_field(to_bytes!(x_vec, vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, cm_u_vec_1, cm_s_vec));
@@ -298,7 +298,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let c_8=z**(K + 3*S)*(omega/z)**(K + 3*S)*(1 - (omega/z)**(3*S + 1))/(omega - z);
         let c_9=-z**D;
         let c_10=-z;
-        let cm_g=sum!((cm_s_vec).mul(c), (cm_h_vec).mul(c_2), (vk.cm_w_vec).mul(c_3), (vk.cm_u_vec).mul(c_4), (vk.cm_y_vec).mul(c_5), (cm_u_vec_1).mul(c_6), (vk.cm_v_vec).mul(c_7), (cm_t_vec_1).mul(c_8), (cm_h_vec_2).mul(c_9), (cm_h_vec_3).mul(c_10), scalar_to_commitment(vk.g, c_10));
+        let cm_g=Commitment::<E>(sum!((cm_s_vec.0.into_projective()).mul(c), (cm_h_vec.0.into_projective()).mul(c_2), (vk.cm_w_vec.0.into_projective()).mul(c_3), (vk.cm_u_vec.0.into_projective()).mul(c_4), (vk.cm_y_vec.0.into_projective()).mul(c_5), (cm_u_vec_1.0.into_projective()).mul(c_6), (vk.cm_v_vec.0.into_projective()).mul(c_7), (cm_t_vec_1.0.into_projective()).mul(c_8), (cm_h_vec_2.0.into_projective()).mul(c_9), (cm_h_vec_3.0.into_projective()).mul(c_10), scalar_to_commitment(&vk.kzg_vk.g, c_10)));
         let rand_xi=hash_to_field(to_bytes!(x_vec, vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, cm_u_vec_1, cm_s_vec, cm_h_vec, cm_r_vec_tilde, cm_t_vec_1, cm_h_vec_2, cm_h_vec_3, cm_g, omega/z, y, y_1, y_2, z, 0));
         let rand_xi_2=hash_to_field(to_bytes!(x_vec, vk.cm_u_vec, vk.cm_w_vec, vk.cm_v_vec, vk.cm_y_vec, cm_u_vec_1, cm_s_vec, cm_h_vec, cm_r_vec_tilde, cm_t_vec_1, cm_h_vec_2, cm_h_vec_3, cm_g, omega/z, y, y_1, y_2, z, 0));
         let zz=z;
@@ -306,20 +306,20 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let f_commitments=vec!(cm_h_vec, cm_u_vec_1, cm_r_vec_tilde);
         let g_commitments=vec!(cm_g);
         let f_values=vec!(y, y_1, y_2);
-        let g_values=vec!(0);
+        let g_values=vec!(E::Fr::zero());
         
         if KZG10::batch_check(
-            vk.kzg_vk,
-            f_commitments,
-            g_commitments,
-            z,
-            zz,
-            rand_xi,
-            rand_xi_2,
-            f_values,
-            g_values,
-            proof.W,
-            proof.W_1,
+            &vk.kzg_vk,
+            &f_commitments,
+            &g_commitments,
+            &z,
+            &zz,
+            &rand_xi,
+            &rand_xi_2,
+            &f_values,
+            &g_values,
+            &proof.W,
+            &proof.W_1,
             rng,
         )? {
             Ok(())
