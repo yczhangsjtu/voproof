@@ -1,5 +1,6 @@
 from sympy import Symbol, latex, sympify, Integer, Expr,\
                   simplify, Max, Add, Mul, Pow, srepr
+from rust import rust_code
 
 
 def keep_alpha_number(s):
@@ -11,6 +12,8 @@ def rust(expr):
     return expr
   if hasattr(expr, "dumpr"):
     return expr.dumpr()
+  if isinstance(expr, Expr):
+    return rust_code(expr)
   return str(expr)
 
 
