@@ -16,7 +16,7 @@ use ark_poly_commit::{UVPolynomial};
 #[macro_use]
 use ark_ff::to_bytes;
 use ark_poly::univariate::DensePolynomial as DensePoly;
-use ark_std::{test_rng, Zero, One, vec::Vec, ops::Mul};
+use ark_std::{test_rng, Zero, One, vec::Vec, ops::{Mul, Add, Sub}};
 use crate::kzg::{
     UniversalParams, Powers, VerifierKey,
     Proof as KZGProof

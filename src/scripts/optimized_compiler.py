@@ -447,7 +447,7 @@ class CombinePolynomial(object):
           oracle_sum_items.append("%s\\cdot [%s]" % (latex(coeff), poly.dumps()))
         if has_commit:
           commit_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.to_comm()))
-          commit_sum_rust_items.append("(%s.0.into_projective()).mul(%s.into_repr())" % (rust_vk(poly.to_comm()), rust(coeff)))
+          commit_sum_rust_items.append("(%s.0).mul(%s.into_repr())" % (rust_vk(poly.to_comm()), rust(coeff)))
         if has_poly:
           poly_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.dumps()))
           poly_sum_rust_items.append("(%s) * (%s)" %
@@ -486,8 +486,10 @@ class CombinePolynomial(object):
       items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
       rust_items.append(RustBuilder().let(self.poly.to_comm())
                        .assign_func("Commitment::<E>")
-                       .append_to_last(RustMacro("sum").append(commit_sum_rust_items))
-                       .end())
+                       .append_to_last(
+                         RustBuilder(RustMacro("sum").append(commit_sum_rust_items))
+                         .invoke_method("into_affine")
+                       ).end())
 
     return items, rust_items
 
@@ -1074,7 +1076,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
                       .assign("\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
                               % poly.dumps()),
                       RustBuilder().let(poly.to_comm())
-                      .assign_func("vector_to_commitment")
+                      .assign_func("vector_to_commitment::<E>")
                       .append_to_last("&powers_of_g")
                       .append_to_last("&%s" % rust(poly.vector))
                       .invoke_method("unwrap").end())
@@ -1121,7 +1123,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           if isinstance(poly, NamedPolynomial):
             commit_rust_computation.assign_func("KZG10::commit").append_to_last(poly).end()
           elif isinstance(poly, NamedVectorPolynomial):
-            commit_rust_computation.assign_func("vector_to_commitment") \
+            commit_rust_computation.assign_func("vector_to_commitment::<E>") \
               .append_to_last("&pk.powers") \
               .append_to_last("&%s" % rust(poly.vector)) \
               .invoke_method("unwrap").end()
@@ -1170,7 +1172,8 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
                                  query.name, query.poly.dumps())
                                 for query in queries])
       for query in queries:
-        transcript.append(query.name)
+        if not isinstance(query.name, int):
+          transcript.append(query.name)
       ffs.append([rust(query.poly) for query in queries])
       fcomms.append([rust_vk(query.poly.to_comm()) for query in queries])
       fvals.append(["E::Fr::zero()" if query.name == 0 else query.name

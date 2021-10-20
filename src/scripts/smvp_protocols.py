@@ -78,17 +78,20 @@ class SparseMVP(VOProtocol):
     voexec.prover_computes(Math(c).assign()
                            .transpose(r, paren=False).append("\\boldsymbol{M}"),
                            RustBuilder().let(c).assign_func("sparse_mvp")
-                           .append_to_last([K, H, "%s.1" % rust_pk(M),
-                                            "%s.0" % rust_pk(M),
-                                            "%s.2" % rust_pk(M), r]).end())
+                           .append_to_last([K, H, "&%s.1" % rust_pk(M),
+                                            "&%s.0" % rust_pk(M),
+                                            "&%s.2" % rust_pk(M),
+                                            "&%s" % rust(r)])
+                           .invoke_method("unwrap").end())
                            # Here K, H and M.rows, M.cols are flipped because the
                            # vector is multiplied from left
     s = get_named_vector("s")
     voexec.prover_computes(Math(s).assign(r).double_bar().paren(-c),
         RustBuilder().let(s).assign(r).invoke_method("iter")
+        .invoke_method("map").append_to_last("|a| *a")
         .invoke_method("chain").append_to_last(
           RustBuilder(r).invoke_method("iter").invoke_method("map")
-          .append_to_last("|a| -a")
+          .append_to_last("|a| -*a")
           ).invoke_method("collect::<Vec<E::Fr>>").end())
     voexec.prover_submit_vector(s, H + K)
     voexec.hadamard_query(
@@ -301,11 +304,11 @@ class R1CS(VOProtocol):
         )
       ).double_bar(1).double_bar(x).double_bar(w),
       RustBuilder().let(u).assign_func("sparse_mvp")
-                   .append_to_last([H, K, "%s.1" % rust_pk(M),
-                      "%s.0" % rust_pk(M), "%s.2" % rust_pk(M),
-                      RustMacro("vector_concat").append([
+                   .append_to_last([H, K, "&%s.1" % rust_pk(M),
+                      "&%s.0" % rust_pk(M), "&%s.2" % rust_pk(M),
+                      RustMacro("&vector_concat").append([
                         "vec![E::Fr::one()]", x, w
-                        ])]).end())
+                        ])]).invoke_method("unwrap").end())
     voexec.prover_submit_vector(u, 3 * H + K)
     voexec.run_subprotocol(SparseMVP(), u)
     voexec.hadamard_query(

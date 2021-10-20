@@ -84,7 +84,7 @@ pub fn power<F: Field>(a: F, e: i64) -> F {
 /// representation of the matrix, where the row indices
 /// and column indices start from 0
 pub fn sparse_mvp<F: Field>(
-    H: u64, K: u64,
+    H: i64, K: i64,
     rows: &Vec<u64>, cols: &Vec<u64>, vals: &Vec<F>,
     right: &Vec<F>) -> Result<Vec<F>, Error> {
     assert!(H > 0);
@@ -278,8 +278,8 @@ macro_rules! linear_combination {
 macro_rules! power_linear_combination {
     ( $alpha: expr, $( $a:expr ),+ ) => {
         {
-            let mut s = F::zero();
-            let mut c = F::one();
+            let mut s = E::Fr::zero();
+            let mut c = E::Fr::one();
             $(
                 s = s + c * $a;
                 c = c * $alpha;
@@ -296,7 +296,7 @@ macro_rules! vector_index {
             if $i >= 1 && ($i as i64) <= $v.len() as i64 {
                 $v[$i as usize-1]
             } else {
-                F::zero()
+                E::Fr::zero()
             }
         }
     };
@@ -338,14 +338,14 @@ macro_rules! accumulate_vector {
     };
 
     ( $v: expr, $op: tt ) => {
-        accumulate_vector!(i, F::zero(), $v[i-1], $v.len(), $op)
+        accumulate_vector!(i, E::Fr::zero(), $v[i-1], $v.len(), $op)
     };
 }
 
 #[macro_export]
 macro_rules! vector_concat {
     ( $u: expr, $( $v: expr ),+ ) => {
-        $u.into_iter()$(.chain($v.into_iter()))+.collect::<Vec<_>>()
+        (&$u).iter().map(|a| *a)$(.chain((&$v).iter().map(|a| *a)))+.collect::<Vec<_>>()
     }
 }
 
@@ -388,7 +388,7 @@ macro_rules! vector_power_mul {
     ($v:expr, $alpha:expr, $n:expr) => {
         {
             let alpha_power = power($alpha, $n as i64);
-            (1..($n as usize)+$v.len()).scan(F::zero(), |acc, i| {
+            (1..($n as usize)+$v.len()).scan(E::Fr::zero(), |acc, i| {
                 *acc = *acc * $alpha + vector_index!($v, i) -
                        vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
                 Some(*acc)
@@ -432,7 +432,7 @@ macro_rules! eval_vector_expression {
     // expressed by an expression
     ($z:expr, $i:ident, $expr:expr, $n: expr) => {
         {
-            let mut power = F::one();
+            let mut power = E::Fr::one();
             (1..=$n).map(|$i| {
                 let ret = $expr * power;
                 power = power * $z;
