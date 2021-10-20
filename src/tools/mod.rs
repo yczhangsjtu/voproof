@@ -32,8 +32,12 @@ pub fn to_int<F: Field>(e: F) -> u64 {
 
 #[macro_export]
 macro_rules! custom_add_literal {
+    (-$a: literal, $b: expr) => {
+        $b - to_field::<E::Fr>($a)
+    };
+
     ($a: literal, $b: expr) => {
-        to_field::<E::Fr>(($a) as u64) + $b
+        to_field::<E::Fr>($a) + $b
     };
 
     ($a: expr, $b: literal) => {
