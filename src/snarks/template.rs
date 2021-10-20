@@ -109,7 +109,7 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
         let D = vk.D as i64;
         let rng = &mut test_rng();
         /*{verify}*/
-        if KZG10::batch_check(
+        if KZG10::<E, DensePoly<E::Fr>>::batch_check(
             &vk.kzg_vk,
             &f_commitments,
             &g_commitments,

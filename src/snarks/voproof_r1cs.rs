@@ -309,7 +309,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let f_values=vec!(y, y_1, y_2);
         let g_values=vec!(E::Fr::zero());
         
-        if KZG10::batch_check(
+        if KZG10::<E, DensePoly<E::Fr>>::batch_check(
             &vk.kzg_vk,
             &f_commitments,
             &g_commitments,
