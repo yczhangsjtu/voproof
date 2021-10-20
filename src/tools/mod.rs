@@ -360,7 +360,7 @@ macro_rules! sum {
 #[macro_export]
 macro_rules! poly_from_vec {
     ($v: expr) => {
-        DensePoly::from_coefficients_vec($v)
+        DensePoly::from_coefficients_vec($v.clone())
     };
 }
 

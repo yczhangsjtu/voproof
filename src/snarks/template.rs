@@ -1,5 +1,6 @@
 use super::*;
 
+#[derive(Clone)]
 pub struct __NAME__ProverKey<E: PairingEngine> {
     pub verifier_key: __NAME__VerifierKey<E>,
     pub powers: Vec<E::G1Affine>,
@@ -7,6 +8,7 @@ pub struct __NAME__ProverKey<E: PairingEngine> {
     /*{ProverKey}*/
 }
 
+#[derive(Clone)]
 pub struct __NAME__VerifierKey<E: PairingEngine> {
     /*{VerifierKey}*/
     pub kzg_vk: VerifierKey<E>,
@@ -14,6 +16,7 @@ pub struct __NAME__VerifierKey<E: PairingEngine> {
     pub D: u64,
 }
 
+#[derive(Clone)]
 pub struct __NAME__Proof<E: PairingEngine> {
     /*{Proof}*/
 }
@@ -79,15 +82,15 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
             D: pp.powers_of_g.len() as u64,
         };
         Ok((__NAME__ProverKey::<E> {
-            verifier_key,
+            verifier_key: verifier_key.clone(),
             powers: powers_of_g,
             max_degree: max_degree as u64,
             /*{index prover key}*/
         }, verifier_key))
     }
     fn prove(pk: &Self::PK, x: &Self::Ins, w: &Self::Wit) -> Result<Self::Pf, Error> {
-        let size = pk.verifier_key.size;
-        let vk = pk.verifier_key;
+        let size = pk.verifier_key.size.clone();
+        let vk = pk.verifier_key.clone();
         let D = pk.verifier_key.D as i64;
         let rng = &mut test_rng();
         /*{prove}*/
@@ -105,7 +108,7 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
         })
     }
     fn verify(vk: &Self::VK, x: &Self::Ins, proof: &Self::Pf) -> Result<(), Error> {
-        let size = vk.size;
+        let size = vk.size.clone();
         let D = vk.D as i64;
         let rng = &mut test_rng();
         /*{verify}*/

@@ -36,8 +36,9 @@ class SparseMVP(VOProtocol):
     ), RustBuilder().let(v).assign("%s.2.to_vec()" % rust(voexec.M)).end())
     voexec.preprocess(Math(y).assign(u).circ(w),
         RustBuilder().let(y)
-        .assign(u).invoke_method("iter").invoke_method("zip").append_to_last(w)
-        .invoke_method("map").append_to_last("|(a, b)| *a * b")
+        .assign(u).invoke_method("iter").invoke_method("zip").append_to_last(
+          RustBuilder(w).invoke_method("iter")
+        ).invoke_method("map").append_to_last("|(a, b)| *a * *b")
         .invoke_method("collect::<Vec<E::Fr>>")
         .end())
     voexec.preprocess_vector(u, ell)
@@ -290,9 +291,9 @@ class R1CS(VOProtocol):
     voexec.input_witness(w)
 
     voexec.verifier_prepare(LaTeXBuilder(),
-        RustBuilder().let(x).assign("x.instance").end())
+        RustBuilder().let(x).assign("x.instance.clone()").end())
     voexec.prover_computes(LaTeXBuilder(),
-        RustBuilder().let(w).assign("w.witness").end())
+        RustBuilder().let(w).assign("w.witness.clone()").end())
 
     H, K, s, n = voexec.r1cs_H, voexec.r1cs_K, voexec.s, voexec.vector_size
     M = voexec.M

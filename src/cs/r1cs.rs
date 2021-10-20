@@ -36,6 +36,7 @@ impl<F: Field> ConstraintSystem<F, R1CSSize> for R1CS<F> {
     }
 }
 
+#[derive(Clone)]
 pub struct R1CSSize {
     pub nrows: u64,
     pub ncols: u64,
