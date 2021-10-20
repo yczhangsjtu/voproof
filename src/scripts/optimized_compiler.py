@@ -461,11 +461,11 @@ class CombinePolynomial(object):
       if has_commit:
         commit_sum_items.append("%s\\cdot \\mathsf{com}(1)" % one)
         commit_sum_rust_items.append(RustBuilder()
-                                     .func("scalar_to_commitment")
+                                     .func("scalar_to_commitment::<E>")
                                      .append_to_last(
                                      ["&vk.kzg_vk.g", "&%s" % rust(coeff)])
                                      .invoke_method("unwrap")
-                                     .attribute("0"))
+                                     .attribute("0").invoke_method("into_projective"))
 
     if has_oracle:
       items.append(Math("[%s]" % self.poly.dumps()).assign("+".join(oracle_sum_items)))
