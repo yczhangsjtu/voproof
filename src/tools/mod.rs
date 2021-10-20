@@ -208,9 +208,9 @@ impl<'a, F: Field> Iterator for FixedLengthVectorIterator<'a, F> {
     }
 }
 
-pub fn fixed_length_vector_iter<'a, F: Field>(v: &'a Vec<F>, n: usize) -> FixedLengthVectorIterator<'a, F> {
+pub fn fixed_length_vector_iter<'a, F: Field>(v: &'a Vec<F>, n: i64) -> FixedLengthVectorIterator<'a, F> {
     FixedLengthVectorIterator {
-        v, i: 0, n,
+        v, i: 0, n: n as usize,
     }
 }
 
@@ -309,7 +309,7 @@ macro_rules! power_vector_index {
             if $i >= 1 && ($i as i64) <= ($n as i64) {
                 power::<E::Fr>($a, $i-1)
             } else {
-                F::zero()
+                E::Fr::zero()
             }
         }
     };

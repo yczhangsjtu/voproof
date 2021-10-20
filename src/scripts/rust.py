@@ -68,8 +68,8 @@ known_functions = {
     # "": "is_sign_positive",
     # "": "is_sign_negative",
     # "": "mul_add",
-    "Add": [(lambda *args: len(args) == 2 and (args[0].is_integer or args[1].is_integer), "custom_add_literal!", 4),
-            (lambda *args: True, "custom_add!", 4)],
+    # "Add": [(lambda *args: len(args) == 2 and (args[0].is_integer or args[1].is_integer), "custom_add_literal!", 4),
+    #         (lambda *args: True, "custom_add!", 4)],
     "Pow": [(lambda base, exp: exp == -S.One, "inverse().unwrap", 2),           # 1.0/x
             (lambda base, exp: exp == S.Half, "sqrt", 2),            # x ** 0.5
             (lambda base, exp: exp == -S.Half, "sqrt().inverse().unwrap", 2),   # 1/(x ** 0.5)
@@ -341,8 +341,8 @@ class RustCodePrinter(CodePrinter):
             return self._print(expr)
         return self._print_Function(expr)
 
-    def _print_Add(self, expr):
-        return self._print_Function(expr)
+    # def _print_Add(self, expr):
+    #     return self._print_Function(expr)
 
     def _print_Float(self, expr, _type=False):
         ret = super()._print_Float(expr)

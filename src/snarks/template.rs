@@ -92,13 +92,13 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
         let rng = &mut test_rng();
         /*{prove}*/
         let (W, W_1) = KZG10::batch_open(
-            pk.powers,
-            fs,
-            gs,
-            z,
-            zz,
-            rand_xi,
-            rand_xi_2,
+            &pk.powers,
+            &fs,
+            &gs,
+            &z,
+            &zz,
+            &rand_xi,
+            &rand_xi_2,
         )?;
         Ok(__NAME__Proof::<E> {
             /*{proof}*/

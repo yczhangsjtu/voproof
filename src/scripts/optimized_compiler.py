@@ -474,12 +474,14 @@ class CombinePolynomial(object):
       if rust_one is None:
         rust_items.append(RustBuilder().letmut(self.poly).assign(
           RustMacro("expression_vector").append([
-            Symbol("i"), RustMacro("sum").append(poly_sum_rust_items), self.length])))
+            Symbol("i"), RustMacro("sum").append(poly_sum_rust_items), self.length])).end()
+          .let(self.poly).assign(RustMacro("poly_from_vec")).append_to_last(self.poly).end())
       else:
         rust_items.append(RustBuilder().letmut(self.poly).assign(
             RustMacro("expression_vector").append([
             Symbol("i"), RustMacro("sum").append(poly_sum_rust_items), self.length])
-          ).end().append(self.poly).append("[0]").plus_assign(rust_one).end())
+          ).end().append(self.poly).append("[0]").plus_assign(rust_one).end()
+          .let(self.poly).assign(RustMacro("poly_from_vec")).append_to_last(self.poly).end())
     if has_commit:
       items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
       rust_items.append(RustBuilder().let(self.poly.to_comm())
@@ -623,7 +625,7 @@ class PIOPFromVOProtocol(object):
           piopexec.prover_computes(
               Math(randomizer).sample(Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
               RustBuilder().let(v).assign_func("fixed_length_vector_iter")
-                           .append_to_last([v, n]).invoke_method("chain")
+                           .append_to_last(["&%s" % rust(v), n]).invoke_method("chain")
                            .append_to_last(randomizer).invoke_method("collect::<Vec<E::Fr>>").end())
           piopexec.prover_send_polynomial(poly, self.vector_size + q)
           piopexec.prover_computes(

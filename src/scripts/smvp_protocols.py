@@ -73,7 +73,7 @@ class SparseMVP(VOProtocol):
     ), RustBuilder().letmut(r).assign(
       ExpressionVectorRust(RustBuilder().append(mu).minus().func("power")
                                         .append_to_last([gamma, Symbol("i")]), H)).end()
-      .func("batch_inversion").append_to_last(r).end())
+      .func("batch_inversion").append_to_last("&mut %s" % rust(r)).end())
     c = get_named_vector("c")
     voexec.prover_computes(Math(c).assign()
                            .transpose(r, paren=False).append("\\boldsymbol{M}"),
@@ -110,7 +110,7 @@ class SparseMVP(VOProtocol):
     voexec.prover_computes(LaTeXBuilder(), RustBuilder().letmut(rnu).assign(
       ExpressionVectorRust(RustBuilder().append(nu).minus().func("power")
                                         .append_to_last([gamma, Symbol("i")]), K)).end()
-      .func("batch_inversion").append_to_last(rnu).end())
+      .func("batch_inversion").append_to_last("&mut %s" % rust(rnu)).end())
     voexec.prover_computes(Math(h).assign(
       ExpressionVector("\\frac{1}{%s-\\gamma^i}" % tex(nu), K)
     ).double_bar(
@@ -118,11 +118,16 @@ class SparseMVP(VOProtocol):
                        (tex(mu), voexec.u.slice(Symbol("i")).dumps(),
                         tex(nu), voexec.w.slice(Symbol("i")).dumps()), ell)
     ), RustBuilder().let(h).assign(rnu).invoke_method("iter")
+                    .invoke_method("map").append_to_last("|a| *a")
                     .invoke_method("chain").append_to_last(
                       RustBuilder(rust_pk(voexec.u)).invoke_method("iter")
-                      .invoke_method("zip").append_to_last(rust_pk(voexec.w))
+                      .invoke_method("map").append_to_last("|a| *a")
+                      .invoke_method("zip").append_to_last(
+                        RustBuilder(rust_pk(voexec.w)).invoke_method("iter")
+                        .invoke_method("map").append_to_last("|a| *a")
+                      )
                       .invoke_method("map")
-                      .append_to_last("|u, w| (%s - u) * (%s - w)" % (rust(mu), rust(nu))))
+                      .append_to_last("|(u, w)| (%s - u) * (%s - w)" % (rust(mu), rust(nu))))
                     .invoke_method("collect::<Vec<E::Fr>>").end())
     voexec.prover_submit_vector(h, ell + K)
 

@@ -129,10 +129,10 @@ where
 
     /// Outputs a commitment to `polynomial`.
     pub fn commit(
-        powers: &Powers<E>,
+        powers: &Vec<E::G1Affine>,
         polynomial: &P,
     ) -> Result<Commitment<E>, Error> {
-        Self::check_degree_is_too_large(polynomial.degree(), powers.size())?;
+        Self::check_degree_is_too_large(polynomial.degree(), powers.len())?;
 
         let commit_time = start_timer!(|| format!(
             // "Committing to polynomial of degree {} with hiding_bound: {:?}",
@@ -147,7 +147,7 @@ where
 
         let msm_time = start_timer!(|| "MSM to compute commitment to plaintext poly");
         let commitment = VariableBaseMSM::multi_scalar_mul(
-            &powers.powers_of_g[num_leading_zeros..],
+            &powers[num_leading_zeros..],
             &plain_coeffs,
         );
         end_timer!(msm_time);
@@ -181,17 +181,17 @@ where
     }
 
     pub(crate) fn open_with_witness_polynomial<'a>(
-        powers: &Powers<E>,
+        powers: &Vec<E::G1Affine>,
         // point: P::Point,
         witness_polynomial: &P,
     ) -> Result<Proof<E>, Error> {
-        Self::check_degree_is_too_large(witness_polynomial.degree(), powers.size())?;
+        Self::check_degree_is_too_large(witness_polynomial.degree(), powers.len())?;
         let (num_leading_zeros, witness_coeffs) =
             skip_leading_zeros_and_convert_to_bigints(witness_polynomial);
 
         let witness_comm_time = start_timer!(|| "Computing commitment to witness polynomial");
         let w = VariableBaseMSM::multi_scalar_mul(
-            &powers.powers_of_g[num_leading_zeros..],
+            &powers[num_leading_zeros..],
             &witness_coeffs,
         );
         end_timer!(witness_comm_time);
@@ -203,11 +203,11 @@ where
 
     /// On input a polynomial `p` and a point `point`, outputs a proof for the same.
     pub(crate) fn open<'a>(
-        powers: &Powers<E>,
+        powers: &Vec<E::G1Affine>,
         p: &P,
         point: &P::Point,
     ) -> Result<Proof<E>, Error> {
-        Self::check_degree_is_too_large(p.degree(), powers.size())?;
+        Self::check_degree_is_too_large(p.degree(), powers.len())?;
         let open_time = start_timer!(|| format!("Opening polynomial of degree {}", p.degree()));
 
         let witness_time = start_timer!(|| "Computing witness polynomials");
@@ -229,7 +229,7 @@ where
     /// On input two list of polynomials `{f1, ..., fm}, {g1, ..., gn}`
     /// two points z, zz, outputs one proof respectively for fi(z) and gi(zz)
     pub(crate) fn batch_open<'a>(
-        powers: &Powers<E>,
+        powers: &Vec<E::G1Affine>,
         fs: &[P],
         gs: &[P],
         z: &P::Point,
@@ -239,7 +239,7 @@ where
         // rand: &Randomness<E::Fr, P>,
     ) -> Result<(Proof<E>, Proof<E>), Error> {
         for f in fs.iter().chain(gs.iter()) {
-            Self::check_degree_is_too_large(f.degree(), powers.size())?;
+            Self::check_degree_is_too_large(f.degree(), powers.len())?;
         }
         let open_time = start_timer!(|| format!("Opening polynomials"));
 
@@ -481,7 +481,7 @@ mod tests {
         pub(crate) fn trim(
             pp: &UniversalParams<E>,
             mut supported_degree: usize,
-        ) -> Result<(Powers<E>, VerifierKey<E>), Error> {
+        ) -> Result<(Vec<E::G1Affine>, VerifierKey<E>), Error> {
             if supported_degree == 1 {
                 supported_degree += 1;
             }

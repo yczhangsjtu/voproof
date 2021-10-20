@@ -12,6 +12,7 @@ use ark_ff::{
     FftField, FpParameters,
     fields::batch_inversion
 };
+use ark_poly_commit::{UVPolynomial};
 #[macro_use]
 use ark_ff::to_bytes;
 use ark_poly::univariate::DensePolynomial as DensePoly;
@@ -44,7 +45,7 @@ pub fn scalar_to_commitment<E: PairingEngine>(g: &E::G1Affine, c: &E::Fr)
     KZG10::<E, DensePoly<E::Fr>>::commit_single(g, c)
 }
 
-pub trait SNARK<'a, E: PairingEngine> {
+pub trait SNARK<E: PairingEngine> {
     type Size: CSSize;
     type CS: ConstraintSystem<E::Fr, Self::Size>;
     type PK: SNARKProverKey<E>;
