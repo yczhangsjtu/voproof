@@ -447,7 +447,7 @@ class CombinePolynomial(object):
           oracle_sum_items.append("%s\\cdot [%s]" % (latex(coeff), poly.dumps()))
         if has_commit:
           commit_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.to_comm()))
-          commit_sum_rust_items.append("(%s.0.into_projective()).mul(%s)" % (rust_vk(poly.to_comm()), rust(coeff)))
+          commit_sum_rust_items.append("(%s.0.into_projective()).mul(%s.into_repr())" % (rust_vk(poly.to_comm()), rust(coeff)))
         if has_poly:
           poly_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.dumps()))
           poly_sum_rust_items.append("(%s) * (%s)" %
@@ -463,7 +463,7 @@ class CombinePolynomial(object):
         commit_sum_rust_items.append(RustBuilder()
                                      .func("scalar_to_commitment")
                                      .append_to_last(
-                                     ["&vk.kzg_vk.g", rust(coeff)])
+                                     ["&vk.kzg_vk.g", "&%s" % rust(coeff)])
                                      .invoke_method("unwrap")
                                      .attribute("0"))
 
@@ -1100,13 +1100,15 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
             % (i+1, ",".join([tex(x) for x in transcript]))
           )
           self.prover_computes(compute_hash,
-              RustBuilder().let(r).assign().func("hash_to_field")
+              RustBuilder().let(r).assign().func("hash_to_field::<E::Fr>")
               .append_to_last(RustBuilder().func("to_bytes!")
-                .append_to_last([rust_pk_vk(x) for x in transcript])).end())
+                .append_to_last([rust_pk_vk(x) for x in transcript])
+                .invoke_method("unwrap")).end())
           self.verifier_computes(compute_hash,
-              RustBuilder().let(r).assign().func("hash_to_field")
+              RustBuilder().let(r).assign().func("hash_to_field::<E::Fr>")
               .append_to_last(RustBuilder().func("to_bytes!")
-                .append_to_last([rust_vk(x) for x in transcript])).end())
+                .append_to_last([rust_vk(x) for x in transcript])
+                .invoke_method("unwrap")).end())
       if isinstance(interaction, ProverSendPolynomials):
         for poly, degree in interaction.polynomials:
           commit_computation = Math(poly.to_comm()).assign(
@@ -1197,12 +1199,14 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     open_computation_rust.let("zz").assign(open_points[1]).end()
     open_computation_rust.let("z").assign(open_points[0]).end()
 
-    open_computation_rust.let("rand_xi").assign().func("hash_to_field") \
+    open_computation_rust.let("rand_xi").assign().func("hash_to_field::<E::Fr>") \
       .append_to_last(RustBuilder().func("to_bytes!") \
-      .append_to_last([rust_pk_vk(x) for x in transcript])).end()
-    open_computation_rust.let("rand_xi_2").assign().func("hash_to_field") \
+        .append_to_last([rust_pk_vk(x) for x in transcript])
+        .invoke_method("unwrap")).end()
+    open_computation_rust.let("rand_xi_2").assign().func("hash_to_field::<E::Fr>") \
       .append_to_last(RustBuilder().func("to_bytes!") \
-      .append_to_last([rust_pk_vk(x) for x in transcript])).end()
+        .append_to_last([rust_pk_vk(x) for x in transcript])
+        .invoke_method("unwrap")).end()
 
     lists = "\\\\\n".join([("\\left\\{%s\\right\\}," % (
                             ",".join([("\\left(%s,%s\\right)" %
@@ -1214,12 +1218,14 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     verify_computation = Math("\\mathsf{vrfy}").paren(array).equals(1)
     verify_computation_rust = RustBuilder()
 
-    verify_computation_rust.let("rand_xi").assign().func("hash_to_field") \
+    verify_computation_rust.let("rand_xi").assign().func("hash_to_field::<E::Fr>") \
       .append_to_last(RustBuilder().func("to_bytes!") \
-        .append_to_last([rust_vk(x) for x in transcript])).end()
-    verify_computation_rust.let("rand_xi_2").assign().func("hash_to_field") \
+        .append_to_last([rust_vk(x) for x in transcript])
+        .invoke_method("unwrap")).end()
+    verify_computation_rust.let("rand_xi_2").assign().func("hash_to_field::<E::Fr>") \
       .append_to_last(RustBuilder().func("to_bytes!") \
-        .append_to_last([rust_vk(x) for x in transcript])).end()
+        .append_to_last([rust_vk(x) for x in transcript])
+        .invoke_method("unwrap")).end()
     verify_computation_rust.let("zz").assign(open_points[1]).end()
     verify_computation_rust.let("z").assign(open_points[0]).end()
     verify_computation_rust.let("f_commitments").assign(RustMacro("vec").append(fcomms)).end()

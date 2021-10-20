@@ -1,10 +1,9 @@
 use ark_ff::{
     PrimeField as Field,
 };
-use ark_std::{vec, vec::Vec};
+use ark_std::{};
 use ark_std::{
-    rand::RngCore,
-    iter::Iterator,
+    vec, vec::Vec, rand::RngCore, iter::Iterator, ops::{Add, Sub},
 };
 use ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
 use sha2::{Sha256, Digest};
@@ -12,6 +11,7 @@ use crate::{
     error::Error,
     kzg::Commitment
 };
+
 
 pub fn to_field<F: Field>(i: u64) -> F {
     F::from_repr(i.into()).unwrap()
@@ -29,9 +29,48 @@ pub fn to_int<F: Field>(e: F) -> u64 {
     }
 }
 
+
+#[macro_export]
+macro_rules! custom_add_literal {
+    ($a: literal, $b: expr) => {
+        to_field::<E::Fr>(($a) as u64) + $b
+    };
+
+    ($a: expr, $b: literal) => {
+        to_field::<E::Fr>(($b) as u64) + $a
+    };
+}
+
+#[macro_export]
+macro_rules! custom_add {
+    ($a: expr, $b: expr) => {
+        $a + $b
+    };
+
+    ($a: expr, $b: expr, $($c: expr),+) => {
+        $a as i64 + $b as i64 $(+ $c as i64)+
+    };
+}
+
+pub fn custom_add_ff<F: Field>(a: F, b: F) -> F {
+    a + b
+}
+
+pub fn custom_add_fi<F: Field>(a: F, b: i64) -> F {
+    a + to_field::<F>(b as u64)
+}
+
+pub fn custom_add_if<F: Field>(a: i64, b: F) -> F {
+    custom_add_fi(b, a)
+}
+
+pub fn custom_add_three<F: Field>(a: F, b: F, c: F) -> F {
+    a + b + c
+}
+
 pub fn power<F: Field>(a: F, e: i64) -> F {
     if e < 0 {
-        a.pow(&[(-e) as u64])
+        a.inverse().unwrap().pow(&[(-e) as u64])
     } else {
         a.pow(&[e as u64])
     }
@@ -361,19 +400,19 @@ macro_rules! power_power_mul {
     ($alpha:expr, $n:expr, $beta:expr, $m:expr) => {
         {
             let alpha_power = power($alpha, $n as i64);
-            let mut beta_power = F::one();
-            let mut late_beta_power = F::zero();
-            (1..($n as usize)+($m as usize)).scan(F::zero(), |acc, i| {
+            let mut beta_power = E::Fr::one();
+            let mut late_beta_power = E::Fr::zero();
+            (1..($n as usize)+($m as usize)).scan(E::Fr::zero(), |acc, i| {
                 *acc = *acc * $alpha + beta_power - late_beta_power * alpha_power;
-                beta_power = if i >= $m {
-                    F::zero()
+                beta_power = if i >= ($m as usize) {
+                    E::Fr::zero()
                 } else {
                     beta_power * $beta
                 };
-                late_beta_power = if i < $n {
-                    F::zero()
-                } else if i == $n {
-                    F::one()
+                late_beta_power = if i < ($n as usize) {
+                    E::Fr::zero()
+                } else if i == ($n as usize) {
+                    E::Fr::one()
                 } else {
                     late_beta_power * $beta
                 };

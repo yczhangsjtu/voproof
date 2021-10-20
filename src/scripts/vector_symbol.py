@@ -1256,7 +1256,7 @@ class NamedVectorPairCombination(CoeffMap):
         # After the reverse, the vector should be shifted left by |u|-1
         # this shift is applied to the coefficient instead
         to_shift = Symbol(get_name("shiftlength"))
-        ret.let(to_shift).assign(vector_pair.u).invoke_method("len").minus(1).end()
+        ret.let(to_shift).assign(vector_pair.u).invoke_method("len").append(" as i64 ").minus(1).end()
         named_vector_structure_pairs.append((v, coeff.shift(-to_shift)))
       elif vector_pair.u is not None:
         v = get_named_vector("v")
@@ -1264,7 +1264,7 @@ class NamedVectorPairCombination(CoeffMap):
             RustMacro("vector_reverse_omega")
             .append([vector_pair.u, omega])).end()
         to_shift = Symbol(get_name("shiftlength"))
-        ret.let(to_shift).assign(vector_pair.u).invoke_method("len").minus(1).end()
+        ret.let(to_shift).assign(vector_pair.u).invoke_method("len").append(" as i64 ").minus(1).end()
         # After the reverse, the vector should be shifted left by |v|-1
         # this shift is applied to the coefficient instead
         named_vector_structure_pairs.append((v, coeff.shift(-to_shift)))
@@ -1307,13 +1307,13 @@ class NamedVectorPairCombination(CoeffMap):
     for v, p, s in named_power_sparse_tuples:
       vec = get_named_vector("v")
       ret.let(vec).assign(RustMacro("vector_power_mul")
-        .append([rust_pk(v), p.alpha, p.size])).end()
+        .append([rust_pk(v), rust(p.alpha, to_field=True), p.size])).end()
       vector_combination += vec * s
 
     for p1, p2, s in power_power_sparse_tuples:
       v = get_named_vector("v")
       ret.let(v).assign(RustMacro("power_power_mul")
-        .append([p1.alpha, p1.size, p2.alpha, p2.size])).end()
+        .append([rust(p1.alpha, to_field=True), p1.size, rust(p2.alpha, to_field=True), p2.size])).end()
       vector_combination += v * s
 
     return ret, vector_combination

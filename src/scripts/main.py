@@ -64,7 +64,7 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
   piopexec = PIOPExecution()
   size_init = RustBuilder()
   for size, value in size_map:
-    size_init.let(size).assign("size.%s" % value).end()
+    size_init.let(size).assign("size.%s as i64" % value).end()
 
   compute_init = RustBuilder().let(gamma).assign("generator_of!(E)").end()
   piop.preprocess(piopexec, *ppargs)
@@ -143,7 +143,7 @@ def analyzeR1CS():
   x = get_named_vector("x")
   x.local_evaluate = True
   x.hint_computation = lambda z: RustMacro("eval_vector_expression").append([
-        z, Symbol("i"), x.slice(Symbol("i")), ell
+        z, Symbol("i"), x.dumpr_at_index(Symbol("i")), ell
       ])
   ppargs = (H, K, S*3)
   execargs = (x, get_named_vector("w"), ell)

@@ -7,14 +7,15 @@ use ark_ec::{
     PairingEngine, AffineCurve, ProjectiveCurve
 };
 use ark_ff::{
-    PrimeField as Field,
+    Field,
+    PrimeField,
     FftField, FpParameters,
     fields::batch_inversion
 };
 #[macro_use]
 use ark_ff::to_bytes;
 use ark_poly::univariate::DensePolynomial as DensePoly;
-use ark_std::{test_rng, Zero, vec::Vec, ops::Mul};
+use ark_std::{test_rng, Zero, One, vec::Vec, ops::Mul};
 use crate::kzg::{
     UniversalParams, Powers, VerifierKey,
     Proof as KZGProof

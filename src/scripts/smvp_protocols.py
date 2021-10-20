@@ -263,8 +263,8 @@ class R1CS(VOProtocol):
     voexec.preprocess(LaTeXBuilder(),
         RustBuilder().let(M).assign(Tuple())
         .append_to_last("cs.arows.iter().map(|a| *a)"
-          ".chain(cs.brows.iter().map(|&i| i + H))"
-          ".chain(cs.crows.iter().map(|&i| i + H * 2)).collect::<Vec<u64>>()")
+          ".chain(cs.brows.iter().map(|&i| i + H as u64))"
+          ".chain(cs.crows.iter().map(|&i| i + H as u64 * 2)).collect::<Vec<u64>>()")
         .append_to_last("cs.acols.iter().chain(cs.bcols.iter()).chain(cs.ccols.iter()).map(|a| *a).collect::<Vec<u64>>()")
         .append_to_last("cs.avals.iter().chain(cs.bvals.iter()).chain(cs.cvals.iter()).map(|a| *a).collect::<Vec<E::Fr>>()").end())
     voexec.preprocess_output_pk(M)

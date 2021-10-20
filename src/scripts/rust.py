@@ -68,13 +68,15 @@ known_functions = {
     # "": "is_sign_positive",
     # "": "is_sign_negative",
     # "": "mul_add",
-    "Pow": [(lambda base, exp: exp == -S.One, "recip", 2),           # 1.0/x
+    "Add": [(lambda *args: len(args) == 2 and (args[0].is_integer or args[1].is_integer), "custom_add_literal!", 4),
+            (lambda *args: True, "custom_add!", 4)],
+    "Pow": [(lambda base, exp: exp == -S.One, "inverse().unwrap", 2),           # 1.0/x
             (lambda base, exp: exp == S.Half, "sqrt", 2),            # x ** 0.5
-            (lambda base, exp: exp == -S.Half, "sqrt().recip", 2),   # 1/(x ** 0.5)
+            (lambda base, exp: exp == -S.Half, "sqrt().inverse().unwrap", 2),   # 1/(x ** 0.5)
             (lambda base, exp: exp == Rational(1, 3), "cbrt", 2),    # x ** (1/3)
             (lambda base, exp: base == S.One*2, "exp2", 3),          # 2 ** x
-            (lambda base, exp: exp.is_integer, "powi", 1),           # x ** y, for i32
-            (lambda base, exp: not exp.is_integer, "powf", 1)],      # x ** y, for f64
+            (lambda base, exp: exp.is_integer, "power", 4),           # x ** y, for i32 # NOTE: powi => power for the sake of finite field in voproof
+            (lambda base, exp: not exp.is_integer, "power", 4)],      # x ** y, for f64 # NOTE: powf => power for the sake of finite field in voproof
     "exp": [(lambda exp: True, "exp", 2)],   # e ** x
     "log": "ln",
     # "": "log",          # number.log(base)
@@ -339,6 +341,9 @@ class RustCodePrinter(CodePrinter):
             return self._print(expr)
         return self._print_Function(expr)
 
+    def _print_Add(self, expr):
+        return self._print_Function(expr)
+
     def _print_Float(self, expr, _type=False):
         ret = super()._print_Float(expr)
         if _type:
@@ -349,9 +354,9 @@ class RustCodePrinter(CodePrinter):
     def _print_Integer(self, expr, _type=False):
         ret = super()._print_Integer(expr)
         if _type:
-            return ret + '_i32'
+          return ret + 'i64'
         else:
-            return ret
+          return ret
 
     def _print_Rational(self, expr):
         p, q = int(expr.p), int(expr.q)
@@ -501,6 +506,11 @@ class RustCodePrinter(CodePrinter):
         return pretty
 
 
+class RustCodePrinterToField(RustCodePrinter):
+    def _print_Integer(self, expr, _type=False):
+        ret = super()._print_Integer(expr, _type)
+        return "to_field::<E::Fr>(%s)" % ret
+
 def rust_code(expr, assign_to=None, **settings):
     """Converts an expr to a string of Rust code
 
@@ -611,6 +621,10 @@ def rust_code(expr, assign_to=None, **settings):
     """
 
     return RustCodePrinter(settings).doprint(expr, assign_to)
+
+
+def rust_code_to_field(expr, assign_to=None, **settings):
+    return RustCodePrinterToField(settings).doprint(expr, assign_to)
 
 
 def print_rust_code(expr, **settings):

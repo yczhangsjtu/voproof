@@ -88,7 +88,7 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
     fn prove(pk: &Self::PK, x: &Self::Ins, w: &Self::Wit) -> Result<Self::Pf, Error> {
         let size = pk.verifier_key.size;
         let vk = pk.verifier_key;
-        let D = pk.verifier_key.D;
+        let D = pk.verifier_key.D as i64;
         let rng = &mut test_rng();
         /*{prove}*/
         let (W, W_1) = KZG10::batch_open(
@@ -106,7 +106,7 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
     }
     fn verify(vk: &Self::VK, x: &Self::Ins, proof: &Self::Pf) -> Result<(), Error> {
         let size = vk.size;
-        let D = vk.D;
+        let D = vk.D as i64;
         let rng = &mut test_rng();
         /*{verify}*/
         if KZG10::batch_check(

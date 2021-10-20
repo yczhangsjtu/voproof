@@ -1,19 +1,19 @@
 from sympy import Symbol, latex, sympify, Integer, Expr,\
                   simplify, Max, Add, Mul, Pow, srepr
-from rust import rust_code
+from rust import rust_code, rust_code_to_field
 
 
 def keep_alpha_number(s):
   return "".join([c for c in s if c.isalnum()])
 
 
-def rust(expr):
+def rust(expr, to_field=False):
   if isinstance(expr, str):
     return expr
   if hasattr(expr, "dumpr"):
     return expr.dumpr()
   if isinstance(expr, Expr):
-    return rust_code(expr)
+    return rust_code(expr) if not to_field else rust_code_to_field(expr)
   return str(expr)
 
 
@@ -29,6 +29,7 @@ def to_field(expr):
 class Samples(object):
   def __init__(self):
     self.items = []
+    self.q = 1
 
   def append(self, item):
     self.items.append(item)
@@ -36,8 +37,8 @@ class Samples(object):
   def dumpr(self):
     ret = RustBuilder()
     for item in self.items:
-      ret.let(item).assign_func("sample_vec::<F, _>") \
-         .append_to_last("rng").end()
+      ret.let(item).assign_func("sample_vec::<E::Fr, _>") \
+         .append_to_last(["rng", self.q]).end()
     return rust(ret)
 
 
