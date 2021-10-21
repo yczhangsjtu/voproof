@@ -185,6 +185,7 @@ class VectorSlice(object):
     if self.end == Infinity:
       return "[%s..]" % start
     slc = "[%s..%s]" % (start, end)
+    return slc
 
   def dumps(self):
     end = latex(self.end) if self.end is not None else ""
