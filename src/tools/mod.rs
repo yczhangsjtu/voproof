@@ -1,48 +1,43 @@
-use ark_ff::{
-    PrimeField as Field,
-};
-use ark_std::{};
-use ark_std::{
-    vec, vec::Vec, rand::RngCore, iter::Iterator, ops::{Add, Sub},
-};
+use crate::{error::Error, kzg::Commitment};
 use ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
-use sha2::{Sha256, Digest};
-use crate::{
-    error::Error,
-    kzg::Commitment
+use ark_ff::PrimeField as Field;
+use ark_std::{
+  iter::Iterator,
+  rand::RngCore,
+  vec,
+  vec::Vec,
 };
-
+use sha2::{Digest, Sha256};
 
 pub fn to_field<F: Field>(i: u64) -> F {
-    F::from_repr(i.into()).unwrap()
+  F::from_repr(i.into()).unwrap()
 }
 
 pub fn to_int<F: Field>(e: F) -> u64 {
-    let digits = e.into_repr().into().to_u64_digits();
-    match digits.len() {
-        0 => 0,
-        1 => digits[0],
-        _ => {
-            println!("{:?}", digits);
-            panic!("Number too big!")
-        }
+  let digits = e.into_repr().into().to_u64_digits();
+  match digits.len() {
+    0 => 0,
+    1 => digits[0],
+    _ => {
+      println!("{:?}", digits);
+      panic!("Number too big!")
     }
+  }
 }
-
 
 #[macro_export]
 macro_rules! custom_add_literal {
-    (-$a: literal, $b: expr) => {
-        $b - to_field::<E::Fr>($a)
-    };
+  (-$a: literal, $b: expr) => {
+    $b - to_field::<E::Fr>($a)
+  };
 
-    ($a: literal, $b: expr) => {
-        to_field::<E::Fr>($a) + $b
-    };
+  ($a: literal, $b: expr) => {
+    to_field::<E::Fr>($a) + $b
+  };
 
-    ($a: expr, $b: literal) => {
-        to_field::<E::Fr>(($b) as u64) + $a
-    };
+  ($a: expr, $b: literal) => {
+    to_field::<E::Fr>(($b) as u64) + $a
+  };
 }
 
 #[macro_export]
@@ -57,195 +52,212 @@ macro_rules! custom_add {
 }
 
 pub fn custom_add_ff<F: Field>(a: F, b: F) -> F {
-    a + b
+  a + b
 }
 
 pub fn custom_add_fi<F: Field>(a: F, b: i64) -> F {
-    a + to_field::<F>(b as u64)
+  a + to_field::<F>(b as u64)
 }
 
 pub fn custom_add_if<F: Field>(a: i64, b: F) -> F {
-    custom_add_fi(b, a)
+  custom_add_fi(b, a)
 }
 
 pub fn custom_add_three<F: Field>(a: F, b: F, c: F) -> F {
-    a + b + c
+  a + b + c
 }
 
 pub fn power<F: Field>(a: F, e: i64) -> F {
-    if e < 0 {
-        a.inverse().unwrap().pow(&[(-e) as u64])
-    } else {
-        a.pow(&[e as u64])
-    }
+  if e < 0 {
+    a.inverse().unwrap().pow(&[(-e) as u64])
+  } else {
+    a.pow(&[e as u64])
+  }
 }
 
 /// Compute the matrix-vector product using the sparse
 /// representation of the matrix, where the row indices
 /// and column indices start from 0
 pub fn sparse_mvp<F: Field>(
-    H: i64, K: i64,
-    rows: &Vec<u64>, cols: &Vec<u64>, vals: &Vec<F>,
-    right: &Vec<F>) -> Result<Vec<F>, Error> {
-    assert!(H > 0);
-    assert!(K > 0);
-    assert_eq!(right.len(), K as usize);
+  H: i64,
+  K: i64,
+  rows: &Vec<u64>,
+  cols: &Vec<u64>,
+  vals: &Vec<F>,
+  right: &Vec<F>,
+) -> Result<Vec<F>, Error> {
+  assert!(H > 0);
+  assert!(K > 0);
+  assert_eq!(right.len(), K as usize);
 
-    let mut res = vec![F::zero(); H as usize];
-    for ((r, c), v) in rows.iter().zip(cols).zip(vals) {
-        res[r.clone() as usize] += right[c.clone() as usize] * v;
-    }
-    Ok(res)
+  let mut res = vec![F::zero(); H as usize];
+  for ((r, c), v) in rows.iter().zip(cols).zip(vals) {
+    res[r.clone() as usize] += right[c.clone() as usize] * v;
+  }
+  Ok(res)
 }
 
 pub fn sample_field<F: Field, R: RngCore>(rng: &mut R) -> F {
-    F::rand(rng)
+  F::rand(rng)
 }
 
 pub fn sample_vec<F: Field, R: RngCore>(rng: &mut R, k: u64) -> Vec<F> {
-    let mut res = Vec::new();
-    for _ in 0..k {
-        res.push(sample_field(rng));
-    }
-    res
+  let mut res = Vec::new();
+  for _ in 0..k {
+    res.push(sample_field(rng));
+  }
+  res
 }
 
 /// Note: use the macro to_bytes![a, b, c] to convert any collection
 /// of elements to a single bytes array, as long as a, b, c implement
 /// the ToBytes trait.
 pub fn hash_to_field<F: Field>(bytes: Vec<u8>) -> F {
-    let mut sha = Sha256::new();
-    sha.update(bytes);
-    let output = sha.finalize();
-    F::from_le_bytes_mod_order(&output)
+  let mut sha = Sha256::new();
+  sha.update(bytes);
+  let output = sha.finalize();
+  F::from_le_bytes_mod_order(&output)
 }
 
 pub fn combine_commits<E: PairingEngine>(
-    comms: &Vec<Commitment<E>>, coeffs: &Vec<E::Fr>)
-    -> Commitment<E> {
-    Commitment{ 
-        0: VariableBaseMSM::multi_scalar_mul(
-            &comms.iter().map(|x| x.0).collect::<Vec<_>>()[..],
-            &coeffs.iter().map(|x| x.into_repr()).collect::<Vec<_>>()[..]).into_affine()
-    }
+  comms: &Vec<Commitment<E>>,
+  coeffs: &Vec<E::Fr>,
+) -> Commitment<E> {
+  Commitment {
+    0: VariableBaseMSM::multi_scalar_mul(
+      &comms.iter().map(|x| x.0).collect::<Vec<_>>()[..],
+      &coeffs.iter().map(|x| x.into_repr()).collect::<Vec<_>>()[..],
+    )
+    .into_affine(),
+  }
 }
 
 pub fn evaluate_sparse<F: Field>(x: F, coeffs: &Vec<F>, indices: &Vec<u64>) -> F {
-    coeffs.iter().zip(indices).fold(F::zero(),
-        |y, (c, i)| y + c.clone() * power(x, i.clone() as i64))
+  coeffs.iter().zip(indices).fold(F::zero(), |y, (c, i)| {
+    y + c.clone() * power(x, i.clone() as i64)
+  })
 }
 
 pub fn evaluate_short<F: Field>(x: F, coeffs: &Vec<F>) -> F {
-    coeffs.iter().enumerate().fold(F::zero(),
-        |y, (i, c)| y + c.clone() * power(x, i.clone() as i64))
+  coeffs.iter().enumerate().fold(F::zero(), |y, (i, c)| {
+    y + c.clone() * power(x, i.clone() as i64)
+  })
 }
 
 pub struct PowerVectorIterator<F: Field> {
-    _start: u64,
-    _end: u64,
-    _alpha: F,
-    _length: u64,
-    _shifted: u64,
-    _i: u64,
-    _curr: Option<F>,
+  _start: u64,
+  _end: u64,
+  _alpha: F,
+  _length: u64,
+  _shifted: u64,
+  _i: u64,
+  _curr: Option<F>,
 }
 
 impl<F: Field> Iterator for PowerVectorIterator<F> {
-    type Item = F;
-    fn next(&mut self) -> Option<F> {
-        if self._end <= self._start || self._i >= self._end {
-            return None;
-        }
-        let ret = if self._i < self._shifted || self._i >= self._length + self._shifted {
-            Some(F::zero())
-        } else if let Some(curr) = self._curr {
-            Some(curr)
-        } else {
-            let curr = power(self._alpha, (self._i - self._shifted) as i64);
-            self._curr = Some(curr);
-            Some(curr)
-        };
-
-        self._i += 1;
-        if let Some(curr) = self._curr {
-            self._curr = Some(curr * self._alpha);
-        }
-
-        ret
+  type Item = F;
+  fn next(&mut self) -> Option<F> {
+    if self._end <= self._start || self._i >= self._end {
+      return None;
     }
+    let ret = if self._i < self._shifted || self._i >= self._length + self._shifted {
+      Some(F::zero())
+    } else if let Some(curr) = self._curr {
+      Some(curr)
+    } else {
+      let curr = power(self._alpha, (self._i - self._shifted) as i64);
+      self._curr = Some(curr);
+      Some(curr)
+    };
+
+    self._i += 1;
+    if let Some(curr) = self._curr {
+      self._curr = Some(curr * self._alpha);
+    }
+
+    ret
+  }
 }
 
-pub fn power_iter<F: Field>(start: u64, end: u64, alpha: F, length: u64, shifted: u64)
-    -> PowerVectorIterator<F> {
-    if end <= start {
-        panic!("Invalid range");
-    }
-    PowerVectorIterator {
-        _start: start,
-        _end: end,
-        _alpha: alpha,
-        _length: length,
-        _shifted: shifted,
-        _i: start,
-        _curr: None,
-    }
+pub fn power_iter<F: Field>(
+  start: u64,
+  end: u64,
+  alpha: F,
+  length: u64,
+  shifted: u64,
+) -> PowerVectorIterator<F> {
+  if end <= start {
+    panic!("Invalid range");
+  }
+  PowerVectorIterator {
+    _start: start,
+    _end: end,
+    _alpha: alpha,
+    _length: length,
+    _shifted: shifted,
+    _i: start,
+    _curr: None,
+  }
 }
 
 pub struct FixedLengthVectorIterator<'a, F: Field> {
-    v: &'a Vec<F>,
-    i: usize,
-    n: usize,
+  v: &'a Vec<F>,
+  i: usize,
+  n: usize,
 }
 
 impl<'a, F: Field> Iterator for FixedLengthVectorIterator<'a, F> {
-    type Item = F;
-    fn next(&mut self) -> Option<F> {
-        match self.i {
-            i if i >= 0 && i < self.v.len() => Some(self.v[i]),
-            i if i >= self.v.len() && i < self.n => Some(F::zero()),
-            _ => None,
-        }
+  type Item = F;
+  fn next(&mut self) -> Option<F> {
+    match self.i {
+      i if i >= 0 && i < self.v.len() => Some(self.v[i]),
+      i if i >= self.v.len() && i < self.n => Some(F::zero()),
+      _ => None,
     }
+  }
 }
 
-pub fn fixed_length_vector_iter<'a, F: Field>(v: &'a Vec<F>, n: i64) -> FixedLengthVectorIterator<'a, F> {
-    FixedLengthVectorIterator {
-        v, i: 0, n: n as usize,
-    }
+pub fn fixed_length_vector_iter<'a, F: Field>(
+  v: &'a Vec<F>,
+  n: i64,
+) -> FixedLengthVectorIterator<'a, F> {
+  FixedLengthVectorIterator {
+    v,
+    i: 0,
+    n: n as usize,
+  }
 }
 
 #[macro_export]
 macro_rules! to_int {
-    ( $v: expr) => {
-        $v.iter().map(|e| to_int::<E::Fr>(*e)).collect::<Vec<_>>()
-    };
+  ( $v: expr) => {
+    $v.iter().map(|e| to_int::<E::Fr>(*e)).collect::<Vec<_>>()
+  };
 }
 
 #[macro_export]
 macro_rules! to_field {
-    ( $v: expr) => {
-        $v.iter().map(|e| to_field::<E::Fr>(*e)).collect::<Vec<_>>()
-    };
+  ( $v: expr) => {
+    $v.iter().map(|e| to_field::<E::Fr>(*e)).collect::<Vec<_>>()
+  };
 }
 
 #[macro_export]
 macro_rules! define_vec {
-    ( $v: ident, $expr: expr ) => {
-        let $v: Vec<E::Fr> = $expr;
-    };
+  ( $v: ident, $expr: expr ) => {
+    let $v: Vec<E::Fr> = $expr;
+  };
 }
 
 #[macro_export]
 macro_rules! delta {
-    ( $i: expr, $j: expr ) => {
-        {
-            if $i == $j {
-                F::one()
-            } else {
-                F::zero()
-            }
-        }
-    };
+  ( $i: expr, $j: expr ) => {{
+    if $i == $j {
+      F::one()
+    } else {
+      F::zero()
+    }
+  }};
 }
 
 #[macro_export]
@@ -291,35 +303,31 @@ macro_rules! power_linear_combination {
 
 #[macro_export]
 macro_rules! vector_index {
-    ( $v: expr, $i: expr ) => {
-        {
-            if $i >= 1 && ($i as i64) <= $v.len() as i64 {
-                $v[$i as usize-1]
-            } else {
-                E::Fr::zero()
-            }
-        }
-    };
+  ( $v: expr, $i: expr ) => {{
+    if $i >= 1 && ($i as i64) <= $v.len() as i64 {
+      $v[$i as usize - 1]
+    } else {
+      E::Fr::zero()
+    }
+  }};
 }
 
 #[macro_export]
 macro_rules! power_vector_index {
-    ( $a: expr, $n: expr, $i: expr ) => {
-        {
-            if $i >= 1 && ($i as i64) <= ($n as i64) {
-                power::<E::Fr>($a, $i-1)
-            } else {
-                E::Fr::zero()
-            }
-        }
-    };
+  ( $a: expr, $n: expr, $i: expr ) => {{
+    if $i >= 1 && ($i as i64) <= ($n as i64) {
+      power::<E::Fr>($a, $i - 1)
+    } else {
+      E::Fr::zero()
+    }
+  }};
 }
 
 #[macro_export]
 macro_rules! expression_vector {
-    ( $i: ident, $v: expr, $n: expr) => {
-         (1..=$n).map(|$i| $v).collect::<Vec<_>>()
-    };
+  ( $i: ident, $v: expr, $n: expr) => {
+    (1..=$n).map(|$i| $v).collect::<Vec<_>>()
+  };
 }
 
 #[macro_export]
@@ -356,7 +364,7 @@ macro_rules! max {
       {
         let a = $h;
         let b = max!($($v),+);
-        if a < b { a } else { b }
+        if a < b { b } else { a }
       }
     };
 }
@@ -371,248 +379,329 @@ macro_rules! sum {
 
 #[macro_export]
 macro_rules! poly_from_vec {
-    ($v: expr) => {
-        DensePoly::from_coefficients_vec($v.clone())
-    };
+  ($v: expr) => {
+    DensePoly::from_coefficients_vec($v.clone())
+  };
 }
 
 #[macro_export]
 macro_rules! vector_reverse_omega {
-    ($v: expr, $omega:expr) => {
-        $v.iter().enumerate().map(|(i,c)| *c*power($omega, i as i64))
-          .rev().collect::<Vec<_>>()
-    };
+  ($v: expr, $omega:expr) => {
+    $v.iter()
+      .enumerate()
+      .map(|(i, c)| *c * power($omega, i as i64))
+      .rev()
+      .collect::<Vec<_>>()
+  };
 }
 
 #[macro_export]
 macro_rules! vector_poly_mul {
-    // Given vectors u, v and field element omega, compute
-    // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
-    ($u:expr, $v:expr, $omega:expr) => {
-        poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec!($v))
-    };
+  // Given vectors u, v and field element omega, compute
+  // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
+  ($u:expr, $v:expr, $omega:expr) => {
+    poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec!($v))
+  };
 }
 
 #[macro_export]
 macro_rules! vector_power_mul {
-    // Given vector v, element alpha, length n, compute
-    // the coefficient vector of v * power(alpha, n)
-    ($v:expr, $alpha:expr, $n:expr) => {
-        {
-            let alpha_power = power($alpha, $n as i64);
-            (1..($n as usize)+$v.len()).scan(E::Fr::zero(), |acc, i| {
-                *acc = *acc * $alpha + vector_index!($v, i) -
-                       vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
-                Some(*acc)
-            }).collect::<Vec<_>>()
-        }
-    };
+  // Given vector v, element alpha, length n, compute
+  // the coefficient vector of v * power(alpha, n)
+  ($v:expr, $alpha:expr, $n:expr) => {{
+    let alpha_power = power($alpha, $n as i64);
+    (1..($n as usize) + $v.len())
+      .scan(E::Fr::zero(), |acc, i| {
+        *acc = *acc * $alpha + vector_index!($v, i)
+          - vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
+        Some(*acc)
+      })
+      .collect::<Vec<_>>()
+  }};
 }
 
 #[macro_export]
 macro_rules! power_power_mul {
-    // Given two power vector, compute the coefficient vector
-    // of their product
-    ($alpha:expr, $n:expr, $beta:expr, $m:expr) => {
-        {
-            let alpha_power = power($alpha, $n as i64);
-            let mut beta_power = E::Fr::one();
-            let mut late_beta_power = E::Fr::zero();
-            (1..($n as usize)+($m as usize)).scan(E::Fr::zero(), |acc, i| {
-                *acc = *acc * $alpha + beta_power - late_beta_power * alpha_power;
-                beta_power = if i >= ($m as usize) {
-                    E::Fr::zero()
-                } else {
-                    beta_power * $beta
-                };
-                late_beta_power = if i < ($n as usize) {
-                    E::Fr::zero()
-                } else if i == ($n as usize) {
-                    E::Fr::one()
-                } else {
-                    late_beta_power * $beta
-                };
-                Some(*acc)
-            }).collect::<Vec<_>>()
-        }
-    };
+  // Given two power vector, compute the coefficient vector
+  // of their product
+  ($alpha:expr, $n:expr, $beta:expr, $m:expr) => {{
+    let alpha_power = power($alpha, $n as i64);
+    let mut beta_power = E::Fr::one();
+    let mut late_beta_power = E::Fr::zero();
+    (1..($n as usize) + ($m as usize))
+      .scan(E::Fr::zero(), |acc, i| {
+        *acc = *acc * $alpha + beta_power - late_beta_power * alpha_power;
+        beta_power = if i >= ($m as usize) {
+          E::Fr::zero()
+        } else {
+          beta_power * $beta
+        };
+        late_beta_power = if i < ($n as usize) {
+          E::Fr::zero()
+        } else if i == ($n as usize) {
+          E::Fr::one()
+        } else {
+          late_beta_power * $beta
+        };
+        Some(*acc)
+      })
+      .collect::<Vec<_>>()
+  }};
 }
 
 #[macro_export]
 macro_rules! eval_vector_expression {
-    // Compute f(z), where f has coefficient vector
-    // expressed by an expression
-    ($z:expr, $i:ident, $expr:expr, $n: expr) => {
-        {
-            let mut power = E::Fr::one();
-            (1..=$n).map(|$i| {
-                let ret = $expr * power;
-                power = power * $z;
-                ret
-            }).sum::<E::Fr>()
-        }
-    };
+  // Compute f(z), where f has coefficient vector
+  // expressed by an expression
+  ($z:expr, $i:ident, $expr:expr, $n: expr) => {{
+    let mut power = E::Fr::one();
+    (1..=$n)
+      .map(|$i| {
+        let ret = $expr * power;
+        power = power * $z;
+        ret
+      })
+      .sum::<E::Fr>()
+  }};
 }
 
 #[macro_export]
 macro_rules! generator_of {
-    ($e:ident) => {
-        $e::Fr::from_repr(<<<E as ark_ec::PairingEngine>::Fr as FftField>::FftParams as FpParameters>::GENERATOR).unwrap()
-    }
+  ($e:ident) => {
+    $e::Fr::from_repr(
+      <<<E as ark_ec::PairingEngine>::Fr as FftField>::FftParams as FpParameters>::GENERATOR,
+    )
+    .unwrap()
+  };
 }
 
 #[cfg(test)]
 mod tests {
-    use ark_poly_commit::UVPolynomial;
-    use ark_std::{Zero, One, ops::Mul};
-    use ark_poly::univariate::DensePolynomial as DensePoly;
-    use super::*;
-    use ark_bls12_381::Fr as F;
-    use ark_bls12_381 as E;
+  use super::*;
+  use ark_bls12_381 as E;
+  use ark_bls12_381::Fr as F;
+  use ark_poly::univariate::DensePolynomial as DensePoly;
+  use ark_poly_commit::UVPolynomial;
+  use ark_std::{Zero, One, ops::{Mul, Add, Sub}};
 
-    #[test]
-    fn test_int_field_transform() {
-        for i in 0..1000 {
-            assert_eq!(i, to_int::<F>(to_field::<F>(i)));
-        }
-    }
+  #[test]
+  fn test_int_field_transform() {
+      for i in 0..1000 {
+          assert_eq!(i, to_int::<F>(to_field::<F>(i)));
+      }
+  }
 
-    #[test]
-    fn test_sparse_mvp() {
-        let rows = vec![1, 0, 3, 2];
-        let cols = vec![0, 1, 2, 3];
-        let vals = vec![F::from_repr(1.into()).unwrap(),
-                        F::from_repr(3.into()).unwrap(),
-                        F::from_repr(2.into()).unwrap(),
-                        F::from_repr(5.into()).unwrap()];
-        let right = vec![F::from_repr(1.into()).unwrap(),
-                         F::from_repr(1.into()).unwrap(),
-                         F::from_repr(1.into()).unwrap(),
-                         F::from_repr(1.into()).unwrap()];
-        let left = sparse_mvp(4, 4, &rows, &cols, &vals, &right).unwrap();
-        assert_eq!(left, vec![F::from_repr(3.into()).unwrap(),
-                              F::from_repr(1.into()).unwrap(),
-                              F::from_repr(5.into()).unwrap(),
-                              F::from_repr(2.into()).unwrap()]);
-    }
+  #[test]
+  fn test_max() {
+    assert_eq!(max!(1, 2, 3), 3);
+  }
 
-    #[test]
-    fn test_power_iterator() {
-        assert_eq!(power_iter::<F>(0, 5, F::one(), 3, 0).collect::<Vec<F>>(),
-                   vec![F::one(), F::one(), F::one(), F::zero(), F::zero()]);
-        assert_eq!(power_iter::<F>(2, 6, to_field(2), 3, 0).collect::<Vec<F>>(),
-                   vec![to_field(4), F::zero(), F::zero(), F::zero()]);
-        assert_eq!(power_iter::<F>(2, 6, to_field(2), 3, 3).collect::<Vec<F>>(),
-                   vec![F::zero(), to_field(1), to_field(2), to_field(4)]);
-    }
+  #[test]
+  fn test_sparse_mvp() {
+    let rows = vec![1, 0, 3, 2];
+    let cols = vec![0, 1, 2, 3];
+    let vals = vec![
+      F::from_repr(1.into()).unwrap(),
+      F::from_repr(3.into()).unwrap(),
+      F::from_repr(2.into()).unwrap(),
+      F::from_repr(5.into()).unwrap(),
+    ];
+    let right = vec![
+      F::from_repr(1.into()).unwrap(),
+      F::from_repr(1.into()).unwrap(),
+      F::from_repr(1.into()).unwrap(),
+      F::from_repr(1.into()).unwrap(),
+    ];
+    let left = sparse_mvp(4, 4, &rows, &cols, &vals, &right).unwrap();
+    assert_eq!(
+      left,
+      vec![
+        F::from_repr(3.into()).unwrap(),
+        F::from_repr(1.into()).unwrap(),
+        F::from_repr(5.into()).unwrap(),
+        F::from_repr(2.into()).unwrap()
+      ]
+    );
+  }
 
-    #[test]
-    fn test_linear_combination() {
-        assert_eq!(linear_combination!(1), 1);
-        assert_eq!(linear_combination!(1, 2, 3), 7);
-        assert_eq!(linear_combination!(1, 2, 3, 4, 5), 27);
-    }
+  #[test]
+  fn test_power_iterator() {
+    assert_eq!(
+      power_iter::<F>(0, 5, F::one(), 3, 0).collect::<Vec<F>>(),
+      vec![F::one(), F::one(), F::one(), F::zero(), F::zero()]
+    );
+    assert_eq!(
+      power_iter::<F>(2, 6, to_field(2), 3, 0).collect::<Vec<F>>(),
+      vec![to_field(4), F::zero(), F::zero(), F::zero()]
+    );
+    assert_eq!(
+      power_iter::<F>(2, 6, to_field(2), 3, 3).collect::<Vec<F>>(),
+      vec![F::zero(), to_field(1), to_field(2), to_field(4)]
+    );
+  }
 
-    #[test]
-    fn test_multi_delta() {
-        define_vec!(v, expression_vector!(i,
-                multi_delta!(i, to_field::<F>(3), 5, to_field::<F>(2), 6), 10));
-        assert_eq!(v.iter().map(|e| to_int::<F>(*e)).collect::<Vec<_>>(), vec![0, 0, 0, 0, 3, 2, 0, 0, 0, 0]);
-    }
+  #[test]
+  fn test_linear_combination() {
+    assert_eq!(linear_combination!(1), 1);
+    assert_eq!(linear_combination!(1, 2, 3), 7);
+    assert_eq!(linear_combination!(1, 2, 3, 4, 5), 27);
+  }
 
-    #[test]
-    fn test_delta() {
-        define_vec!(v, expression_vector!(i, delta!(i, 5), 10));
-        assert_eq!(v.iter().map(|e| to_int::<F>(*e)).collect::<Vec<_>>(), vec![0, 0, 0, 0, 1, 0, 0, 0, 0, 0]);
-    }
+  #[test]
+  fn test_multi_delta() {
+    define_vec!(
+      v,
+      expression_vector!(
+        i,
+        multi_delta!(i, to_field::<F>(3), 5, to_field::<F>(2), 6),
+        10
+      )
+    );
+    assert_eq!(
+      v.iter().map(|e| to_int::<F>(*e)).collect::<Vec<_>>(),
+      vec![0, 0, 0, 0, 3, 2, 0, 0, 0, 0]
+    );
+  }
 
-    #[test]
-    fn test_accumulate_vector() {
-        define_vec!(v, accumulate_vector!(i, to_field::<F>(i*i), 10, +));
-        assert_eq!(v.iter().map(|e| to_int::<F>(*e)).collect::<Vec<_>>(), vec![1, 5, 14, 30, 55, 91, 140, 204, 285, 385]);
-    }
+  #[test]
+  fn test_delta() {
+    define_vec!(v, expression_vector!(i, delta!(i, 5), 10));
+    assert_eq!(
+      v.iter().map(|e| to_int::<F>(*e)).collect::<Vec<_>>(),
+      vec![0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+    );
+  }
 
-    #[test]
-    fn test_vector_index() {
-        let v = to_field!(vec![1, 2, 3, 4]);
-        define_vec!(v, expression_vector!(i, vector_index!(v, i as i64-3), 10));
-        assert_eq!(to_int!(v), vec![0, 0, 0, 1, 2, 3, 4, 0, 0, 0]);
-    }
+  #[test]
+  fn test_accumulate_vector() {
+    define_vec!(v, accumulate_vector!(i, to_field::<F>(i*i), 10, +));
+    assert_eq!(
+      v.iter().map(|e| to_int::<F>(*e)).collect::<Vec<_>>(),
+      vec![1, 5, 14, 30, 55, 91, 140, 204, 285, 385]
+    );
+  }
 
-    #[test]
-    fn test_power_vector_index() {
-        define_vec!(v, expression_vector!(i, power_vector_index!(to_field::<F>(2), 9, i as i64-3), 10));
-        assert_eq!(to_int!(v), vec![0, 0, 0, 1, 2, 4, 8, 16, 32, 64]);
-        define_vec!(v, expression_vector!(i, power_vector_index!(to_field::<F>(2), 4, i as i64-3), 10));
-        assert_eq!(to_int!(v), vec![0, 0, 0, 1, 2, 4, 8, 0, 0, 0]);
-    }
+  #[test]
+  fn test_vector_index() {
+    let v = to_field!(vec![1, 2, 3, 4]);
+    define_vec!(v, expression_vector!(i, vector_index!(v, i as i64 - 3), 10));
+    assert_eq!(to_int!(v), vec![0, 0, 0, 1, 2, 3, 4, 0, 0, 0]);
+  }
 
-    #[test]
-    fn test_power_linear_combination() {
-        assert_eq!(power_linear_combination!(to_field::<F>(2), to_field::<F>(1)), to_field::<F>(1));
-        assert_eq!(power_linear_combination!(to_field::<F>(2),
-                                             to_field::<F>(1), to_field::<F>(2),
-                                             to_field::<F>(3), to_field::<F>(4)),
-                                             to_field::<F>(1 + 2 * 2 + 2 * 2 * 3 +
-                                                           2 * 2 * 2 * 4));
-    }
+  #[test]
+  fn test_power_vector_index() {
+    define_vec!(
+      v,
+      expression_vector!(
+        i,
+        power_vector_index!(to_field::<F>(2), 9, i as i64 - 3),
+        10
+      )
+    );
+    assert_eq!(to_int!(v), vec![0, 0, 0, 1, 2, 4, 8, 16, 32, 64]);
+    define_vec!(
+      v,
+      expression_vector!(
+        i,
+        power_vector_index!(to_field::<F>(2), 4, i as i64 - 3),
+        10
+      )
+    );
+    assert_eq!(to_int!(v), vec![0, 0, 0, 1, 2, 4, 8, 0, 0, 0]);
+  }
 
-    #[test]
-    fn test_sum() {
-        assert_eq!(sum!(1, 2, 3), 6);
-    }
+  #[test]
+  fn test_power_linear_combination() {
+    assert_eq!(
+      power_linear_combination!(to_field::<F>(2), to_field::<F>(1)),
+      to_field::<F>(1)
+    );
+    assert_eq!(
+      power_linear_combination!(
+        to_field::<F>(2),
+        to_field::<F>(1),
+        to_field::<F>(2),
+        to_field::<F>(3),
+        to_field::<F>(4)
+      ),
+      to_field::<F>(1 + 2 * 2 + 2 * 2 * 3 + 2 * 2 * 2 * 4)
+    );
+  }
 
-    #[test]
-    fn test_max() {
-        assert_eq!(max!(1, 2, 3), 3);
-    }
+  #[test]
+  fn test_sum() {
+    assert_eq!(sum!(1, 2, 3), 6);
+  }
 
-    #[test]
-    fn test_vector_concat() {
-        assert_eq!(vector_concat!(vec![1, 2, 3u64], vec![4, 5, 6u64]),
-                   vec![1, 2, 3, 4, 5, 6u64]);
-        assert_eq!(vector_concat!(vec![1, 2, 3u64], vec![4, 5, 6u64], vec![7, 8, 9]),
-                   vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    }
+  #[test]
+  fn test_vector_concat() {
+    assert_eq!(
+      vector_concat!(vec![1, 2, 3u64], vec![4, 5, 6u64]),
+      vec![1, 2, 3, 4, 5, 6u64]
+    );
+    assert_eq!(
+      vector_concat!(vec![1, 2, 3u64], vec![4, 5, 6u64], vec![7, 8, 9]),
+      vec![1, 2, 3, 4, 5, 6, 7, 8, 9]
+    );
+  }
 
-    #[test]
-    fn test_vector_reverse_omega() {
-        let omega = to_field::<F>(2);
-        let v = to_field!(vec![1, 2, 3, 1]);
-        assert_eq!(to_int!(vector_reverse_omega!(v, omega)),
-                   vec![8, 12, 4, 1]);
-    }
+  #[test]
+  fn test_vector_reverse_omega() {
+    let omega = to_field::<F>(2);
+    let v = to_field!(vec![1, 2, 3, 1]);
+    assert_eq!(to_int!(vector_reverse_omega!(v, omega)), vec![8, 12, 4, 1]);
+  }
 
-    #[test]
-    fn test_vector_poly_mul() {
-        let u = to_field!(vec![1, 1, 1, 1]);
-        let v = to_field!(vec![1, 2, 3, 4]);
-        let omega = to_field::<F>(2);
-        let poly = vector_poly_mul!(u, v, omega);
-        assert_eq!(to_int!(poly.coeffs), vec![8, 20, 34, 49, 24, 11, 4]);
-    }
+  #[test]
+  fn test_vector_poly_mul() {
+    let u = to_field!(vec![1, 1, 1, 1]);
+    let v = to_field!(vec![1, 2, 3, 4]);
+    let omega = to_field::<F>(2);
+    let poly = vector_poly_mul!(u, v, omega);
+    assert_eq!(to_int!(poly.coeffs), vec![8, 20, 34, 49, 24, 11, 4]);
+  }
 
-    #[test]
-    fn test_vector_power_mul() {
-        let v = to_field!(vec![1, 2, 3, 4]);
-        let alpha = to_field::<F>(2);
-        assert_eq!(to_int!(vector_power_mul!(v, alpha, 3)), vec![1, 4, 11, 18, 20, 16]);
-        assert_eq!(to_int!(vector_power_mul!(v, alpha, 4)), vec![1, 4, 11, 26, 36, 40, 32]);
-        assert_eq!(to_int!(vector_power_mul!(v, alpha, 5)), vec![1, 4, 11, 26, 52, 72, 80, 64]);
-    }
+  #[test]
+  fn test_vector_power_mul() {
+    let v = to_field!(vec![1, 2, 3, 4]);
+    let alpha = to_field::<F>(2);
+    assert_eq!(
+      to_int!(vector_power_mul!(v, alpha, 3)),
+      vec![1, 4, 11, 18, 20, 16]
+    );
+    assert_eq!(
+      to_int!(vector_power_mul!(v, alpha, 4)),
+      vec![1, 4, 11, 26, 36, 40, 32]
+    );
+    assert_eq!(
+      to_int!(vector_power_mul!(v, alpha, 5)),
+      vec![1, 4, 11, 26, 52, 72, 80, 64]
+    );
+  }
 
-    #[test]
-    fn test_power_power_mul() {
-        let alpha = to_field::<F>(2);
-        let beta = to_field::<F>(3);
-        assert_eq!(to_int!(power_power_mul!(alpha, 3, beta, 4)), vec![1, 5, 19, 57, 90, 108]);
-        assert_eq!(to_int!(power_power_mul!(alpha, 4, beta, 4)), vec![1, 5, 19, 65, 114, 180, 216]);
-        assert_eq!(to_int!(power_power_mul!(alpha, 5, beta, 4)), vec![1, 5, 19, 65, 130, 228, 360, 432]);
-    }
+  #[test]
+  fn test_power_power_mul() {
+    let alpha = to_field::<F>(2);
+    let beta = to_field::<F>(3);
+    assert_eq!(
+      to_int!(power_power_mul!(alpha, 3, beta, 4)),
+      vec![1, 5, 19, 57, 90, 108]
+    );
+    assert_eq!(
+      to_int!(power_power_mul!(alpha, 4, beta, 4)),
+      vec![1, 5, 19, 65, 114, 180, 216]
+    );
+    assert_eq!(
+      to_int!(power_power_mul!(alpha, 5, beta, 4)),
+      vec![1, 5, 19, 65, 130, 228, 360, 432]
+    );
+  }
 
-    #[test]
-    fn test_eval_vector_expression() {
-        assert_eq!(eval_vector_expression!(to_field::<F>(2), i, to_field::<F>(i as u64), 4),
-                                           to_field::<F>(49));
-    }
+  #[test]
+  fn test_eval_vector_expression() {
+    assert_eq!(
+      eval_vector_expression!(to_field::<F>(2), i, to_field::<F>(i as u64), 4),
+      to_field::<F>(49)
+    );
+  }
 }
