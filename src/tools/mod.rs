@@ -350,6 +350,18 @@ macro_rules! vector_concat {
 }
 
 #[macro_export]
+macro_rules! max {
+    ($h:expr) => ($h);
+    ($h:expr, $($v: expr),+) => {
+      {
+        let a = $h;
+        let b = max!($($v),+);
+        if a < b { a } else { b }
+      }
+    };
+}
+
+#[macro_export]
 macro_rules! sum {
     ($h:expr) => ($h);
     ($h:expr, $($v: expr),+) => {
@@ -548,6 +560,11 @@ mod tests {
     #[test]
     fn test_sum() {
         assert_eq!(sum!(1, 2, 3), 6);
+    }
+
+    #[test]
+    fn test_max() {
+        assert_eq!(max!(1, 2, 3), 3);
     }
 
     #[test]

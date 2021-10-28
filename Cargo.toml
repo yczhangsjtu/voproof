@@ -16,5 +16,6 @@ ark-bls12-381 = { version = "^0.3.0", default-features = false, features=["curve
 ark-bls12-377 = { version = "^0.3.0", default-features = false, features=["curve"]}
 ark-std = { version = "^0.3.0", default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
+ark-relations = "^0.3.0"
 derivative = { version = "2", features = [ "use_core" ] }
 sha2 = "0.9.6"
