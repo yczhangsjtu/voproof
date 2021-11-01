@@ -1,8 +1,8 @@
-use ark_ff::Field;
+use ark_ff::{Field, PrimeField};
 use ark_relations::r1cs::{ConstraintSystem as ArkR1CS};
-#[macro_use]
 use crate::*;
 use super::*;
+use crate::tools::*;
 
 pub struct R1CS<F: Field> {
     pub arows: Vec<u64>,
@@ -35,6 +35,19 @@ impl<F: Field> ConstraintSystem<F, R1CSSize> for R1CS<F> {
             input_size: self.input_size,
         }
     }
+}
+
+impl<F: PrimeField> R1CS<F> {
+  pub fn satisfy(&self, ins: &R1CSInstance::<F>, wit: &R1CSWitness::<F>) -> bool {
+    let z = vector_concat!(vec![F::one()], ins.instance, wit.witness);
+    let ya = sparse_mvp(self.nrows as i64, self.ncols as i64,
+      &self.arows, &self.acols, &self.avals, &z).unwrap();
+    let yb = sparse_mvp(self.nrows as i64, self.ncols as i64,
+      &self.brows, &self.bcols, &self.bvals, &z).unwrap();
+    let yc = sparse_mvp(self.nrows as i64, self.ncols as i64,
+      &self.crows, &self.ccols, &self.cvals, &z).unwrap();
+    ya.iter().zip(yb.iter()).zip(yc.iter()).all(|((a, b), c)| *a * *b == *c)
+  }
 }
 
 impl<F: Field> From<ArkR1CS<F>> for R1CS<F> {

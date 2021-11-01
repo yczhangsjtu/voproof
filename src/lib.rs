@@ -6,6 +6,6 @@ extern crate ark_std;
 mod kzg;
 pub mod tools;
 mod error;
-mod cs;
+pub mod cs;
 
 mod snarks;
