@@ -30,7 +30,7 @@ impl<E: PairingEngine> SNARKVerifierKey<E> for __NAME__VerifierKey<E> {}
 impl<E: PairingEngine> SNARKProof<E> for __NAME__Proof<E> {}
 
 impl VOProof__NAME__ {
-    fn get_max_degree(size: __NAME__Size) -> usize {
+    pub fn get_max_degree(size: __NAME__Size) -> usize {
         /*{size}*/
     }
 }

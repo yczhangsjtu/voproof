@@ -49,7 +49,7 @@ impl<E: PairingEngine> SNARKVerifierKey<E> for R1CSVerifierKey<E> {}
 impl<E: PairingEngine> SNARKProof<E> for R1CSProof<E> {}
 
 impl VOProofR1CS {
-    fn get_max_degree(size: R1CSSize) -> usize {
+    pub fn get_max_degree(size: R1CSSize) -> usize {
         let H=size.nrows as i64;
         let K=size.ncols as i64;
         let S=size.density as i64;

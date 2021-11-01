@@ -1,6 +1,6 @@
-mod voproof_hpr;
-mod voproof_pov;
-mod voproof_r1cs;
+pub mod voproof_hpr;
+pub mod voproof_pov;
+pub mod voproof_r1cs;
 // mod template;
 
 use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};

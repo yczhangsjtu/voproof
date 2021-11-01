@@ -14,11 +14,15 @@ use ark_std::{Zero, One, test_rng, UniformRand};
 use ark_ff::fields::PrimeField;
 use ark_relations::{lc, r1cs::{
   ConstraintSynthesizer, ConstraintSystemRef,
-  SynthesisError, ConstraintSystem, Variable}};
+  SynthesisError, ConstraintSystem as ArkR1CS, Variable}};
+#[macro_use]
+use voproof::*;
 use voproof::tools::{to_int, to_field};
 use voproof::{accumulate_vector, define_vec, delta,
               expression_vector, multi_delta, linear_combination};
-use voproof::cs::r1cs::{R1CS, R1CSInstance, R1CSWitness};
+use voproof::cs::{ConstraintSystem, r1cs::{R1CS, R1CSInstance, R1CSWitness}};
+use voproof::snarks::{SNARK, voproof_r1cs::*};
+use voproof::kzg::UniversalParams;
 // use voproof::kzg::{KZG10, UniversalParams, Powers, VerifierKey, Randomness};
 
 #[derive(Copy)]
@@ -65,35 +69,49 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for TestCircuit<F> {
   }
 }
 
-
-fn main() {
-  let c = TestCircuit::<F> {
-    a: Some(to_field::<F>(3)),
-    b: Some(to_field::<F>(2)),
+fn run_r1cs_example<E: PairingEngine>() -> Result<(), Error> {
+  let c = TestCircuit::<E::Fr> {
+    a: Some(to_field::<E::Fr>(3)),
+    b: Some(to_field::<E::Fr>(2)),
     num_variables: 10,
     num_constraints: 5,
   };
   let x = vec![c.a.unwrap(), c.b.unwrap(), (c.a.unwrap() * c.b.unwrap())];
   let w = vec![c.a.unwrap(); 7];
 
-  let cs = ConstraintSystem::<F>::new_ref();
+  let cs = ArkR1CS::<E::Fr>::new_ref();
   c.generate_constraints(cs.clone()).unwrap();
   let r1cs = R1CS::from(cs.into_inner().unwrap());
   println!("R1CS num rows: {}", r1cs.nrows);
   println!("R1CS num cols: {}", r1cs.ncols);
   println!("R1CS A row indices: {:?}", r1cs.arows);
   println!("R1CS A col indices: {:?}", r1cs.acols);
-  println!("R1CS A vals: {:?}", r1cs.avals);
+  println!("R1CS A vals: {:?}", to_int!(r1cs.avals));
   println!("R1CS B row indices: {:?}", r1cs.brows);
   println!("R1CS B col indices: {:?}", r1cs.bcols);
-  println!("R1CS B vals: {:?}", r1cs.bvals);
+  println!("R1CS B vals: {:?}", to_int!(r1cs.bvals));
   println!("R1CS C row indices: {:?}", r1cs.crows);
   println!("R1CS C col indices: {:?}", r1cs.ccols);
-  println!("R1CS C vals: {:?}", r1cs.cvals);
+  println!("R1CS C vals: {:?}", to_int!(r1cs.cvals));
 
   if r1cs.satisfy(&R1CSInstance{instance: x}, &R1CSWitness{witness: w}) {
     println!("R1CS satisfied!");
   } else {
     println!("R1CS unsatisfied!");
   }
+
+  let max_degree = VOProofR1CS::get_max_degree(r1cs.get_size());
+  let universal_params : UniversalParams::<E> = VOProofR1CS::setup(max_degree).unwrap();
+  println!("Universal parameter size: {}", universal_params.powers_of_g.len());
+  let (pk, vk) = VOProofR1CS::index(&universal_params, &r1cs).unwrap();
+  println!("Prover key matrix size: {}", pk.M_mat.0.len());
+  println!("Prover key u size: {}", pk.u_vec.len());
+  println!("Prover key v size: {}", pk.v_vec.len());
+  println!("Prover key w size: {}", pk.w_vec.len());
+  Ok(())
+}
+
+
+fn main() {
+  run_r1cs_example::<ark_bls12_381::Bls12_381>().unwrap();
 }
