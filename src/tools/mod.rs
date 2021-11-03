@@ -255,9 +255,9 @@ macro_rules! define_vec {
 macro_rules! delta {
   ( $i: expr, $j: expr ) => {{
     if $i == $j {
-      F::one()
+      E::Fr::one()
     } else {
-      F::zero()
+      E::Fr::zero()
     }
   }};
 }
@@ -266,7 +266,7 @@ macro_rules! delta {
 macro_rules! multi_delta {
     ( $i: expr, $( $c:expr, $j:expr ),+ ) => {
         {
-            let mut s = F::zero();
+            let mut s = E::Fr::zero();
             $( s = s + $c * delta!($i, $j); )+
             s
         }
@@ -318,7 +318,7 @@ macro_rules! vector_index {
 macro_rules! power_vector_index {
   ( $a: expr, $n: expr, $i: expr ) => {{
     if $i >= 1 && ($i as i64) <= ($n as i64) {
-      power::<E::Fr>($a, $i - 1)
+      power::<E::Fr>($a, ($i - 1) as i64)
     } else {
       E::Fr::zero()
     }
@@ -329,6 +329,15 @@ macro_rules! power_vector_index {
 macro_rules! expression_vector {
   ( $i: ident, $v: expr, $n: expr) => {
     (1..=$n).map(|$i| $v).collect::<Vec<_>>()
+  };
+}
+
+#[macro_export]
+macro_rules! add_expression_vector_to_vector {
+  ( $u:ident, $i: ident, $v: expr) => {
+    for $i in (1i64..=$u.len() as i64) {
+      $u[($i-1) as usize] += $v;
+    }
   };
 }
 
@@ -505,7 +514,7 @@ macro_rules! check_vector_eq {
       return Err(Error::VectorNotEqual("length not equal ".to_string() + $info));
     }
     if let Some(i) = $u.iter().zip($v.iter()).position(|(a, b)| *a != *b) {
-      return Err(Error::VectorNotEqual(format!("{}: unequal at {} (total length {}): {} != {}\nleft = {:?}\nright = {:?}", i, $u.len(), $info, $u[i], $v[i], $u, $v)));
+      return Err(Error::VectorNotEqual(format!("{}: unequal at {} (total length {}): {} != {}\nleft = {:?}\nright = {:?}", $info, i, $u.len(), $u[i], $v[i], $u, $v)));
     }
   }
 }
@@ -745,5 +754,12 @@ mod tests {
       eval_vector_expression!(to_field::<F>(2), i, to_field::<F>(i as u64), 4),
       to_field::<F>(49)
     );
+  }
+
+  #[test]
+  fn test_add_expression_to_vector() {
+    let mut u = vec![0, 1, 2, 3, 4];
+    add_expression_vector_to_vector!(u, i, i * i);
+    assert_eq!(u, vec![1, 5, 11, 19, 29]);
   }
 }

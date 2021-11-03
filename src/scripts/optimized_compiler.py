@@ -641,6 +641,8 @@ class PIOPFromVOProtocol(object):
     alpha = Symbol(get_name('alpha'))
     extended_hadamard = []
     shifts = []
+    if self.debug_mode:
+      check_individual_hadmard = RustBuilder()
     # Some hadamard checks are guaranteed to be zero
     # if the prover is honest. In that case, there is no
     # need for the honest prover to include those terms
@@ -651,6 +653,36 @@ class PIOPFromVOProtocol(object):
       extended_hadamard.append(alpha_power * had.left_side)
       if not had.one_sided:
         extended_hadamard.append((-alpha_power) * had.right_side)
+
+      if self.debug_mode:
+        if had.one_sided:
+          side = extended_hadamard[-1]
+          check_individual_hadmard.append(RustMacro("check_vector_eq")
+            .append([
+              RustMacro("expression_vector").append([
+                Symbol("i"), "(%s) * (%s)" % (
+                  side.a.dumpr_at_index(Symbol("i")),
+                  side.b.dumpr_at_index(Symbol("i"))),
+                rust(n)]),
+              "vec![E::Fr::zero(); (%s) as usize]" % rust(n),
+              '"The %d\'th hadamard check is not satisfied"' % (i+1)
+              ])).end()
+        else:
+          side1 = extended_hadamard[-1]
+          side2 = extended_hadamard[-2]
+          check_individual_hadmard.append(RustMacro("check_vector_eq")
+            .append([
+              RustMacro("expression_vector").append([
+                Symbol("i"), "(%s) * (%s) + (%s) * (%s)" % (
+                  side1.a.dumpr_at_index(Symbol("i")),
+                  side1.b.dumpr_at_index(Symbol("i")),
+                  side2.a.dumpr_at_index(Symbol("i")),
+                  side2.b.dumpr_at_index(Symbol("i"))),
+                rust(n)]),
+              "vec![E::Fr::zero(); (%s) as usize]" % rust(n),
+              '"The %d\'th hadamard check is not satisfied"' % (i+1)
+              ])).end()
+
       else: # One sided, and one of the operand is only a structured vector
         if (not isinstance(had.left_side.a, NamedVector) and \
            not isinstance(had.left_side.a, VectorCombination)) or \
@@ -688,7 +720,6 @@ class PIOPFromVOProtocol(object):
         extended_hadamard.append((alpha_power * beta_power) * inner.left_side)
         if not inner.one_sided:
           extended_hadamard.append((- alpha_power * beta_power) * inner.right_side)
-
         shifts += inner.shifts()
       rcomputes.append(r_items)
 
@@ -714,8 +745,10 @@ class PIOPFromVOProtocol(object):
       extended_hadamard.append((- alpha_power) *
                                VOQuerySide(rtilde - rtilde.shift(1),
                                            PowerVector(1, n)))
+
       extended_hadamard.append((alpha_power * alpha) *
                                VOQuerySide(rtilde, UnitVector(n)))
+
       # This last hadamard check involves only a named vector times
       # a unit vector, it does not contribuets to t
       ignore_in_t.add(len(extended_hadamard) - 1)
@@ -724,6 +757,7 @@ class PIOPFromVOProtocol(object):
     t = get_named_vector("t")
     max_shift = voexec.simplify_max(Max(*shifts))
     piopexec.verifier_send_randomness(alpha)
+    piopexec.prover_computes(LaTeXBuilder(), check_individual_hadmard)
     tcomputes = LaTeXBuilder().start_math().append(t).assign().end_math() \
                               .space("the sum of:").eol()
     tcomputes_rust = RustMacro("define_vec").append(t)
@@ -768,10 +802,23 @@ class PIOPFromVOProtocol(object):
     hx_items = Itemize()
 
     hx_vector_combination = NamedVectorPairCombination()
+
+    if self.debug_mode:
+      vecsum = get_named_vector("sum")
+      piopexec.prover_computes(LaTeXBuilder(),
+          RustBuilder().letmut(vecsum).assign("vec![E::Fr::zero(); (%s) as usize]" % rust(n)).end())
+
     for i, side in enumerate(extended_hadamard):
       self.debug("  Extended Hadamard %d" % (i + 1))
       a = VectorCombination._from(side.a)
       b = VectorCombination._from(side.b)
+      if self.debug_mode:
+        piopexec.prover_computes(LaTeXBuilder(),
+            RustBuilder().append(RustMacro("add_expression_vector_to_vector").append(
+              [vecsum, Symbol("i"),
+               "(%s) * (%s)" % (a.dumpr_at_index(Symbol("i")),
+                                b.dumpr_at_index(Symbol("i")))])).end())
+
       hx_vector_combination += convolution(a, b, omega)
       for key1, vec_value1 in a.items():
         vec1, value1 = vec_value1
@@ -805,6 +852,12 @@ class PIOPFromVOProtocol(object):
                                               value2.to_poly_expr(X)))),
               vec_to_poly_dict[vec1.key()].dumps_var(omega / X),
               vec_to_poly_dict[vec2.key()].dumps_var(X)))
+
+    if self.debug_mode:
+      piopexec.prover_computes(LaTeXBuilder(),
+          RustBuilder().append(RustMacro("check_vector_eq").append([
+            vecsum, "vec![E::Fr::zero(); (%s) as usize]" % rust(n), '"sum of hadamards not zero"'
+            ])).end())
 
     hxcomputes.append(hx_items)
     h = get_named_vector("h")

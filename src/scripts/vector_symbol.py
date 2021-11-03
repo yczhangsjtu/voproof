@@ -485,7 +485,7 @@ class SparseVector(CoeffMap):
     return sum(items)
 
   def dumpr_at_index(self, index):
-    ret = RustMacro("muti_delta").append(rust(index))
+    ret = RustMacro("multi_delta").append(rust(index))
     for key, uv_coeff in self.items():
       unit_vector, coeff = uv_coeff
       ret.append([to_field(coeff), unit_vector.position])
@@ -699,7 +699,8 @@ class PowerVector(object):
     return ((self.alpha * var) ** self.size - Symbol("E::Fr::one()")) / (self.alpha * var - Symbol("E::Fr::one()"))
   
   def dumpr_at_index(self, index):
-    return rust(RustMacro("power_vector_index").append([rust(self.alpha, to_field=True), self.size, index]));
+    return rust(RustMacro("power_vector_index").append([
+        rust(self.alpha, to_field=True), self.size, index]));
 
   def reverse_omega(self, omega):
     return StructuredVector._from(self).reverse_omega(omega)
@@ -794,7 +795,7 @@ class StructuredVector(CoeffMap):
 
   def dumpr_at_index(self, index):
     ret = RustMacro("linear_combination")
-    ret.append(self._dict["one"].dumpr_at_index(index)
+    ret.append(self._dict["one"][1].dumpr_at_index(index)
         if "one" in self._dict else "E::Fr::zero()")
     for key, vec_value in self.items():
       if key == "one":

@@ -334,6 +334,166 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
           cm_s_vec,
           cm_h_vec,
           cm_r_vec_tilde).unwrap());
+        check_vector_eq!(
+          expression_vector!(
+          i,
+          (linear_combination!(
+          E::Fr::zero(),
+          -to_field::<E::Fr>(
+          1),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          3*H,
+          i-(1)+1))) * (power_vector_index!(
+          to_field::<E::Fr>(1),
+          3*H,
+          i)) + (linear_combination!(
+          E::Fr::zero(),
+          mu,
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          3*H,
+          i-(1)+1),
+          -to_field::<E::Fr>(
+          1),
+          power_vector_index!(
+          gamma,
+          3*H,
+          i-(1)+1))) * (vector_index!(
+          s_vec,
+          i)),
+          K + 3*S),
+          vec![E::Fr::zero(); (K + 3*S) as usize],
+          "The 1'th hadamard check is not satisfied");
+        check_vector_eq!(
+          expression_vector!(
+          i,
+          (linear_combination!(
+          E::Fr::zero(),
+          -alpha,
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          K,
+          i-(1)+1))) * (power_vector_index!(
+          to_field::<E::Fr>(1),
+          K,
+          i)) + (linear_combination!(
+          E::Fr::zero(),
+          alpha*nu,
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          K,
+          i-(1)+1),
+          -alpha,
+          power_vector_index!(
+          gamma,
+          K,
+          i-(1)+1))) * (vector_index!(
+          h_vec,
+          i)),
+          K + 3*S),
+          vec![E::Fr::zero(); (K + 3*S) as usize],
+          "The 2'th hadamard check is not satisfied");
+        check_vector_eq!(
+          expression_vector!(
+          i,
+          (linear_combination!(
+          E::Fr::zero(),
+          -power(alpha, 2),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          K,
+          i-(1)+1))) * (power_vector_index!(
+          to_field::<E::Fr>(1),
+          K,
+          i)) + (linear_combination!(
+          E::Fr::zero(),
+          power(alpha, 2),
+          vector_index!(
+          h_vec,
+          (i as i64)-(1) as i64+1))) * (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          mu*nu,
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          K,
+          i-(K + 1)+1)),
+          -mu,
+          vector_index!(
+          pk.w_vec,
+          (i as i64)-(K + 1) as i64+1),
+          -nu,
+          vector_index!(
+          pk.u_vec,
+          (i as i64)-(K + 1) as i64+1),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          pk.y_vec,
+          (i as i64)-(K + 1) as i64+1))),
+          K + 3*S),
+          vec![E::Fr::zero(); (K + 3*S) as usize],
+          "The 3'th hadamard check is not satisfied");
+        check_vector_eq!(
+          expression_vector!(
+          i,
+          (linear_combination!(
+          E::Fr::zero(),
+          -power(alpha, 3),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          H,
+          i-(-H + K + 3*S + 1)+1))) * (linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          u_vec_1,
+          (i as i64)-(-3*H + K + 3*S + 1) as i64+1))) + (linear_combination!(
+          E::Fr::zero(),
+          power(alpha, 3),
+          vector_index!(
+          u_vec_1,
+          (i as i64)-(-H + K + 3*S + 1) as i64+1))) * (linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          u_vec_1,
+          (i as i64)-(-2*H + K + 3*S + 1) as i64+1))),
+          K + 3*S),
+          vec![E::Fr::zero(); (K + 3*S) as usize],
+          "The 4'th hadamard check is not satisfied");
+        check_vector_eq!(
+          expression_vector!(
+          i,
+          (linear_combination!(
+          E::Fr::zero(),
+          power(alpha, 4),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          ell + 1,
+          i-(3*H + 1)+1))) * (linear_combination!(
+          linear_combination!(
+          multi_delta!(
+          i,
+          -to_field::<E::Fr>(
+          1),
+          3*H + 1)),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          u_vec_1,
+          (i as i64)-(1) as i64+1),
+          -to_field::<E::Fr>(
+          1),
+          vector_index!(
+          x_vec,
+          (i as i64)-(3*H + 2) as i64+1))),
+          K + 3*S),
+          vec![E::Fr::zero(); (K + 3*S) as usize],
+          "The 5'th hadamard check is not satisfied");
         define_vec!(
           t_vec,
           expression_vector!(
@@ -452,6 +612,29 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
           (K + 3*S + i as i64)-(-3*H + K + 3*S + 1) as i64+1))),
           (linear_combination!(
           E::Fr::zero(),
+          power(alpha, 4),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          ell + 1,
+          K + 3*S + i-(3*H + 1)+1)))*(linear_combination!(
+          linear_combination!(
+          multi_delta!(
+          K + 3*S + i,
+          -to_field::<E::Fr>(
+          1),
+          3*H + 1)),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          u_vec_1,
+          (K + 3*S + i as i64)-(1) as i64+1),
+          -to_field::<E::Fr>(
+          1),
+          vector_index!(
+          x_vec,
+          (K + 3*S + i as i64)-(3*H + 2) as i64+1))),
+          (linear_combination!(
+          E::Fr::zero(),
           power(alpha, 5),
           vector_index!(
           u_vec_1,
@@ -520,6 +703,301 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
           cm_h_vec,
           cm_r_vec_tilde,
           cm_t_vec_1).unwrap());
+        let mut sum_vec=vec![E::Fr::zero(); (K + 3*S) as usize];
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          mu,
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          3*H,
+          i-(1)+1),
+          -to_field::<E::Fr>(
+          1),
+          power_vector_index!(
+          gamma,
+          3*H,
+          i-(1)+1)))) * (linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          s_vec,
+          (i as i64)-(1) as i64+1))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          -to_field::<E::Fr>(
+          1),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          3*H,
+          i-(1)+1)))) * (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          3*H,
+          i-(1)+1)))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          alpha*nu,
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          K,
+          i-(1)+1),
+          -alpha,
+          power_vector_index!(
+          gamma,
+          K,
+          i-(1)+1)))) * (linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          h_vec,
+          (i as i64)-(1) as i64+1))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          -alpha,
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          K,
+          i-(1)+1)))) * (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          K,
+          i-(1)+1)))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          E::Fr::zero(),
+          power(alpha, 2),
+          vector_index!(
+          h_vec,
+          (i as i64)-(1) as i64+1))) * (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          mu*nu,
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          K,
+          i-(K + 1)+1)),
+          -mu,
+          vector_index!(
+          pk.w_vec,
+          (i as i64)-(K + 1) as i64+1),
+          -nu,
+          vector_index!(
+          pk.u_vec,
+          (i as i64)-(K + 1) as i64+1),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          pk.y_vec,
+          (i as i64)-(K + 1) as i64+1))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          -power(alpha, 2),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          K,
+          i-(1)+1)))) * (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          K,
+          i-(1)+1)))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          E::Fr::zero(),
+          power(alpha, 3),
+          vector_index!(
+          u_vec_1,
+          (i as i64)-(-H + K + 3*S + 1) as i64+1))) * (linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          u_vec_1,
+          (i as i64)-(-2*H + K + 3*S + 1) as i64+1))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          -power(alpha, 3),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          H,
+          i-(-H + K + 3*S + 1)+1)))) * (linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          u_vec_1,
+          (i as i64)-(-3*H + K + 3*S + 1) as i64+1))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          power(alpha, 4),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          ell + 1,
+          i-(3*H + 1)+1)))) * (linear_combination!(
+          linear_combination!(
+          multi_delta!(
+          i,
+          -to_field::<E::Fr>(
+          1),
+          3*H + 1)),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          u_vec_1,
+          (i as i64)-(1) as i64+1),
+          -to_field::<E::Fr>(
+          1),
+          vector_index!(
+          x_vec,
+          (i as i64)-(3*H + 2) as i64+1))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          E::Fr::zero(),
+          power(alpha, 5),
+          vector_index!(
+          u_vec_1,
+          (i as i64)-(-3*H + 3*S + 1) as i64+1))) * (linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          s_vec,
+          (i as i64)-(-3*H + 3*S + 1) as i64+1))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          E::Fr::zero(),
+          -power(alpha, 5)*beta,
+          vector_index!(
+          h_vec,
+          (i as i64)-(3*S + 1) as i64+1))) * (linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          s_vec,
+          (i as i64)-(-3*H + 3*S + 1) as i64+1))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          E::Fr::zero(),
+          -power(alpha, 5)*beta,
+          vector_index!(
+          h_vec,
+          (i as i64)-(1) as i64+1))) * (linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          pk.v_vec,
+          (i as i64)-(K + 1) as i64+1))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          E::Fr::zero(),
+          -power(alpha, 5),
+          vector_index!(
+          r_vec_tilde,
+          (i as i64)-(1) as i64+1),
+          power(alpha, 5),
+          vector_index!(
+          r_vec_tilde,
+          (i as i64)-(2) as i64+1))) * (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          K + 3*S,
+          i-(1)+1)))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          E::Fr::zero(),
+          power(alpha, 6),
+          vector_index!(
+          r_vec_tilde,
+          (i as i64)-(1) as i64+1))) * (linear_combination!(
+          linear_combination!(
+          multi_delta!(
+          i,
+          to_field::<E::Fr>(
+          1),
+          K + 3*S)))));
+        add_expression_vector_to_vector!(
+          sum_vec,
+          i,
+          (linear_combination!(
+          linear_combination!(
+          E::Fr::zero(),
+          -to_field::<E::Fr>(
+          1),
+          power_vector_index!(
+          to_field::<E::Fr>(1),
+          3*S + 1,
+          i-(K + 3*S + 1)+1)))) * (linear_combination!(
+          E::Fr::zero(),
+          to_field::<E::Fr>(
+          1),
+          vector_index!(
+          t_vec_1,
+          (i as i64)-(K + 3*S) as i64+1))));
+        check_vector_eq!(
+          sum_vec,
+          vec![E::Fr::zero(); (K + 3*S) as usize],
+          "sum of hadamards not zero");
         let v_vec_1=vector_poly_mul!(
           h_vec,
           pk.w_vec,
