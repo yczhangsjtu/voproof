@@ -209,11 +209,13 @@ pub struct FixedLengthVectorIterator<'a, F: Field> {
 impl<'a, F: Field> Iterator for FixedLengthVectorIterator<'a, F> {
   type Item = F;
   fn next(&mut self) -> Option<F> {
-    match self.i {
+    let ret = match self.i {
       i if i >= 0 && i < self.v.len() => Some(self.v[i]),
       i if i >= self.v.len() && i < self.n => Some(F::zero()),
       _ => None,
-    }
+    };
+    self.i += 1;
+    ret
   }
 }
 

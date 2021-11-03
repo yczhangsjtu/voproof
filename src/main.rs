@@ -8,7 +8,7 @@ use ark_bls12_381::Fr as F;
 use ark_ec::PairingEngine;
 use ark_poly_commit::{
     // kzg10::{KZG10, UniversalParams, Powers, VerifierKey, Randomness},
-    Error, PCRandomness
+    PCRandomness
 };
 use ark_std::{Zero, One, test_rng, UniformRand};
 use ark_ff::fields::PrimeField;
@@ -17,6 +17,7 @@ use ark_relations::{lc, r1cs::{
   SynthesisError, ConstraintSystem as ArkR1CS, Variable}};
 #[macro_use]
 use voproof::*;
+use voproof::error::Error;
 use voproof::tools::{to_int, to_field};
 use voproof::{accumulate_vector, define_vec, delta,
               expression_vector, multi_delta, linear_combination};
@@ -120,10 +121,14 @@ fn run_r1cs_example<E: PairingEngine>() -> Result<(), Error> {
   println!("K: {}", vksize.ncols);
 
   let proof = VOProofR1CS::prove(&pk, &instance, &witness).unwrap();
-  Ok(())
+  VOProofR1CS::verify(&vk, &instance, &proof)
 }
 
 
 fn main() {
-  run_r1cs_example::<ark_bls12_381::Bls12_381>().unwrap();
+  if let Err(err) = run_r1cs_example::<ark_bls12_381::Bls12_381>() {
+    println!("{}", err);
+  } else {
+    println!("Verification pass");
+  }
 }
