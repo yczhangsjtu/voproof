@@ -1,6 +1,6 @@
 use crate::{error::Error, kzg::Commitment};
 use ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
-use ark_ff::PrimeField as Field;
+use ark_ff::{PrimeField as Field};
 use ark_std::{
   iter::Iterator,
   rand::RngCore,
@@ -21,6 +21,17 @@ pub fn to_int<F: Field>(e: F) -> u64 {
     _ => {
       println!("{:?}", digits);
       panic!("Number too big!")
+    }
+  }
+}
+
+pub fn try_to_int<F: Field>(e: F) -> Option<u64> {
+  let digits = e.into_repr().into().to_u64_digits();
+  match digits.len() {
+    0 => Some(0),
+    1 => Some(digits[0]),
+    _ => {
+      None
     }
   }
 }
@@ -245,6 +256,15 @@ macro_rules! to_field {
 }
 
 #[macro_export]
+macro_rules! zero_pad_and_concat {
+    ( $u: expr, $n: expr, $( $v: expr ),+ ) => {
+        (&$u).iter().map(|a| *a)
+          .chain((0..($n as usize-$u.len())).map(|_| E::Fr::zero()))
+          $(.chain((&$v).iter().map(|a| *a)))+.collect::<Vec<_>>()
+    }
+}
+
+#[macro_export]
 macro_rules! define_vec {
   ( $v: ident, $expr: expr ) => {
     let $v: Vec<E::Fr> = $expr;
@@ -319,6 +339,17 @@ macro_rules! power_vector_index {
   ( $a: expr, $n: expr, $i: expr ) => {{
     if $i >= 1 && ($i as i64) <= ($n as i64) {
       power::<E::Fr>($a, ($i - 1) as i64)
+    } else {
+      E::Fr::zero()
+    }
+  }};
+}
+
+#[macro_export]
+macro_rules! range_index {
+  ( $s: expr, $e: expr, $i: expr ) => {{
+    if ($i as i64) >= ($s as i64) && ($i as i64) <= ($e as i64) {
+      E::Fr::one()
     } else {
       E::Fr::zero()
     }
@@ -508,13 +539,33 @@ macro_rules! check_poly_eval {
 }
 
 #[macro_export]
+macro_rules! fmt_ff {
+  ($a:expr) => {
+    if let Some(x) = try_to_int::<E::Fr>($a.clone()) {
+      format!("Fp256({})", x)
+    } else {
+      $a.to_string()
+    }
+  }
+}
+
+#[macro_export]
+macro_rules! fmt_ff_vector {
+  ($v: expr) => {
+    ($v.iter().map(|e| fmt_ff!(e)).collect::<Vec<String>>()).join("\n")
+  }
+}
+
+#[macro_export]
 macro_rules! check_vector_eq {
   ($u:expr, $v:expr, $info:literal) => {
     if $u.len() != $v.len() {
       return Err(Error::VectorNotEqual("length not equal ".to_string() + $info));
     }
     if let Some(i) = $u.iter().zip($v.iter()).position(|(a, b)| *a != *b) {
-      return Err(Error::VectorNotEqual(format!("{}: unequal at {} (total length {}): {} != {}\nleft = {:?}\nright = {:?}", $info, i, $u.len(), $u[i], $v[i], $u, $v)));
+      return Err(Error::VectorNotEqual(
+          format!("{}: unequal at {} (total length {}): {} != {}\nleft = [\n{}\n]\nright = [\n{\n}]",
+          $info, i, $u.len(), $u[i], $v[i], fmt_ff_vector!($u), fmt_ff_vector!($v))));
     }
   }
 }
@@ -655,6 +706,28 @@ mod tests {
   }
 
   #[test]
+  fn test_range_index() {
+    define_vec!(
+      v,
+      expression_vector!(
+        i,
+        range_index!(1, 9, i as i64 - 3),
+        10
+      )
+    );
+    assert_eq!(to_int!(v), vec![0, 0, 0, 1, 1, 1, 1, 1, 1, 1]);
+    define_vec!(
+      v,
+      expression_vector!(
+        i,
+        range_index!(2, 4, i as i64 - 3),
+        10
+      )
+    );
+    assert_eq!(to_int!(v), vec![0, 0, 0, 0, 1, 1, 1, 0, 0, 0]);
+  }
+
+  #[test]
   fn test_power_linear_combination() {
     assert_eq!(
       power_linear_combination!(to_field::<F>(2), to_field::<F>(1)),
@@ -761,5 +834,18 @@ mod tests {
     let mut u = vec![0, 1, 2, 3, 4];
     add_expression_vector_to_vector!(u, i, i * i);
     assert_eq!(u, vec![1, 5, 11, 19, 29]);
+  }
+
+  #[test]
+  fn test_zero_pad_concat() {
+    assert_eq!(
+      to_int!(zero_pad_and_concat!(to_field!(vec![1, 2, 3u64]), 3, to_field!(vec![4, 5, 6u64]))),
+      vec![1, 2, 3, 4, 5, 6u64]
+    );
+    assert_eq!(
+      to_int!(zero_pad_and_concat!(to_field!(vec![1, 2, 3u64]), 5,
+              to_field!(vec![4, 5, 6u64]), to_field!(vec![7, 8, 9]))),
+      vec![1, 2, 3, 0, 0, 4, 5, 6, 7, 8, 9]
+    );
   }
 }

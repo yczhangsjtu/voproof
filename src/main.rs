@@ -57,7 +57,7 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for TestCircuit<F> {
 
     for _ in 0..(self.num_variables - 3) {
       let v = cs.new_witness_variable(|| self.a.ok_or(SynthesisError::AssignmentMissing))?;
-      cs.enforce_constraint(lc!() + a, lc!() + Variable::One, lc!() + v)?;
+      cs.enforce_constraint(lc!() + a + b, lc!() + Variable::One, lc!() + v + b)?;
     }
 
     for _ in 0..self.num_constraints - 1 {

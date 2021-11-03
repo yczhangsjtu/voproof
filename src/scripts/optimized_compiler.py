@@ -586,6 +586,12 @@ class PIOPFromVOProtocol(object):
       poly = vector.to_named_vector_poly()
       piopexec.preprocess_polynomial(poly, size)
       vec_to_poly_dict[vector.key()] = poly
+      if self.debug_mode:
+        piopexec.preprocess(LaTeXBuilder(),
+            RustBuilder().append(RustMacro("println").append([
+              '"vector %s of length {} = \n[{}]"' % rust(vector), "%s.len()" % rust(vector),
+              "fmt_ff_vector!(%s)" % rust(vector)
+              ])).end())
     piopexec.indexer_output_pk = voexec.indexer_output_pk
     piopexec.indexer_output_vk = voexec.indexer_output_vk
     piopexec.reference_to_voexec = voexec
@@ -626,14 +632,21 @@ class PIOPFromVOProtocol(object):
           poly = v.to_named_vector_poly()
           piopexec.prover_computes(
               Math(randomizer).sample(Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
-              RustBuilder().let(v).assign_func("fixed_length_vector_iter")
-                           .append_to_last(["&%s" % rust(v), n]).invoke_method("chain")
-                           .append_to_last(randomizer).invoke_method("collect::<Vec<E::Fr>>").end())
+              RustBuilder().let(v).assign(RustMacro("zero_pad_and_concat").append(
+                [v, n, randomizer]
+                )).end())
           piopexec.prover_send_polynomial(poly, self.vector_size + q)
           piopexec.prover_computes(
               LaTeXBuilder(),
               RustBuilder().let(poly).assign_func("poly_from_vec!").append_to_last(v).end())
           vec_to_poly_dict[v.key()] = poly
+
+          if self.debug_mode:
+            piopexec.prover_computes(LaTeXBuilder(),
+                RustBuilder().append(RustMacro("println").append([
+                  '"vector %s of length {} = \\n[{}]"' % rust(v), "%s.len()" % rust(v),
+                  "fmt_ff_vector!(%s)" % rust(v)
+                  ])).end())
       else:
         raise ValueError("Interaction of type %s should not appear" % type(interaction))
 
@@ -661,7 +674,7 @@ class PIOPFromVOProtocol(object):
             .append([
               RustMacro("expression_vector").append([
                 Symbol("i"), "(%s) * (%s)" % (
-                  side.a.dumpr_at_index(Symbol("i")),
+                  (side.a * (1/alpha_power)).dumpr_at_index(Symbol("i")),
                   side.b.dumpr_at_index(Symbol("i"))),
                 rust(n)]),
               "vec![E::Fr::zero(); (%s) as usize]" % rust(n),
@@ -673,13 +686,15 @@ class PIOPFromVOProtocol(object):
           check_individual_hadmard.append(RustMacro("check_vector_eq")
             .append([
               RustMacro("expression_vector").append([
-                Symbol("i"), "(%s) * (%s) + (%s) * (%s)" % (
-                  side1.a.dumpr_at_index(Symbol("i")),
-                  side1.b.dumpr_at_index(Symbol("i")),
-                  side2.a.dumpr_at_index(Symbol("i")),
+                Symbol("i"), "(%s) * (%s)" % (
+                  (side1.a * (1/alpha_power)).dumpr_at_index(Symbol("i")),
+                  side1.b.dumpr_at_index(Symbol("i"))),
+                rust(n)]),
+              RustMacro("expression_vector").append([
+                Symbol("i"), "-(%s) * (%s)" % (
+                  (side2.a * (1/alpha_power)).dumpr_at_index(Symbol("i")),
                   side2.b.dumpr_at_index(Symbol("i"))),
                 rust(n)]),
-              "vec![E::Fr::zero(); (%s) as usize]" % rust(n),
               '"The %d\'th hadamard check is not satisfied"' % (i+1)
               ])).end()
 

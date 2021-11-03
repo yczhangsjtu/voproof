@@ -699,8 +699,11 @@ class PowerVector(object):
     return ((self.alpha * var) ** self.size - Symbol("E::Fr::one()")) / (self.alpha * var - Symbol("E::Fr::one()"))
   
   def dumpr_at_index(self, index):
-    return rust(RustMacro("power_vector_index").append([
-        rust(self.alpha, to_field=True), self.size, index]));
+    if self.alpha != 1:
+      return rust(RustMacro("power_vector_index").append([
+          rust(self.alpha, to_field=True), self.size, index]))
+    else:
+      return rust(RustMacro("range_index").append([1, self.size, index]))
 
   def reverse_omega(self, omega):
     return StructuredVector._from(self).reverse_omega(omega)

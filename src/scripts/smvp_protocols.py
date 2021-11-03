@@ -72,8 +72,11 @@ class SparseMVP(VOProtocol):
     voexec.prover_computes(Math(r).assign(
       ExpressionVector("\\frac{1}{%s-\\gamma^i}" % tex(mu), H)
     ), RustBuilder().letmut(r).assign(
-      ExpressionVectorRust(RustBuilder().append(mu).minus().func("power")
-                                        .append_to_last([gamma, Symbol("i")]), H)).end()
+        RustMacro("expression_vector").append([
+            Symbol("i"),
+            "(%s) - (%s)" % (rust(mu), PowerVector(gamma, H).dumpr_at_index(Symbol("i"))),
+            H]),
+      ).end()
       .func("batch_inversion").append_to_last("&mut %s" % rust(r)).end())
     c = get_named_vector("c")
     voexec.prover_computes(Math(c).assign()
@@ -91,7 +94,7 @@ class SparseMVP(VOProtocol):
         RustBuilder().let(s).assign(r).invoke_method("iter")
         .invoke_method("map").append_to_last("|a| *a")
         .invoke_method("chain").append_to_last(
-          RustBuilder(r).invoke_method("iter").invoke_method("map")
+          RustBuilder(c).invoke_method("iter").invoke_method("map")
           .append_to_last("|a| -*a")
           ).invoke_method("collect::<Vec<E::Fr>>").end())
     voexec.prover_submit_vector(s, H + K)
@@ -112,8 +115,11 @@ class SparseMVP(VOProtocol):
     h = get_named_vector("h")
     rnu = get_named_vector("rnu")
     voexec.prover_computes(LaTeXBuilder(), RustBuilder().letmut(rnu).assign(
-      ExpressionVectorRust(RustBuilder().append(nu).minus().func("power")
-                                        .append_to_last([gamma, Symbol("i")]), K)).end()
+        RustMacro("expression_vector").append([
+            Symbol("i"),
+            "(%s) - (%s)" % (rust(nu), PowerVector(gamma, K).dumpr_at_index(Symbol("i"))),
+            K]),
+      ).end()
       .func("batch_inversion").append_to_last("&mut %s" % rust(rnu)).end())
     voexec.prover_computes(Math(h).assign(
       ExpressionVector("\\frac{1}{%s-\\gamma^i}" % tex(nu), K)
@@ -131,7 +137,7 @@ class SparseMVP(VOProtocol):
                         .invoke_method("map").append_to_last("|a| *a")
                       )
                       .invoke_method("map")
-                      .append_to_last("|(u, w)| (%s - u) * (%s - w)" % (rust(mu), rust(nu))))
+                      .append_to_last("|(u, w)| ((%s - u) * (%s - w)).inverse().unwrap()" % (rust(mu), rust(nu))))
                     .invoke_method("collect::<Vec<E::Fr>>").end())
     voexec.prover_submit_vector(h, ell + K)
 
@@ -144,10 +150,10 @@ class SparseMVP(VOProtocol):
 
     voexec.hadamard_query(
       h,
-      (mu * nu * PowerVector(1, K) - mu * voexec.w -
+      (mu * nu * PowerVector(1, ell) - mu * voexec.w -
        nu * voexec.u + voexec.y).shift(K),
-      PowerVector(1, K),
-      PowerVector(1, K),
+      PowerVector(1, ell).shift(K),
+      PowerVector(1, ell).shift(K),
     )
 
     voexec.inner_product_query(
@@ -310,6 +316,9 @@ class R1CS(VOProtocol):
                       RustMacro("&vector_concat").append([
                         "vec![E::Fr::one()]", x, w
                         ])]).invoke_method("unwrap").end())
+    voexec.prover_computes(LaTeXBuilder(), RustBuilder().let(u).assign(
+        RustMacro("vector_concat").append([u, "vec![E::Fr::one()]", x, w])
+        ).end())
     voexec.prover_submit_vector(u, 3 * H + K)
     voexec.run_subprotocol(SparseMVP(), u)
     voexec.hadamard_query(
