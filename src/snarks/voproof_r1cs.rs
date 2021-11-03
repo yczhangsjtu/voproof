@@ -150,7 +150,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let delta_vec_3=sample_vec::<E::Fr, _>(rng, 1);
         let delta_vec_4=sample_vec::<E::Fr, _>(rng, 1);
         let w_vec=w.witness.clone();
-        let u_vec_1=sparse_mvp(H, K, &pk.M_mat.1, &pk.M_mat.0, &pk.M_mat.2, &vector_concat!(vec![E::Fr::one()], x_vec, w_vec)).unwrap();
+        let u_vec_1=sparse_mvp(3*H, K, &pk.M_mat.0, &pk.M_mat.1, &pk.M_mat.2, &vector_concat!(vec![E::Fr::one()], x_vec, w_vec)).unwrap();
         let u_vec_1=fixed_length_vector_iter(&u_vec_1, K + 3*S).chain(delta_vec).collect::<Vec<E::Fr>>();
         let cm_u_vec_1=vector_to_commitment::<E>(&pk.powers, &u_vec_1).unwrap();
         let u_vec_1_poly=poly_from_vec!(u_vec_1);

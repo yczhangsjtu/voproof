@@ -94,7 +94,10 @@ fn run_r1cs_example<E: PairingEngine>() -> Result<(), Error> {
   println!("R1CS C col indices: {:?}", r1cs.ccols);
   println!("R1CS C vals: {:?}", to_int!(r1cs.cvals));
 
-  if r1cs.satisfy(&R1CSInstance{instance: x}, &R1CSWitness{witness: w}) {
+  let instance = R1CSInstance{instance: x};
+  let witness = R1CSWitness{witness: w};
+
+  if r1cs.satisfy(&instance, &witness) {
     println!("R1CS satisfied!");
   } else {
     println!("R1CS unsatisfied!");
@@ -108,6 +111,15 @@ fn run_r1cs_example<E: PairingEngine>() -> Result<(), Error> {
   println!("Prover key u size: {}", pk.u_vec.len());
   println!("Prover key v size: {}", pk.v_vec.len());
   println!("Prover key w size: {}", pk.w_vec.len());
+
+  println!("M A row indices: {:?}", pk.M_mat.0);
+  println!("M A col indices: {:?}", pk.M_mat.1);
+  println!("M A vals: {:?}", to_int!(pk.M_mat.2));
+  let vksize = vk.size.clone();
+  println!("H: {}", vksize.nrows);
+  println!("K: {}", vksize.ncols);
+
+  let proof = VOProofR1CS::prove(&pk, &instance, &witness).unwrap();
   Ok(())
 }
 

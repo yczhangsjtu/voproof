@@ -305,8 +305,8 @@ class R1CS(VOProtocol):
         )
       ).double_bar(1).double_bar(x).double_bar(w),
       RustBuilder().let(u).assign_func("sparse_mvp")
-                   .append_to_last([H, K, "&%s.1" % rust_pk(M),
-                      "&%s.0" % rust_pk(M), "&%s.2" % rust_pk(M),
+                   .append_to_last([H * 3, K, "&%s.0" % rust_pk(M),
+                      "&%s.1" % rust_pk(M), "&%s.2" % rust_pk(M),
                       RustMacro("&vector_concat").append([
                         "vec![E::Fr::one()]", x, w
                         ])]).invoke_method("unwrap").end())
