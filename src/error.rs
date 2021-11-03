@@ -172,6 +172,9 @@ pub enum Error {
 
     Unimplemented(String),
     VerificationFail,
+    GZNotZero(String),
+    PolynomialEvaluationUnexpected(String, String),
+    VectorNotEqual(String),
 }
 
 impl core::fmt::Display for Error {
@@ -260,6 +263,9 @@ impl core::fmt::Display for Error {
             Error::IncorrectInputLength(err) => write!(f, "{}", err),
             Error::Unimplemented(info) => write!(f, "Unimplemented {}", info),
             Error::VerificationFail => write!(f, "VerificationFail"),
+            Error::GZNotZero(info) => write!(f, "GZNotZero {}", info),
+            Error::PolynomialEvaluationUnexpected(info1, info2) => write!(f, "PolynomialEvaluationUnexpected {} {}", info1, info2),
+            Error::VectorNotEqual(info) => write!(f, "VectorNotEqual {}", info),
         }
     }
 }

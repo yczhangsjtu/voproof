@@ -120,7 +120,7 @@ fn run_r1cs_example<E: PairingEngine>() -> Result<(), Error> {
   println!("H: {}", vksize.nrows);
   println!("K: {}", vksize.ncols);
 
-  let proof = VOProofR1CS::prove(&pk, &instance, &witness).unwrap();
+  let proof = VOProofR1CS::prove(&pk, &instance, &witness)?;
   VOProofR1CS::verify(&vk, &instance, &proof)
 }
 

@@ -67,6 +67,7 @@ def mut(name):
 class RustList(object):
   def __init__(self):
     self.items = []
+    self.expand_lines = False
 
   def append(self, item):
     if isinstance(item, list):
@@ -76,13 +77,17 @@ class RustList(object):
     return self
 
   def dumpr(self):
-    return ", ".join([rust(item) for item in self.items])
+    if self.expand_lines and len(self.items) > 0:
+      return "\n          " + ",\n          ".join([rust(item) for item in self.items])
+    else:
+      return ", ".join([rust(item) for item in self.items])
 
 
 class FunctionCall(RustList):
   def __init__(self, func_name):
     super(FunctionCall, self).__init__()
     self.func_name = func_name
+    self.expand_lines = True
 
   def dumpr(self):
     return "%s(%s)" % (self.func_name, super(FunctionCall, self).dumpr())

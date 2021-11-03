@@ -14,7 +14,7 @@ use crate::cs::{
 use crate::error::Error;
 use crate::kzg::{Proof as KZGProof, UniversalParams, VerifierKey};
 use crate::tools::*;
-use ark_poly::univariate::DensePolynomial as DensePoly;
+use ark_poly::{Polynomial, univariate::{DensePolynomial as DensePoly}};
 use ark_std::{ops::Mul, test_rng, vec::Vec, One, Zero};
 use crate::*;
 use crate::kzg::*;

@@ -488,6 +488,28 @@ macro_rules! generator_of {
   };
 }
 
+#[macro_export]
+macro_rules! check_poly_eval {
+  ($f:expr, $z:expr, $y:expr) => {
+    let y = $f.evaluate(&$z);
+    if y != $y.clone() {
+      return Err(Error::PolynomialEvaluationUnexpected(y.to_string(), $y.to_string()));
+    }
+  };
+}
+
+#[macro_export]
+macro_rules! check_vector_eq {
+  ($u:expr, $v:expr, $info:literal) => {
+    if $u.len() != $v.len() {
+      return Err(Error::VectorNotEqual("length not equal ".to_string() + $info));
+    }
+    if let Some(i) = $u.iter().zip($v.iter()).position(|(a, b)| *a != *b) {
+      return Err(Error::VectorNotEqual(format!("{}: unequal at {} (total length {}): {} != {}\nleft = {:?}\nright = {:?}", i, $u.len(), $info, $u[i], $v[i], $u, $v)));
+    }
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

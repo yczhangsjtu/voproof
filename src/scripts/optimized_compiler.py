@@ -223,7 +223,7 @@ class VOQuerySide(object):
   def _dumps(self, oper):
     return "%s\\%s %s" % (VOQuerySide.dump_vec(self.a),
                           oper, VOQuerySide.dump_vec(self.b))
-  
+
   def shifts(self):
     return self.a.shifts() + self.b.shifts()
 
@@ -827,6 +827,7 @@ class PIOPFromVOProtocol(object):
            h_vec_combination.dumpr_at_index(Symbol("i")),
            h_degree])).end()
 
+
     # For producing the latex code only
     h1x = get_named_polynomial("h")
     h2x = get_named_polynomial("h")
@@ -841,6 +842,22 @@ class PIOPFromVOProtocol(object):
                                     (latex(-self.degree_bound-1),
                                      h1x.dumps_var(X))),
                              h2computes_rust)
+
+    if self.debug_mode:
+      piopexec.prover_computes(LaTeXBuilder(),
+          RustBuilder().let(h).assign(RustMacro("expression_vector").append(
+            [
+              Symbol("i"),
+              h_vec_combination.dumpr_at_index(Symbol("i") - h_inverse_degree),
+              h_degree + h_inverse_degree + 1
+            ]
+            )).end()
+          .append(RustMacro("check_vector_eq").append([
+              h,
+              RustMacro("vector_concat").append(
+                [h1, "vec![E::Fr::zero()]", h2]),
+              '"h != h1 || 0 || h2"'])).end())
+
 
     # For the rust code, use the vector instead
     h1x = h1.to_named_vector_poly()
@@ -931,7 +948,7 @@ class PIOPFromVOProtocol(object):
             raise Exception("%s != %s" % (_poly.dumps(), poly.dumps()))
           items.append(value)
           rust_items.append(rust_value)
-    
+
     # 2. The part contributed by h1(X) and h2(X)
     c = Symbol(get_name("c"))
     coeff_builders[h1x.key()] = (h1x, c, [- z ** self.degree_bound], [- z ** self.degree_bound])
@@ -1174,6 +1191,17 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       for query in queries:
         if not isinstance(query.name, int):
           transcript.append(query.name)
+        else:
+          # Only make this check when the query result is an expected constant
+          self.prover_computes(LaTeXBuilder(),
+                               RustBuilder().append(
+                                   RustMacro("check_poly_eval")
+                                   .append([
+                                     query.poly,
+                                     queries[0].point,
+                                     "E::Fr::zero()" if query.name == 0
+                                     else query.name])
+                               ).end())
       ffs.append([rust(query.poly) for query in queries])
       fcomms.append([rust_vk(query.poly.to_comm()) for query in queries])
       fvals.append(["E::Fr::zero()" if query.name == 0 else query.name
