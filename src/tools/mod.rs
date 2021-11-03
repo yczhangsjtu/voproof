@@ -396,6 +396,17 @@ macro_rules! vector_reverse_omega {
 }
 
 #[macro_export]
+macro_rules! int_array_to_power_vector {
+  ($v:expr, $gamma:expr) => {
+    expression_vector!(
+      i,
+      power($gamma, $v[i-1] as i64),
+      $v.len()
+    )
+  };
+}
+
+#[macro_export]
 macro_rules! vector_poly_mul {
   // Given vectors u, v and field element omega, compute
   // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
@@ -650,6 +661,13 @@ mod tests {
     let omega = to_field::<F>(2);
     let v = to_field!(vec![1, 2, 3, 1]);
     assert_eq!(to_int!(vector_reverse_omega!(v, omega)), vec![8, 12, 4, 1]);
+  }
+
+  #[test]
+  fn test_int_array_to_power_vector() {
+    let gamma = to_field::<F>(2);
+    let v = vec![1, 2, 3, 1];
+    assert_eq!(to_int!(int_array_to_power_vector!(v, gamma)), vec![2, 4, 8, 2]);
   }
 
   #[test]

@@ -98,8 +98,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let ell=size.input_size as i64;
         let gamma=generator_of!(E);
         let M_mat=(cs.arows.iter().map(|a| *a).chain(cs.brows.iter().map(|&i| i + H as u64)).chain(cs.crows.iter().map(|&i| i + H as u64 * 2)).collect::<Vec<u64>>(), cs.acols.iter().chain(cs.bcols.iter()).chain(cs.ccols.iter()).map(|a| *a).collect::<Vec<u64>>(), cs.avals.iter().chain(cs.bvals.iter()).chain(cs.cvals.iter()).map(|a| *a).collect::<Vec<E::Fr>>());
-        let u_vec=(1..=3*S).map(|i| power(gamma, M_mat.0[i as usize] as i64)).collect::<Vec<E::Fr>>();
-        let w_vec=(1..=3*S).map(|i| power(gamma, M_mat.1[i as usize] as i64)).collect::<Vec<E::Fr>>();
+        let u_vec=int_array_to_power_vector!(M_mat.0, gamma);
+        let w_vec=int_array_to_power_vector!(M_mat.1, gamma);
         let v_vec=M_mat.2.to_vec();
         let y_vec=u_vec.iter().zip(w_vec.iter()).map(|(a, b)| *a * *b).collect::<Vec<E::Fr>>();
         let cm_u_vec=vector_to_commitment::<E>(&powers_of_g, &u_vec).unwrap();
