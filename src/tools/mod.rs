@@ -851,6 +851,10 @@ mod tests {
             to_int!(power_power_mul!(alpha, 5, beta, 4)),
             vec![1, 5, 19, 65, 130, 228, 360, 432]
         );
+        assert_eq!(
+            to_int!(power_power_mul!(E::Fr::one(), 4, E::Fr::one(), 4)),
+            vec![1, 2, 3, 4, 3, 2, 1]
+        );
     }
 
     #[test]

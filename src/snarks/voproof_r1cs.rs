@@ -812,15 +812,16 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             omega
         );
         add_vector_to_vector!(hcheck_vec, abnaive_vec_1);
-        let v_vec_3 = power_power_mul!(to_field::<E::Fr>(1), 3 * H, to_field::<E::Fr>(1), 3 * H);
+        let v_vec_3 =
+            power_power_mul!(omega.inverse().unwrap(), 3 * H, to_field::<E::Fr>(1), 3 * H);
         let atimesb_vec_1 = expression_vector!(
             i,
             linear_combination!(
                 E::Fr::zero(),
-                -to_field::<E::Fr>(1),
+                -power(omega, 3 * H - 1),
                 vector_index!(
                     v_vec_3,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - 3 * H) as i64 + 1
                 )
             ),
             2 * K + 4 * S_a + 4 * S_b + 4 * S_c + 1
@@ -928,15 +929,15 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             omega
         );
         add_vector_to_vector!(hcheck_vec, abnaive_vec_3);
-        let v_vec_6 = power_power_mul!(to_field::<E::Fr>(1), K, to_field::<E::Fr>(1), K);
+        let v_vec_6 = power_power_mul!(omega.inverse().unwrap(), K, to_field::<E::Fr>(1), K);
         let atimesb_vec_3 = expression_vector!(
             i,
             linear_combination!(
                 E::Fr::zero(),
-                -alpha,
+                -alpha * power(omega, K - 1),
                 vector_index!(
                     v_vec_6,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - K) as i64 + 1
                 )
             ),
             2 * K + 4 * S_a + 4 * S_b + 4 * S_c + 1
@@ -1078,7 +1079,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         add_vector_to_vector!(hcheck_vec, abnaive_vec_5);
         let v_vec_12 = power_power_mul!(
-            to_field::<E::Fr>(1),
+            omega.inverse().unwrap(),
             S_a + S_b + S_c,
             to_field::<E::Fr>(1),
             S_a + S_b + S_c
@@ -1087,10 +1088,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             i,
             linear_combination!(
                 E::Fr::zero(),
-                -power(alpha, 2) * power(omega, K),
+                -power(alpha, 2) * power(omega, K + S_a + S_b + S_c - 1),
                 vector_index!(
                     v_vec_12,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-S_a - S_b - S_c + 2) as i64
+                        + 1
                 )
             ),
             2 * K + 4 * S_a + 4 * S_b + 4 * S_c + 1
@@ -1272,11 +1274,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             linear_combination!(
                 linear_combination!(
                     E::Fr::zero(),
-                    -power(alpha, 4) * power(omega, 3 * H + ell),
-                    power_vector_index!(
-                        omega.inverse().unwrap(),
+                    -power(alpha, 4),
+                    range_index!(
+                        1,
                         ell + 1,
-                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (1 - ell) + 1
+                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (6 * H + 1) + 1
                     )
                 ),
                 power(alpha, 4) * power(omega, 3 * H + ell),
@@ -1932,10 +1934,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let v_vec_40 = vector_power_mul!(x_vec, omega.inverse().unwrap(), ell + 1);
         let v_vec_41 = vector_power_mul!(v_vec_32, to_field::<E::Fr>(1), K + S_a + S_b + S_c);
         let v_vec_42 = vector_power_mul!(t_vec_1, omega.inverse().unwrap(), S_a + S_b + S_c + 1);
-        let v_vec_43 = power_power_mul!(to_field::<E::Fr>(1), 3 * H, to_field::<E::Fr>(1), 3 * H);
-        let v_vec_44 = power_power_mul!(to_field::<E::Fr>(1), K, to_field::<E::Fr>(1), K);
+        let v_vec_43 =
+            power_power_mul!(omega.inverse().unwrap(), 3 * H, to_field::<E::Fr>(1), 3 * H);
+        let v_vec_44 = power_power_mul!(omega.inverse().unwrap(), K, to_field::<E::Fr>(1), K);
         let v_vec_45 = power_power_mul!(
-            to_field::<E::Fr>(1),
+            omega.inverse().unwrap(),
             S_a + S_b + S_c,
             to_field::<E::Fr>(1),
             S_a + S_b + S_c
@@ -1945,11 +1948,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             linear_combination!(
                 linear_combination!(
                     E::Fr::zero(),
-                    -power(alpha, 4) * power(omega, 3 * H + ell),
-                    power_vector_index!(
-                        omega.inverse().unwrap(),
+                    -power(alpha, 4),
+                    range_index!(
+                        1,
                         ell + 1,
-                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (1 - ell) + 1
+                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (6 * H + 1) + 1
                     )
                 ),
                 -power(alpha, 2) * mu,
@@ -2058,20 +2061,21 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     v_vec_42,
                     (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-S_a - S_b - S_c) as i64 + 1
                 ),
-                -to_field::<E::Fr>(1),
+                -power(omega, 3 * H - 1),
                 vector_index!(
                     v_vec_43,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - 3 * H) as i64 + 1
                 ),
-                -alpha,
+                -alpha * power(omega, K - 1),
                 vector_index!(
                     v_vec_44,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - K) as i64 + 1
                 ),
-                -power(alpha, 2) * power(omega, K),
+                -power(alpha, 2) * power(omega, K + S_a + S_b + S_c - 1),
                 vector_index!(
                     v_vec_45,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-S_a - S_b - S_c + 2) as i64
+                        + 1
                 )
             ),
             K + 2 * S_a + 2 * S_b + 2 * S_c
@@ -2081,8 +2085,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             linear_combination!(
                 linear_combination!(
                     E::Fr::zero(),
-                    -power(alpha, 4) * power(omega, 3 * H + ell),
-                    power_vector_index!(omega.inverse().unwrap(), ell + 1, i + 1 - (1 - ell) + 1)
+                    -power(alpha, 4),
+                    range_index!(1, ell + 1, i + 1 - (6 * H + 1) + 1)
                 ),
                 -power(alpha, 2) * mu,
                 vector_index!(
@@ -2146,12 +2150,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 vector_index!(v_vec_41, (i + 1 as i64) - (-shiftlength_18) as i64 + 1),
                 -power(omega, K + 2 * S_a + 2 * S_b + 2 * S_c),
                 vector_index!(v_vec_42, (i + 1 as i64) - (-S_a - S_b - S_c) as i64 + 1),
-                -to_field::<E::Fr>(1),
-                vector_index!(v_vec_43, (i + 1 as i64) - (1) as i64 + 1),
-                -alpha,
-                vector_index!(v_vec_44, (i + 1 as i64) - (1) as i64 + 1),
-                -power(alpha, 2) * power(omega, K),
-                vector_index!(v_vec_45, (i + 1 as i64) - (1) as i64 + 1)
+                -power(omega, 3 * H - 1),
+                vector_index!(v_vec_43, (i + 1 as i64) - (2 - 3 * H) as i64 + 1),
+                -alpha * power(omega, K - 1),
+                vector_index!(v_vec_44, (i + 1 as i64) - (2 - K) as i64 + 1),
+                -power(alpha, 2) * power(omega, K + S_a + S_b + S_c - 1),
+                vector_index!(v_vec_45, (i + 1 as i64) - (-S_a - S_b - S_c + 2) as i64 + 1)
             ),
             K + 2 * S_a + 2 * S_b + 2 * S_c
         );
@@ -2160,11 +2164,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             linear_combination!(
                 linear_combination!(
                     E::Fr::zero(),
-                    -power(alpha, 4) * power(omega, 3 * H + ell),
-                    power_vector_index!(
-                        omega.inverse().unwrap(),
+                    -power(alpha, 4),
+                    range_index!(
+                        1,
                         ell + 1,
-                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (1 - ell) + 1
+                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (6 * H + 1) + 1
                     )
                 ),
                 -power(alpha, 2) * mu,
@@ -2273,20 +2277,21 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     v_vec_42,
                     (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-S_a - S_b - S_c) as i64 + 1
                 ),
-                -to_field::<E::Fr>(1),
+                -power(omega, 3 * H - 1),
                 vector_index!(
                     v_vec_43,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - 3 * H) as i64 + 1
                 ),
-                -alpha,
+                -alpha * power(omega, K - 1),
                 vector_index!(
                     v_vec_44,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - K) as i64 + 1
                 ),
-                -power(alpha, 2) * power(omega, K),
+                -power(alpha, 2) * power(omega, K + S_a + S_b + S_c - 1),
                 vector_index!(
                     v_vec_45,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-S_a - S_b - S_c + 2) as i64
+                        + 1
                 )
             ),
             2 * K + 4 * S_a + 4 * S_b + 4 * S_c + 1
@@ -2301,8 +2306,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             linear_combination!(
                 linear_combination!(
                     E::Fr::zero(),
-                    -power(alpha, 4) * power(omega, 3 * H + ell),
-                    power_vector_index!(omega.inverse().unwrap(), ell + 1, 1 - (1 - ell) + 1)
+                    -power(alpha, 4),
+                    range_index!(1, ell + 1, 1 - (6 * H + 1) + 1)
                 ),
                 -power(alpha, 2) * mu,
                 vector_index!(v_vec_24, (1 as i64) - (K - shiftlength_10 + 1) as i64 + 1),
@@ -2348,12 +2353,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 vector_index!(v_vec_41, (1 as i64) - (-shiftlength_18) as i64 + 1),
                 -power(omega, K + 2 * S_a + 2 * S_b + 2 * S_c),
                 vector_index!(v_vec_42, (1 as i64) - (-S_a - S_b - S_c) as i64 + 1),
-                -to_field::<E::Fr>(1),
-                vector_index!(v_vec_43, (1 as i64) - (1) as i64 + 1),
-                -alpha,
-                vector_index!(v_vec_44, (1 as i64) - (1) as i64 + 1),
-                -power(alpha, 2) * power(omega, K),
-                vector_index!(v_vec_45, (1 as i64) - (1) as i64 + 1)
+                -power(omega, 3 * H - 1),
+                vector_index!(v_vec_43, (1 as i64) - (2 - 3 * H) as i64 + 1),
+                -alpha * power(omega, K - 1),
+                vector_index!(v_vec_44, (1 as i64) - (2 - K) as i64 + 1),
+                -power(alpha, 2) * power(omega, K + S_a + S_b + S_c - 1),
+                vector_index!(v_vec_45, (1 as i64) - (-S_a - S_b - S_c + 2) as i64 + 1)
             ),
             E::Fr::zero()
         );

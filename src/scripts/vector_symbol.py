@@ -1300,7 +1300,7 @@ class NamedVectorPairCombination(CoeffMap):
             for right_key, right_p_coeff in structured_vector_pair.v.items():
               right_p, right_coeff = right_p_coeff
               if left_key != "one" and right_key != "one":
-                coeff = convolution(left_coeff, right_coeff, omega)
+                coeff = left_coeff * right_coeff # convolution(left_coeff, right_coeff, omega)
                 power_power_sparse_tuples.append((left_p, right_p, coeff))
               elif left_key != "one":
                 vector_combination += convolution(left_p * left_coeff, right_coeff, omega)
@@ -1368,13 +1368,19 @@ def convolution(left, right, omega):
     return ret
 
   if isinstance(left, StructuredVector) and isinstance(right, StructuredVector):
-    return StructuredVectorPair(left, right)
+     return StructuredVectorPair(left.reverse_omega(omega), right)
 
   return left.reverse_omega(omega) * right
 
 
 if __name__ == "__main__":
-  v = (NamedVector("a") + NamedVector("b").shift(2) + NamedVector("c").shift(Symbol("n"))).shift(1)
-  print(v.dumps())
+  H = Symbol("H")
+  omega = Symbol("omega")
+  vpc = NamedVectorPairCombination._from(
+          convolution(StructuredVector._from(PowerVector(1, H)),
+                      StructuredVector._from(PowerVector(1, H)), omega)) \
+          .generate_vector_combination(omega)
+  print(vpc[0].dumpr())
+  print(vpc[1].dumpr_at_index(Symbol("i")))
 
 
