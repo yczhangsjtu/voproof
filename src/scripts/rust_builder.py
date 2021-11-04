@@ -339,3 +339,17 @@ def rust_builder_poly_from_vec(v):
   return rust_builder_macro("poly_from_vec", v)
 
 
+def rust_define_vec(v, expr):
+  return RustMacro("define_vec", v, expr)
+
+
+def rust_builder_define_vec(v, expr):
+  return rust_builder_macro("define_vec", v, expr)
+
+
+def rust_check_vector_eq(v, expr, info):
+  return RustMacro("check_vector_eq", v, expr, info)
+
+
+def rust_builder_check_vector_eq(v, expr, info):
+  return rust_builder_macro("check_vector_eq", v, expr, info)

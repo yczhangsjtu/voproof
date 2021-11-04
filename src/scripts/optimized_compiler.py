@@ -674,7 +674,7 @@ class PIOPFromVOProtocol(object):
       if self.debug_mode:
         if had.one_sided:
           side = extended_hadamard[-1]
-          check_individual_hadmard.append(RustMacro("check_vector_eq",
+          check_individual_hadmard.append(rust_check_vector_eq(
               rust_expression_vector_i(
                 "(%s) * (%s)" % (
                   (side.a * (1/alpha_power)).dumpr_at_index(sym_i),
@@ -686,7 +686,7 @@ class PIOPFromVOProtocol(object):
         else:
           side1 = extended_hadamard[-1]
           side2 = extended_hadamard[-2]
-          check_individual_hadmard.append(RustMacro("check_vector_eq",
+          check_individual_hadmard.append(rust_check_vector_eq(
               rust_expression_vector_i(
                 "(%s) * (%s)" % (
                   (side1.a * (1/alpha_power)).dumpr_at_index(sym_i),
@@ -716,8 +716,8 @@ class PIOPFromVOProtocol(object):
 
       rcomputes = LaTeXBuilder().start_math().append(r).assign().end_math() \
                                 .space("the sum of:").eol()
-      rcomputes_rust = rust_builder_macro("define_vec", r)
       expression_vector = RustMacro("expression_vector", sym_i)
+      rcomputes_rust = rust_builder_define_vec(r, expression_vector)
       linear_combination = RustMacro("power_linear_combination", beta)
       r_items = Itemize()
       for i, inner in enumerate(voexec.inner_products):
@@ -741,7 +741,6 @@ class PIOPFromVOProtocol(object):
       rcomputes.append(r_items)
 
       expression_vector.append([linear_combination, n])
-      rcomputes_rust.append_to_last(expression_vector)
       piopexec.prover_computes(rcomputes, rcomputes_rust.end())
 
       randomizer = get_named_vector("delta")
@@ -751,13 +750,12 @@ class PIOPFromVOProtocol(object):
       piopexec.prover_computes(Math(randomizer).sample(Ftoq)
         .comma(rtilde).assign(AccumulationVector(r.slice("j"), n))
         .double_bar(randomizer),
-        RustBuilder(RustMacro("define_vec")
-          .append(rtilde)
-          .append(
-              RustMacro("vector_concat")
-              .append(RustMacro("accumulate_vector").append([r, "+"]))
-              .append(randomizer)
-            )).end()
+        rust_builder_define_vec(
+          rtilde,
+            RustMacro("vector_concat")
+            .append(RustMacro("accumulate_vector").append([r, "+"]))
+            .append(randomizer)
+          ).end()
           .let(fr).assign(rust_poly_from_vec(rtilde)).end())
 
       piopexec.prover_send_polynomial(fr, n + q)
@@ -781,8 +779,8 @@ class PIOPFromVOProtocol(object):
     piopexec.prover_computes(LaTeXBuilder(), check_individual_hadmard)
     tcomputes = LaTeXBuilder().start_math().append(t).assign().end_math() \
                               .space("the sum of:").eol()
-    tcomputes_rust = RustMacro("define_vec").append(t)
-    expression_vector = RustMacro("expression_vector").append(sym_i)
+    expression_vector = RustMacro("expression_vector", sym_i)
+    tcomputes_rust = rust_builder_define_vec(t, expression_vector)
     compute_sum = rust_sum()
     t_items = Itemize()
     for i, side in enumerate(extended_hadamard):
@@ -790,9 +788,8 @@ class PIOPFromVOProtocol(object):
         compute_sum.append(side.dumpr_at_index(simplify(sym_i + n)))
         t_items.append("$%s$" % side._dumps("circ"))
     expression_vector.append([compute_sum, 2 * q + max_shift])
-    tcomputes_rust.append(expression_vector)
     tcomputes.append(t_items)
-    piopexec.prover_computes(tcomputes, RustBuilder(tcomputes_rust).end())
+    piopexec.prover_computes(tcomputes, tcomputes_rust.end())
 
     randomizer = get_named_vector("delta")
     samples.append(randomizer)
@@ -803,15 +800,11 @@ class PIOPFromVOProtocol(object):
                         .comma(t)
                         .assign(original_t)
                         .double_bar(randomizer),
-        RustBuilder(
-          RustMacro("define_vec")
-          .append(t)
-          .append(
+          rust_builder_define_vec(t,
             RustMacro("vector_concat")
             .append(randomizer)
             .append(original_t)
-          )
-        ).end())
+          ).end())
 
     tx = t.to_named_vector_poly()
     vec_to_poly_dict[t.key()] = tx
@@ -928,7 +921,7 @@ class PIOPFromVOProtocol(object):
           )).end()
       piopexec.prover_computes(LaTeXBuilder(), h_omega_sum_check)
       piopexec.prover_computes(LaTeXBuilder(),
-          rust_builder_macro("check_vector_eq",
+          rust_builder_check_vector_eq(
             vecsum,
             "vec![E::Fr::zero(); (%s) as usize]" % rust(n + max_shift + q),
             '"sum of hadamards not zero"'
@@ -975,15 +968,15 @@ class PIOPFromVOProtocol(object):
               h_vec_combination.dumpr_at_index(sym_i - h_inverse_degree + 1),
               h_degree + h_inverse_degree - 1
             )).end()
-          .append(RustMacro("check_vector_eq").append([
+          .append(rust_check_vector_eq(
               h,
               hcheck_vec,
-              '"h is not expected"'])).end()
-          .append(RustMacro("check_vector_eq").append([
+              '"h is not expected"')).end()
+          .append(rust_check_vector_eq(
               h,
               RustMacro("vector_concat").append(
                 [h1, "vec![E::Fr::zero()]", h2]),
-              '"h != h1 || 0 || h2"'])).end())
+              '"h != h1 || 0 || h2"')).end())
 
       piopexec.prover_computes(LaTeXBuilder(),
         rust_builder_macro("assert_eq",
