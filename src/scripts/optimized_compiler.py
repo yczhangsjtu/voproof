@@ -9,7 +9,8 @@ from latex_builder import tex, LaTeXBuilder, AccumulationVector, \
                           ExpressionVector, Math, Enumerate, Itemize, \
                           add_paren_if_add, Algorithm
 from rust_builder import rust, RustBuilder, AccumulationVectorRust, mut, ref, \
-                         Samples, SumAccumulationVectorRust, RustMacro
+                         Samples, SumAccumulationVectorRust, RustMacro, \
+                         rust_builder_macro
 from sympy import Symbol, Integer, UnevaluatedExpr, Expr, Max, simplify, \
                   latex, srepr, Add, Mul
 from sympy.core.numbers import Infinity
@@ -481,8 +482,10 @@ class CombinePolynomial(object):
           .let(self.poly).assign(RustMacro("poly_from_vec")).append_to_last(self.poly).end())
       else:
         rust_items.append(RustBuilder().letmut(self.poly).assign(
-            RustMacro("expression_vector").append([
-            sym_i, RustMacro("sum").append(poly_sum_rust_items), self.length])
+            RustMacro("expression_vector",
+              sym_i,
+              RustMacro("sum", poly_sum_rust_items),
+              self.length)
           ).end().append(self.poly).append("[0]").plus_assign(rust_one).end()
           .let(self.poly).assign(RustMacro("poly_from_vec")).append_to_last(self.poly).end())
     if has_commit:
@@ -490,7 +493,7 @@ class CombinePolynomial(object):
       rust_items.append(RustBuilder().let(self.poly.to_comm())
                        .assign_func("Commitment::<E>")
                        .append_to_last(
-                         RustBuilder(RustMacro("sum").append(commit_sum_rust_items))
+                         RustBuilder(RustMacro("sum", commit_sum_rust_items))
                          .invoke_method("into_affine")
                        ).end())
 
@@ -591,10 +594,10 @@ class PIOPFromVOProtocol(object):
       vec_to_poly_dict[vector.key()] = poly
       if self.debug_mode:
         piopexec.preprocess(LaTeXBuilder(),
-            RustBuilder().append(RustMacro("println").append([
+            rust_builder_macro("println",
               '"vector %s of length {} = \n[{}]"' % rust(vector), "%s.len()" % rust(vector),
               "fmt_ff_vector!(%s)" % rust(vector)
-              ])).end())
+              ).end())
     piopexec.indexer_output_pk = voexec.indexer_output_pk
     piopexec.indexer_output_vk = voexec.indexer_output_vk
     piopexec.reference_to_voexec = voexec
@@ -646,10 +649,10 @@ class PIOPFromVOProtocol(object):
 
           if self.debug_mode:
             piopexec.prover_computes(LaTeXBuilder(),
-                RustBuilder().append(RustMacro("println").append([
+                rust_builder_macro("println",
                   '"vector %s of length {} = \\n[{}]"' % rust(v), "%s.len()" % rust(v),
                   "fmt_ff_vector!(%s)" % rust(v)
-                  ])).end())
+                  ).end())
       else:
         raise ValueError("Interaction of type %s should not appear" % type(interaction))
 
@@ -869,32 +872,27 @@ class PIOPFromVOProtocol(object):
           ])
         ).end()
         piopexec.prover_computes(LaTeXBuilder(),
-            RustBuilder().append(RustMacro("add_expression_vector_to_vector").append(
-              [vecsum, sym_i,
+            rust_builder_macro("add_expression_vector_to_vector",
+              vecsum, sym_i,
                "(%s) * (%s)" % (a.dumpr_at_index(sym_i),
-                                b.dumpr_at_index(sym_i))])).end())
+                                b.dumpr_at_index(sym_i))).end())
 
         piopexec.prover_computes(LaTeXBuilder(),
-            RustBuilder().append(RustMacro("add_vector_to_vector").append(
-              [
+            rust_builder_macro("add_vector_to_vector",
                 hcheck_vec,
-                RustMacro("vector_poly_mul").append([
-                  RustMacro("expression_vector")
-                  .append([
+                RustMacro("vector_poly_mul",
+                  RustMacro("expression_vector",
                     sym_i,
                     a.dumpr_at_index(sym_i),
                     rust(n + max_shift + q),
-                  ]),
-                  RustMacro("expression_vector")
-                  .append([
+                  ),
+                  RustMacro("expression_vector",
                     sym_i,
                     b.dumpr_at_index(sym_i),
                     rust(n + max_shift + q),
-                  ]),
+                  ),
                   omega
-                ])
-              ]
-            )).end())
+                )).end())
 
       hx_vector_combination += convolution(a, b, omega)
       for key1, vec_value1 in a.items():

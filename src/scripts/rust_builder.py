@@ -96,8 +96,9 @@ class FunctionCall(RustList):
 class RustMacro(FunctionCall):
   def __init__(self, macro_name, *args):
     super(RustMacro, self).__init__("%s!" % macro_name)
-    if isinstance(args, list) and len(args) > 0:
-      self.append(args)
+    if (isinstance(args, list) or isinstance(args, tuple)) and len(args) > 0:
+      for arg in args:
+        self.append(arg)
 
 
 class Tuple(RustList):
@@ -255,6 +256,9 @@ class RustBuilder(object):
       raise Exception("Stack is not empty")
     return "".join([rust(arg) for arg in self.items])
 
+
+def rust_builder_macro(macro_name, *args):
+  return RustBuilder().append(RustMacro(macro_name, *args))
 
 class ExpressionVectorRust(object):
   def __init__(self, expr, length):
