@@ -322,3 +322,10 @@ def rust_sum(*args):
 def rust_builder_sum(*args):
   return rust_builder_macro("sum", *args)
 
+
+def rust_vec(*args):
+  return RustMacro("vec", *args)
+
+
+def rust_builder_vec(*args):
+  return rust_builder_macro("vec", *args)

@@ -640,7 +640,9 @@ class PIOPFromVOProtocol(object):
           piopexec.prover_send_polynomial(poly, self.vector_size + q)
           piopexec.prover_computes(
               LaTeXBuilder(),
-              RustBuilder().let(poly).assign_func("poly_from_vec!").append_to_last(v).end())
+              RustBuilder().let(poly).assign(
+                RustMacro("poly_from_vec", v)
+              ).end())
           vec_to_poly_dict[v.key()] = poly
 
           if self.debug_mode:
@@ -672,8 +674,7 @@ class PIOPFromVOProtocol(object):
       if self.debug_mode:
         if had.one_sided:
           side = extended_hadamard[-1]
-          check_individual_hadmard.append(RustMacro("check_vector_eq")
-            .append([
+          check_individual_hadmard.append(RustMacro("check_vector_eq",
               rust_expression_vector_i(
                 "(%s) * (%s)" % (
                   (side.a * (1/alpha_power)).dumpr_at_index(sym_i),
@@ -681,12 +682,11 @@ class PIOPFromVOProtocol(object):
                 rust(n)),
               "vec![E::Fr::zero(); (%s) as usize]" % rust(n),
               '"The %d\'th hadamard check is not satisfied"' % (i+1)
-              ])).end()
+              )).end()
         else:
           side1 = extended_hadamard[-1]
           side2 = extended_hadamard[-2]
-          check_individual_hadmard.append(RustMacro("check_vector_eq")
-            .append([
+          check_individual_hadmard.append(RustMacro("check_vector_eq",
               rust_expression_vector_i(
                 "(%s) * (%s)" % (
                   (side1.a * (1/alpha_power)).dumpr_at_index(sym_i),
@@ -698,7 +698,7 @@ class PIOPFromVOProtocol(object):
                   side2.b.dumpr_at_index(sym_i)),
                 rust(n)),
               '"The %d\'th hadamard check is not satisfied"' % (i+1)
-              ])).end()
+              )).end()
 
       else: # One sided, and one of the operand is only a structured vector
         if (not isinstance(had.left_side.a, NamedVector) and \
@@ -716,9 +716,9 @@ class PIOPFromVOProtocol(object):
 
       rcomputes = LaTeXBuilder().start_math().append(r).assign().end_math() \
                                 .space("the sum of:").eol()
-      rcomputes_rust = RustMacro("define_vec").append(r)
+      rcomputes_rust = RustMacro("define_vec", r)
       expression_vector = RustMacro("expression_vector", sym_i)
-      linear_combination = RustMacro("power_linear_combination").append(beta)
+      linear_combination = RustMacro("power_linear_combination", beta)
       r_items = Itemize()
       for i, inner in enumerate(voexec.inner_products):
         difference = inner.dump_hadamard_difference()
@@ -758,7 +758,7 @@ class PIOPFromVOProtocol(object):
               .append(RustMacro("accumulate_vector").append([r, "+"]))
               .append(randomizer)
             )).end()
-          .let(fr).assign_func("poly_from_vec!").append_to_last(rtilde).end())
+          .let(fr).assign(RustMacro("poly_from_vec", rtilde)).end())
 
       piopexec.prover_send_polynomial(fr, n + q)
       vec_to_poly_dict[rtilde.key()] = fr
@@ -1361,8 +1361,8 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     open_computation.paren(array)
 
     open_computation_rust = RustBuilder()
-    open_computation_rust.let("fs").assign(RustMacro("vec", fs)).end()
-    open_computation_rust.let("gs").assign(RustMacro("vec", gs)).end()
+    open_computation_rust.let("fs").assign(rust_vec(fs)).end()
+    open_computation_rust.let("gs").assign(rust_vec(gs)).end()
     open_computation_rust.let("zz").assign(open_points[1]).end()
     open_computation_rust.let("z").assign(open_points[0]).end()
 
@@ -1395,10 +1395,10 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         .invoke_method("unwrap")).end()
     verify_computation_rust.let("zz").assign(open_points[1]).end()
     verify_computation_rust.let("z").assign(open_points[0]).end()
-    verify_computation_rust.let("f_commitments").assign(RustMacro("vec", fcomms)).end()
-    verify_computation_rust.let("g_commitments").assign(RustMacro("vec", gcomms)).end()
-    verify_computation_rust.let("f_values").assign(RustMacro("vec", fvals)).end()
-    verify_computation_rust.let("g_values").assign(RustMacro("vec", gvals)).end()
+    verify_computation_rust.let("f_commitments").assign(rust_vec(fcomms)).end()
+    verify_computation_rust.let("g_commitments").assign(rust_vec(gcomms)).end()
+    verify_computation_rust.let("f_values").assign(rust_vec(fvals)).end()
+    verify_computation_rust.let("g_values").assign(rust_vec(gvals)).end()
 
     self.prover_computes(open_computation, open_computation_rust)
     self.verifier_computes(verify_computation, verify_computation_rust)
