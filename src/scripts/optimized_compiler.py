@@ -476,14 +476,14 @@ class CombinePolynomial(object):
             rust_sum(poly_sum_rust_items),
             self.length
           )).end()
-          .let(self.poly).assign(RustMacro("poly_from_vec")).append_to_last(self.poly).end())
+          .let(self.poly).assign(rust_poly_from_vec(self.poly)).end())
       else:
         rust_items.append(RustBuilder().letmut(self.poly).assign(
             rust_expression_vector_i(
               rust_sum(poly_sum_rust_items),
               self.length)
           ).end().append(self.poly).append("[0]").plus_assign(rust_one).end()
-          .let(self.poly).assign(RustMacro("poly_from_vec")).append_to_last(self.poly).end())
+          .let(self.poly).assign(rust_poly_from_vec(self.poly)).end())
     if has_commit:
       items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
       rust_items.append(RustBuilder().let(self.poly.to_comm())
@@ -641,7 +641,7 @@ class PIOPFromVOProtocol(object):
           piopexec.prover_computes(
               LaTeXBuilder(),
               RustBuilder().let(poly).assign(
-                RustMacro("poly_from_vec", v)
+                rust_poly_from_vec(v)
               ).end())
           vec_to_poly_dict[v.key()] = poly
 
@@ -716,7 +716,7 @@ class PIOPFromVOProtocol(object):
 
       rcomputes = LaTeXBuilder().start_math().append(r).assign().end_math() \
                                 .space("the sum of:").eol()
-      rcomputes_rust = RustMacro("define_vec", r)
+      rcomputes_rust = rust_builder_macro("define_vec", r)
       expression_vector = RustMacro("expression_vector", sym_i)
       linear_combination = RustMacro("power_linear_combination", beta)
       r_items = Itemize()
@@ -741,8 +741,8 @@ class PIOPFromVOProtocol(object):
       rcomputes.append(r_items)
 
       expression_vector.append([linear_combination, n])
-      rcomputes_rust.append(expression_vector)
-      piopexec.prover_computes(rcomputes, RustBuilder(rcomputes_rust).end())
+      rcomputes_rust.append_to_last(expression_vector)
+      piopexec.prover_computes(rcomputes, rcomputes_rust.end())
 
       randomizer = get_named_vector("delta")
       samples.append(randomizer)
@@ -758,7 +758,7 @@ class PIOPFromVOProtocol(object):
               .append(RustMacro("accumulate_vector").append([r, "+"]))
               .append(randomizer)
             )).end()
-          .let(fr).assign(RustMacro("poly_from_vec", rtilde)).end())
+          .let(fr).assign(rust_poly_from_vec(rtilde)).end())
 
       piopexec.prover_send_polynomial(fr, n + q)
       vec_to_poly_dict[rtilde.key()] = fr

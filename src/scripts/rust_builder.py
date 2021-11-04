@@ -329,3 +329,13 @@ def rust_vec(*args):
 
 def rust_builder_vec(*args):
   return rust_builder_macro("vec", *args)
+
+
+def rust_poly_from_vec(v):
+  return RustMacro("poly_from_vec", v)
+
+
+def rust_builder_poly_from_vec(v):
+  return rust_builder_macro("poly_from_vec", v)
+
+
