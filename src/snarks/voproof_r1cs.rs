@@ -507,7 +507,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 )),
                 K + S_a + S_b + S_c
             ),
-            vec![E::Fr::zero(); (K + S_a + S_b + S_c) as usize],
+            vec!(E::Fr::zero(); (K + S_a + S_b + S_c) as usize),
             "The 5'th hadamard check is not satisfied"
         );
         define_vec!(
@@ -1585,7 +1585,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         assert_eq!(h_osum, E::Fr::zero());
         check_vector_eq!(
             sum_vec,
-            vec![E::Fr::zero(); (K + 2 * S_a + 2 * S_b + 2 * S_c + 1) as usize],
+            vec!(E::Fr::zero(); (K + 2 * S_a + 2 * S_b + 2 * S_c + 1) as usize),
             "sum of hadamards not zero"
         );
         let v_vec_1 = vector_poly_mul!(h_vec, pk.w_vec, omega).coeffs;
@@ -1964,7 +1964,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         check_vector_eq!(h_vec_1, hcheck_vec, "h is not expected");
         check_vector_eq!(
             h_vec_1,
-            vector_concat!(h_vec_2, vec![E::Fr::zero()], h_vec_3),
+            vector_concat!(h_vec_2, vec!(E::Fr::one()), h_vec_3),
             "h != h1 || 0 || h2"
         );
         assert_eq!(

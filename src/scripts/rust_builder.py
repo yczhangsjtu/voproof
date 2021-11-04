@@ -4,6 +4,8 @@ from rust import rust_code, rust_code_to_field
 
 
 sym_i = Symbol("i")
+rust_zero = "E::Fr::zero()"
+rust_one = "E::Fr::one()"
 
 def keep_alpha_number(s):
   return "".join([c for c in s if c.isalnum()])
@@ -327,6 +329,10 @@ def rust_vec(*args):
   return RustMacro("vec", *args)
 
 
+def rust_vec_size(e, length):
+  return RustMacro("vec", "%s; (%s) as usize" % (rust(e), rust(length)))
+
+
 def rust_builder_vec(*args):
   return rust_builder_macro("vec", *args)
 
@@ -353,3 +359,11 @@ def rust_check_vector_eq(v, expr, info):
 
 def rust_builder_check_vector_eq(v, expr, info):
   return rust_builder_macro("check_vector_eq", v, expr, info)
+
+
+def rust_vector_concat(*args):
+  return RustMacro("vector_concat", *args)
+
+
+def rust_builder_vector_concat(*args):
+  return rust_builder_macro("vector_concat", *args)
