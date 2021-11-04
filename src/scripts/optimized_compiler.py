@@ -825,28 +825,73 @@ class PIOPFromVOProtocol(object):
     self.debug("Process polynomial h")
     omega = Symbol(get_name('omega'))
     piopexec.verifier_send_randomness(omega)
+
+    if self.debug_mode:
+      h_omega_sum_check = RustBuilder()
+      h_omega_sum = Symbol(get_name('h_osum'))
+      h_omega_sum_check.letmut(h_omega_sum) \
+                       .assign("E::Fr::zero()") \
+                       .end()
+
     hx = get_named_polynomial("h")
     hxcomputes = LaTeXBuilder().start_math().append(hx).assign().end_math() \
                                .space("the sum of:").eol()
     hx_items = Itemize()
+
 
     hx_vector_combination = NamedVectorPairCombination()
 
     if self.debug_mode:
       vecsum = get_named_vector("sum")
       piopexec.prover_computes(LaTeXBuilder(),
-          RustBuilder().letmut(vecsum).assign("vec![E::Fr::zero(); (%s) as usize]" % rust(n)).end())
+          RustBuilder().letmut(vecsum).assign("vec![E::Fr::zero(); (%s) as usize]" % rust(n + max_shift + q)).end())
+      hcheck_vec = get_named_vector("hcheck")
+      piopexec.prover_computes(LaTeXBuilder(),
+          RustBuilder().letmut(hcheck_vec).assign(
+            "vec![E::Fr::zero(); (%s) as usize]" %
+            rust((n + max_shift + q) * 2 - 1)
+          ).end())
 
     for i, side in enumerate(extended_hadamard):
       self.debug("  Extended Hadamard %d" % (i + 1))
       a = VectorCombination._from(side.a)
       b = VectorCombination._from(side.b)
       if self.debug_mode:
+        h_omega_sum_check.append(h_omega_sum).plus_assign(
+          RustMacro("eval_vector_expression").append([
+            omega, Symbol("i"),
+            "(%s) * (%s)" %
+              (a.dumpr_at_index(Symbol("i")), b.dumpr_at_index(Symbol("i"))),
+            rust(n + max_shift + q)
+          ])
+        ).end()
         piopexec.prover_computes(LaTeXBuilder(),
             RustBuilder().append(RustMacro("add_expression_vector_to_vector").append(
               [vecsum, Symbol("i"),
                "(%s) * (%s)" % (a.dumpr_at_index(Symbol("i")),
                                 b.dumpr_at_index(Symbol("i")))])).end())
+
+        piopexec.prover_computes(LaTeXBuilder(),
+            RustBuilder().append(RustMacro("add_vector_to_vector").append(
+              [
+                hcheck_vec,
+                RustMacro("vector_poly_mul").append([
+                  RustMacro("expression_vector")
+                  .append([
+                    Symbol("i"),
+                    a.dumpr_at_index(Symbol("i")),
+                    rust(n + max_shift + q),
+                  ]),
+                  RustMacro("expression_vector")
+                  .append([
+                    Symbol("i"),
+                    b.dumpr_at_index(Symbol("i")),
+                    rust(n + max_shift + q),
+                  ]),
+                  omega
+                ])
+              ]
+            )).end())
 
       hx_vector_combination += convolution(a, b, omega)
       for key1, vec_value1 in a.items():
@@ -883,9 +928,13 @@ class PIOPFromVOProtocol(object):
               vec_to_poly_dict[vec2.key()].dumps_var(X)))
 
     if self.debug_mode:
+      h_omega_sum_check.append(RustMacro("assert_eq").append(
+          [h_omega_sum, "E::Fr::zero()"]
+          )).end()
+      piopexec.prover_computes(LaTeXBuilder(), h_omega_sum_check)
       piopexec.prover_computes(LaTeXBuilder(),
           RustBuilder().append(RustMacro("check_vector_eq").append([
-            vecsum, "vec![E::Fr::zero(); (%s) as usize]" % rust(n), '"sum of hadamards not zero"'
+            vecsum, "vec![E::Fr::zero(); (%s) as usize]" % rust(n + max_shift + q), '"sum of hadamards not zero"'
             ])).end())
 
     hxcomputes.append(hx_items)
@@ -901,13 +950,13 @@ class PIOPFromVOProtocol(object):
     h1computes_rust = RustBuilder().let(h1).assign(
         RustMacro("expression_vector").append(
           [Symbol("i"),
-           h_vec_combination.dumpr_at_index(Symbol("i") - h_inverse_degree - 1),
-           h_inverse_degree])).end()
+           h_vec_combination.dumpr_at_index(Symbol("i") - h_inverse_degree + 1),
+           h_inverse_degree - 1])).end()
     h2computes_rust = RustBuilder().let(h2).assign(
         RustMacro("expression_vector").append(
           [Symbol("i"),
-           h_vec_combination.dumpr_at_index(Symbol("i")),
-           h_degree])).end()
+           h_vec_combination.dumpr_at_index(Symbol("i") + 1),
+           h_degree - 1])).end()
 
 
     # For producing the latex code only
@@ -927,24 +976,28 @@ class PIOPFromVOProtocol(object):
 
     if self.debug_mode:
       piopexec.prover_computes(LaTeXBuilder(),
-        RustBuilder().append(RustMacro("assert_eq").append(
-          [h_vec_combination.dumpr_at_index(1), "E::Fr::zero()"]
-          )).end())
-
-      piopexec.prover_computes(LaTeXBuilder(),
-          RustBuilder().let(h).assign(RustMacro("expression_vector").append(
+          RustBuilder().let(h).assign(RustMacro("expression_vector")
+          .append(
             [
               Symbol("i"),
-              h_vec_combination.dumpr_at_index(Symbol("i") - h_inverse_degree - 1),
-              h_degree + h_inverse_degree + 1
+              h_vec_combination.dumpr_at_index(Symbol("i") - h_inverse_degree + 1),
+              h_degree + h_inverse_degree - 1
             ]
             )).end()
+          .append(RustMacro("check_vector_eq").append([
+              h,
+              hcheck_vec,
+              '"h is not expected"'])).end()
           .append(RustMacro("check_vector_eq").append([
               h,
               RustMacro("vector_concat").append(
                 [h1, "vec![E::Fr::zero()]", h2]),
               '"h != h1 || 0 || h2"'])).end())
 
+      piopexec.prover_computes(LaTeXBuilder(),
+        RustBuilder().append(RustMacro("assert_eq").append(
+          [h_vec_combination.dumpr_at_index(1), "E::Fr::zero()"]
+          )).end())
 
     # For the rust code, use the vector instead
     h1x = h1.to_named_vector_poly()

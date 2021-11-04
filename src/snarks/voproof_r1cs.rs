@@ -711,7 +711,9 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             )
             .unwrap(),
         );
-        let mut sum_vec = vec![E::Fr::zero(); (K + S_a + S_b + S_c) as usize];
+        let mut sum_vec = vec![E::Fr::zero(); (K + 2 * S_a + 2 * S_b + 2 * S_c + 1) as usize];
+        let mut hcheck_vec =
+            vec![E::Fr::zero(); (2 * K + 4 * S_a + 4 * S_b + 4 * S_c + 1) as usize];
         add_expression_vector_to_vector!(
             sum_vec,
             i,
@@ -727,6 +729,32 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 vector_index!(s_vec, (i as i64) - (1) as i64 + 1)
             ))
         );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        mu,
+                        range_index!(1, 3 * H, i - (1) + 1),
+                        -to_field::<E::Fr>(1),
+                        power_vector_index!(gamma, 3 * H, i - (1) + 1)
+                    )),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(s_vec, (i as i64) - (1) as i64 + 1)
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
+        );
         add_expression_vector_to_vector!(
             sum_vec,
             i,
@@ -739,6 +767,30 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 to_field::<E::Fr>(1),
                 range_index!(1, 3 * H, i - (1) + 1)
             )))
+        );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        -to_field::<E::Fr>(1),
+                        range_index!(1, 3 * H, i - (1) + 1)
+                    )),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        range_index!(1, 3 * H, i - (1) + 1)
+                    )),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
         );
         add_expression_vector_to_vector!(
             sum_vec,
@@ -755,6 +807,32 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 vector_index!(h_vec, (i as i64) - (1) as i64 + 1)
             ))
         );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        alpha * nu,
+                        range_index!(1, K, i - (1) + 1),
+                        -alpha,
+                        power_vector_index!(gamma, K, i - (1) + 1)
+                    )),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(h_vec, (i as i64) - (1) as i64 + 1)
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
+        );
         add_expression_vector_to_vector!(
             sum_vec,
             i,
@@ -767,6 +845,30 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 to_field::<E::Fr>(1),
                 range_index!(1, K, i - (1) + 1)
             )))
+        );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        -alpha,
+                        range_index!(1, K, i - (1) + 1)
+                    )),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        range_index!(1, K, i - (1) + 1)
+                    )),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
         );
         add_expression_vector_to_vector!(
             sum_vec,
@@ -789,6 +891,38 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 vector_index!(pk.y_vec, (i as i64) - (K + 1) as i64 + 1)
             ))
         );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        power(alpha, 2),
+                        vector_index!(h_vec, (i as i64) - (1) as i64 + 1)
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        linear_combination!(
+                            E::Fr::zero(),
+                            mu * nu,
+                            range_index!(1, S_a + S_b + S_c, i - (K + 1) + 1)
+                        ),
+                        -mu,
+                        vector_index!(pk.w_vec, (i as i64) - (K + 1) as i64 + 1),
+                        -nu,
+                        vector_index!(pk.u_vec, (i as i64) - (K + 1) as i64 + 1),
+                        to_field::<E::Fr>(1),
+                        vector_index!(pk.y_vec, (i as i64) - (K + 1) as i64 + 1)
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
+        );
         add_expression_vector_to_vector!(
             sum_vec,
             i,
@@ -801,6 +935,30 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 to_field::<E::Fr>(1),
                 range_index!(1, S_a + S_b + S_c, i - (K + 1) + 1)
             )))
+        );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        -power(alpha, 2),
+                        range_index!(1, S_a + S_b + S_c, i - (K + 1) + 1)
+                    )),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        range_index!(1, S_a + S_b + S_c, i - (K + 1) + 1)
+                    )),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
         );
         add_expression_vector_to_vector!(
             sum_vec,
@@ -821,6 +979,36 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 )
             ))
         );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        power(alpha, 3),
+                        vector_index!(
+                            u_vec_1,
+                            (i as i64) - (-H + K + S_a + S_b + S_c + 1) as i64 + 1
+                        )
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(
+                            u_vec_1,
+                            (i as i64) - (-2 * H + K + S_a + S_b + S_c + 1) as i64 + 1
+                        )
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
+        );
         add_expression_vector_to_vector!(
             sum_vec,
             i,
@@ -837,6 +1025,33 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 )
             ))
         );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        -power(alpha, 3),
+                        range_index!(1, H, i - (-H + K + S_a + S_b + S_c + 1) + 1)
+                    )),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(
+                            u_vec_1,
+                            (i as i64) - (-3 * H + K + S_a + S_b + S_c + 1) as i64 + 1
+                        )
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
+        );
         add_expression_vector_to_vector!(
             sum_vec,
             i,
@@ -851,6 +1066,32 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 -to_field::<E::Fr>(1),
                 vector_index!(x_vec, (i as i64) - (3 * H + 2) as i64 + 1)
             ))
+        );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        power(alpha, 4),
+                        range_index!(1, ell + 1, i - (3 * H + 1) + 1)
+                    )),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        linear_combination!(multi_delta!(i, -to_field::<E::Fr>(1), 3 * H + 1)),
+                        to_field::<E::Fr>(1),
+                        vector_index!(u_vec_1, (i as i64) - (1) as i64 + 1),
+                        -to_field::<E::Fr>(1),
+                        vector_index!(x_vec, (i as i64) - (3 * H + 2) as i64 + 1)
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
         );
         add_expression_vector_to_vector!(
             sum_vec,
@@ -870,6 +1111,36 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     (i as i64) - (-3 * H + S_a + S_b + S_c + 1) as i64 + 1
                 )
             ))
+        );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        power(alpha, 5),
+                        vector_index!(
+                            u_vec_1,
+                            (i as i64) - (-3 * H + S_a + S_b + S_c + 1) as i64 + 1
+                        )
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(
+                            s_vec,
+                            (i as i64) - (-3 * H + S_a + S_b + S_c + 1) as i64 + 1
+                        )
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
         );
         add_expression_vector_to_vector!(
             sum_vec,
@@ -887,6 +1158,33 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 )
             ))
         );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        -power(alpha, 5) * beta,
+                        vector_index!(h_vec, (i as i64) - (S_a + S_b + S_c + 1) as i64 + 1)
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(
+                            s_vec,
+                            (i as i64) - (-3 * H + S_a + S_b + S_c + 1) as i64 + 1
+                        )
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
+        );
         add_expression_vector_to_vector!(
             sum_vec,
             i,
@@ -899,6 +1197,30 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 to_field::<E::Fr>(1),
                 vector_index!(pk.v_vec, (i as i64) - (K + 1) as i64 + 1)
             ))
+        );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        -power(alpha, 5) * beta,
+                        vector_index!(h_vec, (i as i64) - (1) as i64 + 1)
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(pk.v_vec, (i as i64) - (K + 1) as i64 + 1)
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
         );
         add_expression_vector_to_vector!(
             sum_vec,
@@ -915,6 +1237,32 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 range_index!(1, K + S_a + S_b + S_c, i - (1) + 1)
             )))
         );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        -power(alpha, 5),
+                        vector_index!(r_vec_tilde, (i as i64) - (1) as i64 + 1),
+                        power(alpha, 5),
+                        vector_index!(r_vec_tilde, (i as i64) - (2) as i64 + 1)
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        range_index!(1, K + S_a + S_b + S_c, i - (1) + 1)
+                    )),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
+        );
         add_expression_vector_to_vector!(
             sum_vec,
             i,
@@ -927,6 +1275,30 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 to_field::<E::Fr>(1),
                 K + S_a + S_b + S_c
             ))))
+        );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        power(alpha, 6),
+                        vector_index!(r_vec_tilde, (i as i64) - (1) as i64 + 1)
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(multi_delta!(
+                        i,
+                        to_field::<E::Fr>(1),
+                        K + S_a + S_b + S_c
+                    ))),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
         );
         add_expression_vector_to_vector!(
             sum_vec,
@@ -941,9 +1313,279 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 vector_index!(t_vec_1, (i as i64) - (K + S_a + S_b + S_c) as i64 + 1)
             ))
         );
+        add_vector_to_vector!(
+            hcheck_vec,
+            vector_poly_mul!(
+                expression_vector!(
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        -to_field::<E::Fr>(1),
+                        range_index!(1, S_a + S_b + S_c + 1, i - (K + S_a + S_b + S_c + 1) + 1)
+                    )),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                expression_vector!(
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(t_vec_1, (i as i64) - (K + S_a + S_b + S_c) as i64 + 1)
+                    ),
+                    K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+                ),
+                omega
+            )
+        );
+        let mut h_osum = E::Fr::zero();
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(linear_combination!(
+                E::Fr::zero(),
+                mu,
+                range_index!(1, 3 * H, i - (1) + 1),
+                -to_field::<E::Fr>(1),
+                power_vector_index!(gamma, 3 * H, i - (1) + 1)
+            ))) * (linear_combination!(
+                E::Fr::zero(),
+                to_field::<E::Fr>(1),
+                vector_index!(s_vec, (i as i64) - (1) as i64 + 1)
+            )),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(linear_combination!(
+                E::Fr::zero(),
+                -to_field::<E::Fr>(1),
+                range_index!(1, 3 * H, i - (1) + 1)
+            ))) * (linear_combination!(linear_combination!(
+                E::Fr::zero(),
+                to_field::<E::Fr>(1),
+                range_index!(1, 3 * H, i - (1) + 1)
+            ))),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(linear_combination!(
+                E::Fr::zero(),
+                alpha * nu,
+                range_index!(1, K, i - (1) + 1),
+                -alpha,
+                power_vector_index!(gamma, K, i - (1) + 1)
+            ))) * (linear_combination!(
+                E::Fr::zero(),
+                to_field::<E::Fr>(1),
+                vector_index!(h_vec, (i as i64) - (1) as i64 + 1)
+            )),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(linear_combination!(
+                E::Fr::zero(),
+                -alpha,
+                range_index!(1, K, i - (1) + 1)
+            ))) * (linear_combination!(linear_combination!(
+                E::Fr::zero(),
+                to_field::<E::Fr>(1),
+                range_index!(1, K, i - (1) + 1)
+            ))),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(
+                E::Fr::zero(),
+                power(alpha, 2),
+                vector_index!(h_vec, (i as i64) - (1) as i64 + 1)
+            )) * (linear_combination!(
+                linear_combination!(
+                    E::Fr::zero(),
+                    mu * nu,
+                    range_index!(1, S_a + S_b + S_c, i - (K + 1) + 1)
+                ),
+                -mu,
+                vector_index!(pk.w_vec, (i as i64) - (K + 1) as i64 + 1),
+                -nu,
+                vector_index!(pk.u_vec, (i as i64) - (K + 1) as i64 + 1),
+                to_field::<E::Fr>(1),
+                vector_index!(pk.y_vec, (i as i64) - (K + 1) as i64 + 1)
+            )),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(linear_combination!(
+                E::Fr::zero(),
+                -power(alpha, 2),
+                range_index!(1, S_a + S_b + S_c, i - (K + 1) + 1)
+            ))) * (linear_combination!(linear_combination!(
+                E::Fr::zero(),
+                to_field::<E::Fr>(1),
+                range_index!(1, S_a + S_b + S_c, i - (K + 1) + 1)
+            ))),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(
+                E::Fr::zero(),
+                power(alpha, 3),
+                vector_index!(
+                    u_vec_1,
+                    (i as i64) - (-H + K + S_a + S_b + S_c + 1) as i64 + 1
+                )
+            )) * (linear_combination!(
+                E::Fr::zero(),
+                to_field::<E::Fr>(1),
+                vector_index!(
+                    u_vec_1,
+                    (i as i64) - (-2 * H + K + S_a + S_b + S_c + 1) as i64 + 1
+                )
+            )),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(linear_combination!(
+                E::Fr::zero(),
+                -power(alpha, 3),
+                range_index!(1, H, i - (-H + K + S_a + S_b + S_c + 1) + 1)
+            ))) * (linear_combination!(
+                E::Fr::zero(),
+                to_field::<E::Fr>(1),
+                vector_index!(
+                    u_vec_1,
+                    (i as i64) - (-3 * H + K + S_a + S_b + S_c + 1) as i64 + 1
+                )
+            )),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(linear_combination!(
+                E::Fr::zero(),
+                power(alpha, 4),
+                range_index!(1, ell + 1, i - (3 * H + 1) + 1)
+            ))) * (linear_combination!(
+                linear_combination!(multi_delta!(i, -to_field::<E::Fr>(1), 3 * H + 1)),
+                to_field::<E::Fr>(1),
+                vector_index!(u_vec_1, (i as i64) - (1) as i64 + 1),
+                -to_field::<E::Fr>(1),
+                vector_index!(x_vec, (i as i64) - (3 * H + 2) as i64 + 1)
+            )),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(
+                E::Fr::zero(),
+                power(alpha, 5),
+                vector_index!(
+                    u_vec_1,
+                    (i as i64) - (-3 * H + S_a + S_b + S_c + 1) as i64 + 1
+                )
+            )) * (linear_combination!(
+                E::Fr::zero(),
+                to_field::<E::Fr>(1),
+                vector_index!(
+                    s_vec,
+                    (i as i64) - (-3 * H + S_a + S_b + S_c + 1) as i64 + 1
+                )
+            )),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(
+                E::Fr::zero(),
+                -power(alpha, 5) * beta,
+                vector_index!(h_vec, (i as i64) - (S_a + S_b + S_c + 1) as i64 + 1)
+            )) * (linear_combination!(
+                E::Fr::zero(),
+                to_field::<E::Fr>(1),
+                vector_index!(
+                    s_vec,
+                    (i as i64) - (-3 * H + S_a + S_b + S_c + 1) as i64 + 1
+                )
+            )),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(
+                E::Fr::zero(),
+                -power(alpha, 5) * beta,
+                vector_index!(h_vec, (i as i64) - (1) as i64 + 1)
+            )) * (linear_combination!(
+                E::Fr::zero(),
+                to_field::<E::Fr>(1),
+                vector_index!(pk.v_vec, (i as i64) - (K + 1) as i64 + 1)
+            )),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(
+                E::Fr::zero(),
+                -power(alpha, 5),
+                vector_index!(r_vec_tilde, (i as i64) - (1) as i64 + 1),
+                power(alpha, 5),
+                vector_index!(r_vec_tilde, (i as i64) - (2) as i64 + 1)
+            )) * (linear_combination!(linear_combination!(
+                E::Fr::zero(),
+                to_field::<E::Fr>(1),
+                range_index!(1, K + S_a + S_b + S_c, i - (1) + 1)
+            ))),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(
+                E::Fr::zero(),
+                power(alpha, 6),
+                vector_index!(r_vec_tilde, (i as i64) - (1) as i64 + 1)
+            )) * (linear_combination!(linear_combination!(multi_delta!(
+                i,
+                to_field::<E::Fr>(1),
+                K + S_a + S_b + S_c
+            )))),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        h_osum += eval_vector_expression!(
+            omega,
+            i,
+            (linear_combination!(linear_combination!(
+                E::Fr::zero(),
+                -to_field::<E::Fr>(1),
+                range_index!(1, S_a + S_b + S_c + 1, i - (K + S_a + S_b + S_c + 1) + 1)
+            ))) * (linear_combination!(
+                E::Fr::zero(),
+                to_field::<E::Fr>(1),
+                vector_index!(t_vec_1, (i as i64) - (K + S_a + S_b + S_c) as i64 + 1)
+            )),
+            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+        );
+        assert_eq!(h_osum, E::Fr::zero());
         check_vector_eq!(
             sum_vec,
-            vec![E::Fr::zero(); (K + S_a + S_b + S_c) as usize],
+            vec![E::Fr::zero(); (K + 2 * S_a + 2 * S_b + 2 * S_c + 1) as usize],
             "sum of hadamards not zero"
         );
         let v_vec_1 = vector_poly_mul!(h_vec, pk.w_vec, omega).coeffs;
@@ -991,141 +1633,131 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     power_vector_index!(
                         omega.inverse().unwrap(),
                         ell + 1,
-                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 - (1 - ell) + 1
+                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (1 - ell) + 1
                     )
                 ),
                 -power(alpha, 2) * mu,
                 vector_index!(
                     v_vec_1,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (K - shiftlength + 1) as i64
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (K - shiftlength + 1) as i64
                         + 1
                 ),
                 -power(alpha, 2) * nu,
                 vector_index!(
                     v_vec_3,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (K - shiftlength_2 + 1) as i64
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (K - shiftlength_2 + 1) as i64
                         + 1
                 ),
                 power(alpha, 2),
                 vector_index!(
                     v_vec_4,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (K - shiftlength_3 + 1) as i64
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (K - shiftlength_3 + 1) as i64
                         + 1
                 ),
                 power(alpha, 3) * power(omega, -H + K + S_a + S_b + S_c),
                 vector_index!(
                     v_vec_5,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (-H - shiftlength_4 + 1) as i64
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-H - shiftlength_4 + 1) as i64
                         + 1
                 ),
                 power(alpha, 5) * power(omega, -3 * H + S_a + S_b + S_c),
                 vector_index!(
                     v_vec_6,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (1 - shiftlength_5) as i64
-                        + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1 - shiftlength_5) as i64 + 1
                 ),
                 -power(alpha, 5) * beta * power(omega, S_a + S_b + S_c),
                 vector_index!(
                     v_vec_7,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64)
                         - (-3 * H - shiftlength_6 + 1) as i64
                         + 1
                 ),
                 -power(alpha, 5) * beta,
                 vector_index!(
                     v_vec_8,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (K - shiftlength_7 + 1) as i64
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (K - shiftlength_7 + 1) as i64
                         + 1
                 ),
                 power(alpha, 6),
                 vector_index!(
                     v_vec_9,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64)
                         - (K + S_a + S_b + S_c - shiftlength_8) as i64
                         + 1
                 ),
                 mu * power(omega, 3 * H - 1),
                 vector_index!(
                     v_vec_10,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (2 - 3 * H) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - 3 * H) as i64 + 1
                 ),
                 -power(gamma * omega, 3 * H - 1),
                 vector_index!(
                     v_vec_11,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (2 - 3 * H) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - 3 * H) as i64 + 1
                 ),
                 alpha * nu * power(omega, K - 1),
                 vector_index!(
                     v_vec_12,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (2 - K) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - K) as i64 + 1
                 ),
                 -alpha * power(gamma * omega, K - 1),
                 vector_index!(
                     v_vec_13,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (2 - K) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - K) as i64 + 1
                 ),
                 power(alpha, 2) * mu * nu,
                 vector_index!(
                     v_vec_14,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (K - shiftlength_1 + 1) as i64
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (K - shiftlength_1 + 1) as i64
                         + 1
                 ),
                 -power(alpha, 3) * power(omega, K + S_a + S_b + S_c - 1),
                 vector_index!(
                     v_vec_15,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (2 - 3 * H) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - 3 * H) as i64 + 1
                 ),
                 power(alpha, 4) * power(omega, 3 * H + ell),
                 vector_index!(
                     v_vec_16,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (-3 * H - ell + 1) as i64
-                        + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-3 * H - ell + 1) as i64 + 1
                 ),
                 -power(alpha, 4) * power(omega, 3 * H + ell),
                 vector_index!(
                     v_vec_17,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (2 - ell) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - ell) as i64 + 1
                 ),
                 -power(alpha, 5),
                 vector_index!(
                     v_vec_18,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (1 - shiftlength_8) as i64
-                        + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1 - shiftlength_8) as i64 + 1
                 ),
                 power(alpha, 5) * omega,
                 vector_index!(
                     v_vec_18,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (-shiftlength_8) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-shiftlength_8) as i64 + 1
                 ),
                 -power(omega, K + 2 * S_a + 2 * S_b + 2 * S_c),
                 vector_index!(
                     v_vec_19,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (-S_a - S_b - S_c) as i64
-                        + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-S_a - S_b - S_c) as i64 + 1
                 ),
                 -to_field::<E::Fr>(1),
                 vector_index!(
                     v_vec_20,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (1) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
                 ),
                 -alpha,
                 vector_index!(
                     v_vec_21,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (1) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
                 ),
                 -power(alpha, 2) * power(omega, K),
                 vector_index!(
                     v_vec_22,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (1) as i64 + 1
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
                 )
             ),
-            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+            K + 2 * S_a + 2 * S_b + 2 * S_c
         );
         let h_vec_3 = expression_vector!(
             i,
@@ -1133,60 +1765,207 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 linear_combination!(
                     E::Fr::zero(),
                     -power(alpha, 4) * power(omega, 3 * H + ell),
-                    power_vector_index!(omega.inverse().unwrap(), ell + 1, i - (1 - ell) + 1)
+                    power_vector_index!(omega.inverse().unwrap(), ell + 1, i + 1 - (1 - ell) + 1)
                 ),
                 -power(alpha, 2) * mu,
-                vector_index!(v_vec_1, (i as i64) - (K - shiftlength + 1) as i64 + 1),
+                vector_index!(v_vec_1, (i + 1 as i64) - (K - shiftlength + 1) as i64 + 1),
                 -power(alpha, 2) * nu,
-                vector_index!(v_vec_3, (i as i64) - (K - shiftlength_2 + 1) as i64 + 1),
+                vector_index!(v_vec_3, (i + 1 as i64) - (K - shiftlength_2 + 1) as i64 + 1),
                 power(alpha, 2),
-                vector_index!(v_vec_4, (i as i64) - (K - shiftlength_3 + 1) as i64 + 1),
+                vector_index!(v_vec_4, (i + 1 as i64) - (K - shiftlength_3 + 1) as i64 + 1),
                 power(alpha, 3) * power(omega, -H + K + S_a + S_b + S_c),
-                vector_index!(v_vec_5, (i as i64) - (-H - shiftlength_4 + 1) as i64 + 1),
+                vector_index!(
+                    v_vec_5,
+                    (i + 1 as i64) - (-H - shiftlength_4 + 1) as i64 + 1
+                ),
                 power(alpha, 5) * power(omega, -3 * H + S_a + S_b + S_c),
-                vector_index!(v_vec_6, (i as i64) - (1 - shiftlength_5) as i64 + 1),
+                vector_index!(v_vec_6, (i + 1 as i64) - (1 - shiftlength_5) as i64 + 1),
                 -power(alpha, 5) * beta * power(omega, S_a + S_b + S_c),
                 vector_index!(
                     v_vec_7,
-                    (i as i64) - (-3 * H - shiftlength_6 + 1) as i64 + 1
+                    (i + 1 as i64) - (-3 * H - shiftlength_6 + 1) as i64 + 1
                 ),
                 -power(alpha, 5) * beta,
-                vector_index!(v_vec_8, (i as i64) - (K - shiftlength_7 + 1) as i64 + 1),
+                vector_index!(v_vec_8, (i + 1 as i64) - (K - shiftlength_7 + 1) as i64 + 1),
                 power(alpha, 6),
                 vector_index!(
                     v_vec_9,
-                    (i as i64) - (K + S_a + S_b + S_c - shiftlength_8) as i64 + 1
+                    (i + 1 as i64) - (K + S_a + S_b + S_c - shiftlength_8) as i64 + 1
                 ),
                 mu * power(omega, 3 * H - 1),
-                vector_index!(v_vec_10, (i as i64) - (2 - 3 * H) as i64 + 1),
+                vector_index!(v_vec_10, (i + 1 as i64) - (2 - 3 * H) as i64 + 1),
                 -power(gamma * omega, 3 * H - 1),
-                vector_index!(v_vec_11, (i as i64) - (2 - 3 * H) as i64 + 1),
+                vector_index!(v_vec_11, (i + 1 as i64) - (2 - 3 * H) as i64 + 1),
                 alpha * nu * power(omega, K - 1),
-                vector_index!(v_vec_12, (i as i64) - (2 - K) as i64 + 1),
+                vector_index!(v_vec_12, (i + 1 as i64) - (2 - K) as i64 + 1),
                 -alpha * power(gamma * omega, K - 1),
-                vector_index!(v_vec_13, (i as i64) - (2 - K) as i64 + 1),
+                vector_index!(v_vec_13, (i + 1 as i64) - (2 - K) as i64 + 1),
                 power(alpha, 2) * mu * nu,
-                vector_index!(v_vec_14, (i as i64) - (K - shiftlength_1 + 1) as i64 + 1),
+                vector_index!(
+                    v_vec_14,
+                    (i + 1 as i64) - (K - shiftlength_1 + 1) as i64 + 1
+                ),
                 -power(alpha, 3) * power(omega, K + S_a + S_b + S_c - 1),
-                vector_index!(v_vec_15, (i as i64) - (2 - 3 * H) as i64 + 1),
+                vector_index!(v_vec_15, (i + 1 as i64) - (2 - 3 * H) as i64 + 1),
                 power(alpha, 4) * power(omega, 3 * H + ell),
-                vector_index!(v_vec_16, (i as i64) - (-3 * H - ell + 1) as i64 + 1),
+                vector_index!(v_vec_16, (i + 1 as i64) - (-3 * H - ell + 1) as i64 + 1),
                 -power(alpha, 4) * power(omega, 3 * H + ell),
-                vector_index!(v_vec_17, (i as i64) - (2 - ell) as i64 + 1),
+                vector_index!(v_vec_17, (i + 1 as i64) - (2 - ell) as i64 + 1),
                 -power(alpha, 5),
-                vector_index!(v_vec_18, (i as i64) - (1 - shiftlength_8) as i64 + 1),
+                vector_index!(v_vec_18, (i + 1 as i64) - (1 - shiftlength_8) as i64 + 1),
                 power(alpha, 5) * omega,
-                vector_index!(v_vec_18, (i as i64) - (-shiftlength_8) as i64 + 1),
+                vector_index!(v_vec_18, (i + 1 as i64) - (-shiftlength_8) as i64 + 1),
                 -power(omega, K + 2 * S_a + 2 * S_b + 2 * S_c),
-                vector_index!(v_vec_19, (i as i64) - (-S_a - S_b - S_c) as i64 + 1),
+                vector_index!(v_vec_19, (i + 1 as i64) - (-S_a - S_b - S_c) as i64 + 1),
                 -to_field::<E::Fr>(1),
-                vector_index!(v_vec_20, (i as i64) - (1) as i64 + 1),
+                vector_index!(v_vec_20, (i + 1 as i64) - (1) as i64 + 1),
                 -alpha,
-                vector_index!(v_vec_21, (i as i64) - (1) as i64 + 1),
+                vector_index!(v_vec_21, (i + 1 as i64) - (1) as i64 + 1),
                 -power(alpha, 2) * power(omega, K),
-                vector_index!(v_vec_22, (i as i64) - (1) as i64 + 1)
+                vector_index!(v_vec_22, (i + 1 as i64) - (1) as i64 + 1)
             ),
-            K + 2 * S_a + 2 * S_b + 2 * S_c + 1
+            K + 2 * S_a + 2 * S_b + 2 * S_c
+        );
+        let h_vec_1 = expression_vector!(
+            i,
+            linear_combination!(
+                linear_combination!(
+                    E::Fr::zero(),
+                    -power(alpha, 4) * power(omega, 3 * H + ell),
+                    power_vector_index!(
+                        omega.inverse().unwrap(),
+                        ell + 1,
+                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (1 - ell) + 1
+                    )
+                ),
+                -power(alpha, 2) * mu,
+                vector_index!(
+                    v_vec_1,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (K - shiftlength + 1) as i64
+                        + 1
+                ),
+                -power(alpha, 2) * nu,
+                vector_index!(
+                    v_vec_3,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (K - shiftlength_2 + 1) as i64
+                        + 1
+                ),
+                power(alpha, 2),
+                vector_index!(
+                    v_vec_4,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (K - shiftlength_3 + 1) as i64
+                        + 1
+                ),
+                power(alpha, 3) * power(omega, -H + K + S_a + S_b + S_c),
+                vector_index!(
+                    v_vec_5,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-H - shiftlength_4 + 1) as i64
+                        + 1
+                ),
+                power(alpha, 5) * power(omega, -3 * H + S_a + S_b + S_c),
+                vector_index!(
+                    v_vec_6,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1 - shiftlength_5) as i64 + 1
+                ),
+                -power(alpha, 5) * beta * power(omega, S_a + S_b + S_c),
+                vector_index!(
+                    v_vec_7,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64)
+                        - (-3 * H - shiftlength_6 + 1) as i64
+                        + 1
+                ),
+                -power(alpha, 5) * beta,
+                vector_index!(
+                    v_vec_8,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (K - shiftlength_7 + 1) as i64
+                        + 1
+                ),
+                power(alpha, 6),
+                vector_index!(
+                    v_vec_9,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64)
+                        - (K + S_a + S_b + S_c - shiftlength_8) as i64
+                        + 1
+                ),
+                mu * power(omega, 3 * H - 1),
+                vector_index!(
+                    v_vec_10,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - 3 * H) as i64 + 1
+                ),
+                -power(gamma * omega, 3 * H - 1),
+                vector_index!(
+                    v_vec_11,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - 3 * H) as i64 + 1
+                ),
+                alpha * nu * power(omega, K - 1),
+                vector_index!(
+                    v_vec_12,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - K) as i64 + 1
+                ),
+                -alpha * power(gamma * omega, K - 1),
+                vector_index!(
+                    v_vec_13,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - K) as i64 + 1
+                ),
+                power(alpha, 2) * mu * nu,
+                vector_index!(
+                    v_vec_14,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (K - shiftlength_1 + 1) as i64
+                        + 1
+                ),
+                -power(alpha, 3) * power(omega, K + S_a + S_b + S_c - 1),
+                vector_index!(
+                    v_vec_15,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - 3 * H) as i64 + 1
+                ),
+                power(alpha, 4) * power(omega, 3 * H + ell),
+                vector_index!(
+                    v_vec_16,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-3 * H - ell + 1) as i64 + 1
+                ),
+                -power(alpha, 4) * power(omega, 3 * H + ell),
+                vector_index!(
+                    v_vec_17,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (2 - ell) as i64 + 1
+                ),
+                -power(alpha, 5),
+                vector_index!(
+                    v_vec_18,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1 - shiftlength_8) as i64 + 1
+                ),
+                power(alpha, 5) * omega,
+                vector_index!(
+                    v_vec_18,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-shiftlength_8) as i64 + 1
+                ),
+                -power(omega, K + 2 * S_a + 2 * S_b + 2 * S_c),
+                vector_index!(
+                    v_vec_19,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (-S_a - S_b - S_c) as i64 + 1
+                ),
+                -to_field::<E::Fr>(1),
+                vector_index!(
+                    v_vec_20,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
+                ),
+                -alpha,
+                vector_index!(
+                    v_vec_21,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
+                ),
+                -power(alpha, 2) * power(omega, K),
+                vector_index!(
+                    v_vec_22,
+                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i as i64) - (1) as i64 + 1
+                )
+            ),
+            2 * K + 4 * S_a + 4 * S_b + 4 * S_c + 1
+        );
+        check_vector_eq!(h_vec_1, hcheck_vec, "h is not expected");
+        check_vector_eq!(
+            h_vec_1,
+            vector_concat!(h_vec_2, vec![E::Fr::zero()], h_vec_3),
+            "h != h1 || 0 || h2"
         );
         assert_eq!(
             linear_combination!(
@@ -1247,156 +2026,6 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 vector_index!(v_vec_22, (1 as i64) - (1) as i64 + 1)
             ),
             E::Fr::zero()
-        );
-        let h_vec_1 = expression_vector!(
-            i,
-            linear_combination!(
-                linear_combination!(
-                    E::Fr::zero(),
-                    -power(alpha, 4) * power(omega, 3 * H + ell),
-                    power_vector_index!(
-                        omega.inverse().unwrap(),
-                        ell + 1,
-                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 - (1 - ell) + 1
-                    )
-                ),
-                -power(alpha, 2) * mu,
-                vector_index!(
-                    v_vec_1,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (K - shiftlength + 1) as i64
-                        + 1
-                ),
-                -power(alpha, 2) * nu,
-                vector_index!(
-                    v_vec_3,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (K - shiftlength_2 + 1) as i64
-                        + 1
-                ),
-                power(alpha, 2),
-                vector_index!(
-                    v_vec_4,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (K - shiftlength_3 + 1) as i64
-                        + 1
-                ),
-                power(alpha, 3) * power(omega, -H + K + S_a + S_b + S_c),
-                vector_index!(
-                    v_vec_5,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (-H - shiftlength_4 + 1) as i64
-                        + 1
-                ),
-                power(alpha, 5) * power(omega, -3 * H + S_a + S_b + S_c),
-                vector_index!(
-                    v_vec_6,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (1 - shiftlength_5) as i64
-                        + 1
-                ),
-                -power(alpha, 5) * beta * power(omega, S_a + S_b + S_c),
-                vector_index!(
-                    v_vec_7,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (-3 * H - shiftlength_6 + 1) as i64
-                        + 1
-                ),
-                -power(alpha, 5) * beta,
-                vector_index!(
-                    v_vec_8,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (K - shiftlength_7 + 1) as i64
-                        + 1
-                ),
-                power(alpha, 6),
-                vector_index!(
-                    v_vec_9,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (K + S_a + S_b + S_c - shiftlength_8) as i64
-                        + 1
-                ),
-                mu * power(omega, 3 * H - 1),
-                vector_index!(
-                    v_vec_10,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (2 - 3 * H) as i64 + 1
-                ),
-                -power(gamma * omega, 3 * H - 1),
-                vector_index!(
-                    v_vec_11,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (2 - 3 * H) as i64 + 1
-                ),
-                alpha * nu * power(omega, K - 1),
-                vector_index!(
-                    v_vec_12,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (2 - K) as i64 + 1
-                ),
-                -alpha * power(gamma * omega, K - 1),
-                vector_index!(
-                    v_vec_13,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (2 - K) as i64 + 1
-                ),
-                power(alpha, 2) * mu * nu,
-                vector_index!(
-                    v_vec_14,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64)
-                        - (K - shiftlength_1 + 1) as i64
-                        + 1
-                ),
-                -power(alpha, 3) * power(omega, K + S_a + S_b + S_c - 1),
-                vector_index!(
-                    v_vec_15,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (2 - 3 * H) as i64 + 1
-                ),
-                power(alpha, 4) * power(omega, 3 * H + ell),
-                vector_index!(
-                    v_vec_16,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (-3 * H - ell + 1) as i64
-                        + 1
-                ),
-                -power(alpha, 4) * power(omega, 3 * H + ell),
-                vector_index!(
-                    v_vec_17,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (2 - ell) as i64 + 1
-                ),
-                -power(alpha, 5),
-                vector_index!(
-                    v_vec_18,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (1 - shiftlength_8) as i64
-                        + 1
-                ),
-                power(alpha, 5) * omega,
-                vector_index!(
-                    v_vec_18,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (-shiftlength_8) as i64 + 1
-                ),
-                -power(omega, K + 2 * S_a + 2 * S_b + 2 * S_c),
-                vector_index!(
-                    v_vec_19,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (-S_a - S_b - S_c) as i64
-                        + 1
-                ),
-                -to_field::<E::Fr>(1),
-                vector_index!(
-                    v_vec_20,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (1) as i64 + 1
-                ),
-                -alpha,
-                vector_index!(
-                    v_vec_21,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (1) as i64 + 1
-                ),
-                -power(alpha, 2) * power(omega, K),
-                vector_index!(
-                    v_vec_22,
-                    (-K - 2 * S_a - 2 * S_b - 2 * S_c + i - 2 as i64) - (1) as i64 + 1
-                )
-            ),
-            2 * K + 4 * S_a + 4 * S_b + 4 * S_c + 3
-        );
-        check_vector_eq!(
-            h_vec_1,
-            vector_concat!(h_vec_2, vec![E::Fr::zero()], h_vec_3),
-            "h != h1 || 0 || h2"
         );
         let cm_h_vec_2 = vector_to_commitment::<E>(&pk.powers, &h_vec_2).unwrap();
         let cm_h_vec_3 = vector_to_commitment::<E>(&pk.powers, &h_vec_3).unwrap();

@@ -373,6 +373,15 @@ macro_rules! add_expression_vector_to_vector {
 }
 
 #[macro_export]
+macro_rules! add_vector_to_vector {
+  ( $u:ident, $v: expr) => {
+    for i in (1i64..=$u.len() as i64) {
+      $u[(i-1) as usize] += vector_index!($v, i);
+    }
+  };
+}
+
+#[macro_export]
 macro_rules! accumulate_vector {
     ( $i: ident, $init: expr, $v: expr, $n: expr, $op: tt ) => {
          (1..=$n).scan($init, |acc, $i| {*acc = *acc $op ($v); Some(*acc)})
@@ -551,7 +560,11 @@ macro_rules! fmt_ff {
     if let Some(x) = try_to_int::<E::Fr>($a.clone()) {
       format!("Fp256({})", x)
     } else {
-      $a.to_string()
+      if let Some(x) = try_to_int::<E::Fr>(-$a.clone()) {
+        format!("Fp256(-{})", x)
+      } else {
+        $a.to_string()
+      }
     }
   }
 }
@@ -564,15 +577,27 @@ macro_rules! fmt_ff_vector {
 }
 
 #[macro_export]
+macro_rules! vector_diff {
+  ($u: expr, $v: expr) => {
+    {
+      assert_eq!($u.len(), $v.len());
+      ($u).iter().zip(($v).iter()).map(|(a, b)| *a - *b).collect::<Vec<_>>()
+    }
+  }
+}
+
+#[macro_export]
 macro_rules! check_vector_eq {
   ($u:expr, $v:expr, $info:literal) => {
     if $u.len() != $v.len() {
-      return Err(Error::VectorNotEqual("length not equal ".to_string() + $info));
+      return Err(Error::VectorNotEqual(format!("{}: length not equal, {} != {}", $info, $u.len(), $v.len())));
     }
     if let Some(i) = $u.iter().zip($v.iter()).position(|(a, b)| *a != *b) {
       return Err(Error::VectorNotEqual(
-          format!("{}: unequal at {} (total length {}): {} != {}\nleft = [\n{}\n]\nright = [\n{\n}]",
-          $info, i, $u.len(), $u[i], $v[i], fmt_ff_vector!($u), fmt_ff_vector!($v))));
+          format!("{}: unequal at {} (total length {}): {} != {}\nleft = [\n{}\n]\nright = [\n{}\n], diff = [\n{}\n], differ at {} places",
+          $info, i, $u.len(), $u[i], $v[i], fmt_ff_vector!($u), fmt_ff_vector!($v),
+          fmt_ff_vector!(vector_diff!($u, $v)),
+          $u.iter().zip($v.iter()).filter(|(a,b)| *a != *b).count())));
     }
   }
 }
@@ -848,6 +873,13 @@ mod tests {
   fn test_add_expression_to_vector() {
     let mut u = vec![0, 1, 2, 3, 4];
     add_expression_vector_to_vector!(u, i, i * i);
+    assert_eq!(u, vec![1, 5, 11, 19, 29]);
+  }
+
+  #[test]
+  fn test_add_vector_to_vector() {
+    let mut u = vec![0, 1, 2, 3, 4];
+    add_vector_to_vector!(u, [1, 4, 9, 16, 25]);
     assert_eq!(u, vec![1, 5, 11, 19, 29]);
   }
 
