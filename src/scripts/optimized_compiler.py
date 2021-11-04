@@ -8,9 +8,7 @@ from vector_symbol import NamedVector, PowerVector, UnitVector, \
 from latex_builder import tex, LaTeXBuilder, AccumulationVector, \
                           ExpressionVector, Math, Enumerate, Itemize, \
                           add_paren_if_add, Algorithm
-from rust_builder import rust, RustBuilder, AccumulationVectorRust, mut, ref, \
-                         Samples, SumAccumulationVectorRust, RustMacro, \
-                         rust_builder_macro
+from rust_builder import *
 from sympy import Symbol, Integer, UnevaluatedExpr, Expr, Max, simplify, \
                   latex, srepr, Add, Mul
 from sympy.core.numbers import Infinity
@@ -474,16 +472,14 @@ class CombinePolynomial(object):
       items.append(Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
       if rust_one is None:
         rust_items.append(RustBuilder().letmut(self.poly).assign(
-          RustMacro("expression_vector",
-            sym_i,
+          rust_expression_vector_i(
             RustMacro("sum", poly_sum_rust_items),
             self.length
           )).end()
           .let(self.poly).assign(RustMacro("poly_from_vec")).append_to_last(self.poly).end())
       else:
         rust_items.append(RustBuilder().letmut(self.poly).assign(
-            RustMacro("expression_vector",
-              sym_i,
+            rust_expression_vector_i(
               RustMacro("sum", poly_sum_rust_items),
               self.length)
           ).end().append(self.poly).append("[0]").plus_assign(rust_one).end()
@@ -678,11 +674,11 @@ class PIOPFromVOProtocol(object):
           side = extended_hadamard[-1]
           check_individual_hadmard.append(RustMacro("check_vector_eq")
             .append([
-              RustMacro("expression_vector").append([
-                sym_i, "(%s) * (%s)" % (
+              rust_expression_vector_i(
+                "(%s) * (%s)" % (
                   (side.a * (1/alpha_power)).dumpr_at_index(sym_i),
                   side.b.dumpr_at_index(sym_i)),
-                rust(n)]),
+                rust(n)),
               "vec![E::Fr::zero(); (%s) as usize]" % rust(n),
               '"The %d\'th hadamard check is not satisfied"' % (i+1)
               ])).end()
@@ -691,16 +687,16 @@ class PIOPFromVOProtocol(object):
           side2 = extended_hadamard[-2]
           check_individual_hadmard.append(RustMacro("check_vector_eq")
             .append([
-              RustMacro("expression_vector").append([
-                sym_i, "(%s) * (%s)" % (
+              rust_expression_vector_i(
+                "(%s) * (%s)" % (
                   (side1.a * (1/alpha_power)).dumpr_at_index(sym_i),
                   side1.b.dumpr_at_index(sym_i)),
-                rust(n)]),
-              RustMacro("expression_vector").append([
-                sym_i, "-(%s) * (%s)" % (
+                rust(n)),
+              rust_expression_vector_i(
+                "-(%s) * (%s)" % (
                   (side2.a * (1/alpha_power)).dumpr_at_index(sym_i),
                   side2.b.dumpr_at_index(sym_i)),
-                rust(n)]),
+                rust(n)),
               '"The %d\'th hadamard check is not satisfied"' % (i+1)
               ])).end()
 
@@ -721,7 +717,7 @@ class PIOPFromVOProtocol(object):
       rcomputes = LaTeXBuilder().start_math().append(r).assign().end_math() \
                                 .space("the sum of:").eol()
       rcomputes_rust = RustMacro("define_vec").append(r)
-      expression_vector = RustMacro("expression_vector").append(sym_i)
+      expression_vector = RustMacro("expression_vector", sym_i)
       linear_combination = RustMacro("power_linear_combination").append(beta)
       r_items = Itemize()
       for i, inner in enumerate(voexec.inner_products):
@@ -881,13 +877,11 @@ class PIOPFromVOProtocol(object):
             rust_builder_macro("add_vector_to_vector",
                 hcheck_vec,
                 RustMacro("vector_poly_mul",
-                  RustMacro("expression_vector",
-                    sym_i,
+                  rust_expression_vector_i(
                     a.dumpr_at_index(sym_i),
                     rust(n + max_shift + q),
                   ),
-                  RustMacro("expression_vector",
-                    sym_i,
+                  rust_expression_vector_i(
                     b.dumpr_at_index(sym_i),
                     rust(n + max_shift + q),
                   ),
@@ -951,15 +945,13 @@ class PIOPFromVOProtocol(object):
     h1 = get_named_vector("h")
     h2 = get_named_vector("h")
     h1computes_rust = RustBuilder().let(h1).assign(
-        RustMacro("expression_vector").append(
-          [sym_i,
+        rust_expression_vector_i(
            h_vec_combination.dumpr_at_index(sym_i - h_inverse_degree + 1),
-           h_inverse_degree - 1])).end()
+           h_inverse_degree - 1)).end()
     h2computes_rust = RustBuilder().let(h2).assign(
-        RustMacro("expression_vector").append(
-          [sym_i,
+        rust_expression_vector_i(
            h_vec_combination.dumpr_at_index(sym_i + 1),
-           h_degree - 1])).end()
+           h_degree - 1)).end()
 
 
     # For producing the latex code only
@@ -979,13 +971,9 @@ class PIOPFromVOProtocol(object):
 
     if self.debug_mode:
       piopexec.prover_computes(LaTeXBuilder(),
-          RustBuilder().let(h).assign(RustMacro("expression_vector")
-          .append(
-            [
-              sym_i,
+          RustBuilder().let(h).assign(rust_expression_vector_i(
               h_vec_combination.dumpr_at_index(sym_i - h_inverse_degree + 1),
               h_degree + h_inverse_degree - 1
-            ]
             )).end()
           .append(RustMacro("check_vector_eq").append([
               h,

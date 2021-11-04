@@ -3,6 +3,8 @@ from sympy import Symbol, latex, sympify, Integer, Expr,\
 from rust import rust_code, rust_code_to_field
 
 
+sym_i = Symbol("i")
+
 def keep_alpha_number(s):
   return "".join([c for c in s if c.isalnum()])
 
@@ -304,4 +306,11 @@ def add_paren_if_not_atom(vector):
     return "(%s)" % rust(vector)
   return rust(vector)
 
+
+def rust_expression_vector_i(expr, length):
+  return RustMacro("expression_vector", sym_i, expr, length)
+
+
+def rust_builder_expression_vector_i(expr, length):
+  return rust_builder_macro("expression_vector", sym_i, expr, length)
 
