@@ -749,9 +749,13 @@ class PIOPFromVOProtocol(object):
       piopexec.prover_computes(Math(randomizer).sample(Ftoq)
         .comma(rtilde).assign(AccumulationVector(r.slice("j"), n))
         .double_bar(randomizer),
-        RustBuilder(RustMacro("define_vec").append(rtilde).append(
-          RustMacro("vector_concat").append(randomizer).append(
-              RustMacro("accumulate_vector").append([r, "+"])))).end()
+        RustBuilder(RustMacro("define_vec")
+          .append(rtilde)
+          .append(
+              RustMacro("vector_concat")
+              .append(RustMacro("accumulate_vector").append([r, "+"]))
+              .append(randomizer)
+            )).end()
           .let(fr).assign_func("poly_from_vec!").append_to_last(rtilde).end())
 
       piopexec.prover_send_polynomial(fr, n + q)
@@ -794,8 +798,15 @@ class PIOPFromVOProtocol(object):
     t = get_named_vector("t")
     piopexec.prover_computes(
         Math(randomizer).sample(Ftoq).comma(t).assign(original_t).double_bar(randomizer),
-        RustBuilder(RustMacro("define_vec").append(t).append(
-          RustMacro("vector_concat").append(original_t).append(randomizer))).end())
+        RustBuilder(
+          RustMacro("define_vec")
+          .append(t)
+          .append(
+            RustMacro("vector_concat")
+            .append(randomizer)
+            .append(original_t)
+          )
+        ).end())
 
     tx = t.to_named_vector_poly()
     vec_to_poly_dict[t.key()] = tx
