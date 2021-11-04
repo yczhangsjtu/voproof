@@ -358,7 +358,7 @@ def rust_check_vector_eq(v, expr, info):
 
 
 def rust_builder_check_vector_eq(v, expr, info):
-  return rust_builder_macro("check_vector_eq", v, expr, info)
+  return rust_builder_macro("check_vector_eq", v, expr, '"%s"' % info)
 
 
 def rust_vector_concat(*args):

@@ -3,8 +3,7 @@ from sympy import Symbol, latex, sympify, Integer, Expr,\
 from sympy.abc import alpha, X
 from sympy.core.numbers import Infinity
 from latex_builder import tex
-from rust_builder import keep_alpha_number, rust, RustMacro, to_field, \
-                         RustBuilder
+from rust_builder import *
 
 
 class _NamedBasic(object):
@@ -1261,7 +1260,8 @@ class NamedVectorPairCombination(CoeffMap):
         # After the reverse, the vector should be shifted left by |u|-1
         # this shift is applied to the coefficient instead
         to_shift = Symbol(get_name("shiftlength"))
-        ret.let(to_shift).assign(vector_pair.u).invoke_method("len").append(" as i64 ").minus(1).end()
+        ret.let(to_shift).assign(vector_pair.u) \
+           .invoke_method("len").append(" as i64 ").minus(1).end()
         named_vector_structure_pairs.append((v, coeff.shift(-to_shift)))
       elif vector_pair.u is not None:
         v = get_named_vector("v")
