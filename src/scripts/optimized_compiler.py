@@ -473,14 +473,14 @@ class CombinePolynomial(object):
       if rust_one is None:
         rust_items.append(RustBuilder().letmut(self.poly).assign(
           rust_expression_vector_i(
-            RustMacro("sum", poly_sum_rust_items),
+            rust_sum(poly_sum_rust_items),
             self.length
           )).end()
           .let(self.poly).assign(RustMacro("poly_from_vec")).append_to_last(self.poly).end())
       else:
         rust_items.append(RustBuilder().letmut(self.poly).assign(
             rust_expression_vector_i(
-              RustMacro("sum", poly_sum_rust_items),
+              rust_sum(poly_sum_rust_items),
               self.length)
           ).end().append(self.poly).append("[0]").plus_assign(rust_one).end()
           .let(self.poly).assign(RustMacro("poly_from_vec")).append_to_last(self.poly).end())
@@ -489,7 +489,7 @@ class CombinePolynomial(object):
       rust_items.append(RustBuilder().let(self.poly.to_comm())
                        .assign_func("Commitment::<E>")
                        .append_to_last(
-                         RustBuilder(RustMacro("sum", commit_sum_rust_items))
+                         RustBuilder(rust_sum(commit_sum_rust_items))
                          .invoke_method("into_affine")
                        ).end())
 
@@ -783,7 +783,7 @@ class PIOPFromVOProtocol(object):
                               .space("the sum of:").eol()
     tcomputes_rust = RustMacro("define_vec").append(t)
     expression_vector = RustMacro("expression_vector").append(sym_i)
-    compute_sum = RustMacro("sum")
+    compute_sum = rust_sum()
     t_items = Itemize()
     for i, side in enumerate(extended_hadamard):
       if not i in ignore_in_t:
@@ -1097,7 +1097,7 @@ class PIOPFromVOProtocol(object):
       if len(coeff_list) > 1:
         latex_builder = LaTeXBuilder().start_math().append(coeff).assign() \
                                       .end_math().space("the sum of:")
-        sum_macro = RustMacro("sum")
+        sum_macro = rust_sum()
         rust_builder = RustBuilder().let(coeff).assign(sum_macro).end()
         items = Itemize()
         for item in coeff_list:

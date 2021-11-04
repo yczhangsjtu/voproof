@@ -314,3 +314,11 @@ def rust_expression_vector_i(expr, length):
 def rust_builder_expression_vector_i(expr, length):
   return rust_builder_macro("expression_vector", sym_i, expr, length)
 
+
+def rust_sum(*args):
+  return RustMacro("sum", *args)
+
+
+def rust_builder_sum(*args):
+  return rust_builder_macro("sum", *args)
+
