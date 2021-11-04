@@ -74,11 +74,11 @@ fn run_r1cs_example<E: PairingEngine>() -> Result<(), Error> {
   let c = TestCircuit::<E::Fr> {
     a: Some(to_field::<E::Fr>(3)),
     b: Some(to_field::<E::Fr>(2)),
-    num_variables: 10,
+    num_variables: 5,
     num_constraints: 5,
   };
   let x = vec![c.a.unwrap(), c.b.unwrap(), (c.a.unwrap() * c.b.unwrap())];
-  let w = vec![c.a.unwrap(); 7];
+  let w = vec![c.a.unwrap(); 2];
 
   let cs = ArkR1CS::<E::Fr>::new_ref();
   c.generate_constraints(cs.clone()).unwrap();

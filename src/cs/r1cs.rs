@@ -60,8 +60,8 @@ impl<F: Field> From<ArkR1CS<F>> for R1CS<F> {
     r1cs.inline_all_lcs();
     let matrices = r1cs.to_matrices().unwrap();
 
-    let ell = matrices.num_instance_variables;
-    let ncols = (ell + matrices.num_witness_variables) as u64;
+    let ell = matrices.num_instance_variables - 1; // Arkworks takes the constant 1 as a instance variable, while VOProof does not
+    let ncols = (matrices.num_instance_variables + matrices.num_witness_variables) as u64;
     let nrows = matrices.num_constraints as u64;
     let (a, b, c) = (matrices.a, matrices.b, matrices.c);
     let a = a.iter().enumerate()
