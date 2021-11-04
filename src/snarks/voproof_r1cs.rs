@@ -755,6 +755,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         add_vector_to_vector!(hcheck_vec, abnaive_vec);
         let v_vec_1 = vector_power_mul!(s_vec, omega.inverse().unwrap(), 3 * H);
         let v_vec_2 = vector_power_mul!(s_vec, to_field::<E::Fr>(1) / (gamma * omega), 3 * H);
+        // The vector pair here is \mu\cdot \vec{1}^{3 H}-\vec{\gamma}^{3 H} and \vec{s}
         let atimesb_vec = expression_vector!(
             i,
             linear_combination!(
@@ -814,6 +815,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         add_vector_to_vector!(hcheck_vec, abnaive_vec_1);
         let v_vec_3 =
             power_power_mul!(omega.inverse().unwrap(), 3 * H, to_field::<E::Fr>(1), 3 * H);
+        // The vector pair here is -\vec{1}^{3 H} and \vec{1}^{3 H}
         let atimesb_vec_1 = expression_vector!(
             i,
             linear_combination!(
@@ -872,6 +874,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         add_vector_to_vector!(hcheck_vec, abnaive_vec_2);
         let v_vec_4 = vector_power_mul!(h_vec, omega.inverse().unwrap(), K);
         let v_vec_5 = vector_power_mul!(h_vec, to_field::<E::Fr>(1) / (gamma * omega), K);
+        // The vector pair here is \alpha \nu\cdot \vec{1}^{K}- \alpha\cdot \vec{\gamma}^{K} and \vec{h}
         let atimesb_vec_2 = expression_vector!(
             i,
             linear_combination!(
@@ -930,6 +933,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         add_vector_to_vector!(hcheck_vec, abnaive_vec_3);
         let v_vec_6 = power_power_mul!(omega.inverse().unwrap(), K, to_field::<E::Fr>(1), K);
+        // The vector pair here is - \alpha\cdot \vec{1}^{K} and \vec{1}^{K}
         let atimesb_vec_3 = expression_vector!(
             i,
             linear_combination!(
@@ -1007,6 +1011,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let v_vec_10 = vector_poly_mul!(h_vec, pk.y_vec, omega).coeffs;
         let shiftlength_3 = h_vec.len() as i64 - 1;
         let v_vec_11 = vector_power_mul!(v_vec_8, to_field::<E::Fr>(1), S_a + S_b + S_c);
+        // The vector pair here is \alpha^{2}\cdot \vec{h} and - \mu\cdot {\vec{w}}^{\to K}- \nu\cdot {\vec{u}}^{\to K}+{\vec{y}}^{\to K}+\mu \nu\cdot {\vec{1}^{S_{a} + S_{b} + S_{c}}}^{\to K}
         let atimesb_vec_4 = expression_vector!(
             i,
             linear_combination!(
@@ -1084,6 +1089,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             to_field::<E::Fr>(1),
             S_a + S_b + S_c
         );
+        // The vector pair here is - \alpha^{2}\cdot {\vec{1}^{S_{a} + S_{b} + S_{c}}}^{\to K} and {\vec{1}^{S_{a} + S_{b} + S_{c}}}^{\to K}
         let atimesb_vec_5 = expression_vector!(
             i,
             linear_combination!(
@@ -1151,6 +1157,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         add_vector_to_vector!(hcheck_vec, abnaive_vec_6);
         let v_vec_13 = vector_poly_mul!(u_vec_1, u_vec_1, omega).coeffs;
         let shiftlength_4 = u_vec_1.len() as i64 - 1;
+        // The vector pair here is \alpha^{3}\cdot {{\vec{u}}_{\mathtt{\text{1}}}}^{\to - H + K + S_{a} + S_{b} + S_{c}} and {{\vec{u}}_{\mathtt{\text{1}}}}^{\to - 2 H + K + S_{a} + S_{b} + S_{c}}
         let atimesb_vec_6 = expression_vector!(
             i,
             linear_combination!(
@@ -1211,6 +1218,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         add_vector_to_vector!(hcheck_vec, abnaive_vec_7);
         let v_vec_14 = vector_power_mul!(u_vec_1, omega.inverse().unwrap(), H);
+        // The vector pair here is - \alpha^{3}\cdot {\vec{1}^{H}}^{\to - H + K + S_{a} + S_{b} + S_{c}} and {{\vec{u}}_{\mathtt{\text{1}}}}^{\to - 3 H + K + S_{a} + S_{b} + S_{c}}
         let atimesb_vec_7 = expression_vector!(
             i,
             linear_combination!(
@@ -1269,16 +1277,17 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         add_vector_to_vector!(hcheck_vec, abnaive_vec_8);
         let v_vec_15 = vector_power_mul!(u_vec_1, omega.inverse().unwrap(), ell + 1);
         let v_vec_16 = vector_power_mul!(x_vec, omega.inverse().unwrap(), ell + 1);
+        // The vector pair here is \alpha^{4}\cdot {\vec{1}^{\ell + 1}}^{\to 3 H} and {\vec{u}}_{\mathtt{\text{1}}}-{\vec{x}}^{\to 3 H + 1}-\vec{e}_{3 H + 1}
         let atimesb_vec_8 = expression_vector!(
             i,
             linear_combination!(
                 linear_combination!(
                     E::Fr::zero(),
-                    -power(alpha, 4),
-                    range_index!(
-                        1,
+                    -power(alpha, 4) * power(omega, 3 * H + ell),
+                    power_vector_index!(
+                        omega.inverse().unwrap(),
                         ell + 1,
-                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (6 * H + 1) + 1
+                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (1 - ell) + 1
                     )
                 ),
                 power(alpha, 4) * power(omega, 3 * H + ell),
@@ -1348,6 +1357,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         add_vector_to_vector!(hcheck_vec, abnaive_vec_9);
         let v_vec_17 = vector_poly_mul!(u_vec_1, s_vec, omega).coeffs;
         let shiftlength_5 = u_vec_1.len() as i64 - 1;
+        // The vector pair here is \alpha^{5}\cdot {{\vec{u}}_{\mathtt{\text{1}}}}^{\to - 3 H + S_{a} + S_{b} + S_{c}} and {\vec{s}}^{\to - 3 H + S_{a} + S_{b} + S_{c}}
         let atimesb_vec_9 = expression_vector!(
             i,
             linear_combination!(
@@ -1408,6 +1418,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         add_vector_to_vector!(hcheck_vec, abnaive_vec_10);
         let v_vec_18 = vector_poly_mul!(h_vec, s_vec, omega).coeffs;
         let shiftlength_6 = h_vec.len() as i64 - 1;
+        // The vector pair here is - \alpha^{5} \beta\cdot {\vec{h}}^{\to S_{a} + S_{b} + S_{c}} and {\vec{s}}^{\to - 3 H + S_{a} + S_{b} + S_{c}}
         let atimesb_vec_10 = expression_vector!(
             i,
             linear_combination!(
@@ -1464,6 +1475,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         add_vector_to_vector!(hcheck_vec, abnaive_vec_11);
         let v_vec_19 = vector_poly_mul!(h_vec, pk.v_vec, omega).coeffs;
         let shiftlength_7 = h_vec.len() as i64 - 1;
+        // The vector pair here is - \alpha^{5} \beta\cdot \vec{h} and {\vec{v}}^{\to K}
         let atimesb_vec_11 = expression_vector!(
             i,
             linear_combination!(
@@ -1524,6 +1536,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let v_vec_20 = vector_reverse_omega!(r_vec_tilde, omega);
         let shiftlength_8 = r_vec_tilde.len() as i64 - 1;
         let v_vec_21 = vector_power_mul!(v_vec_20, to_field::<E::Fr>(1), K + S_a + S_b + S_c);
+        // The vector pair here is - \alpha^{5}\cdot \tilde{\vec{r}}+\alpha^{5}\cdot {\tilde{\vec{r}}}^{\to 1} and \vec{1}^{K + S_{a} + S_{b} + S_{c}}
         let atimesb_vec_12 = expression_vector!(
             i,
             linear_combination!(
@@ -1583,6 +1596,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         add_vector_to_vector!(hcheck_vec, abnaive_vec_13);
         let v_vec_22 = vector_reverse_omega!(r_vec_tilde, omega);
         let shiftlength_9 = r_vec_tilde.len() as i64 - 1;
+        // The vector pair here is \alpha^{6}\cdot \tilde{\vec{r}} and \vec{e}_{K + S_{a} + S_{b} + S_{c}}
         let atimesb_vec_13 = expression_vector!(
             i,
             linear_combination!(
@@ -1638,6 +1652,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         add_vector_to_vector!(hcheck_vec, abnaive_vec_14);
         let v_vec_23 = vector_power_mul!(t_vec_1, omega.inverse().unwrap(), S_a + S_b + S_c + 1);
+        // The vector pair here is -{\vec{1}^{S_{a} + S_{b} + S_{c} + 1}}^{\to K + S_{a} + S_{b} + S_{c}} and {{\vec{t}}_{\mathtt{\text{1}}}}^{\to K + S_{a} + S_{b} + S_{c} - 1}
         let atimesb_vec_14 = expression_vector!(
             i,
             linear_combination!(
@@ -1948,11 +1963,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             linear_combination!(
                 linear_combination!(
                     E::Fr::zero(),
-                    -power(alpha, 4),
-                    range_index!(
-                        1,
+                    -power(alpha, 4) * power(omega, 3 * H + ell),
+                    power_vector_index!(
+                        omega.inverse().unwrap(),
                         ell + 1,
-                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (6 * H + 1) + 1
+                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (1 - ell) + 1
                     )
                 ),
                 -power(alpha, 2) * mu,
@@ -2085,8 +2100,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             linear_combination!(
                 linear_combination!(
                     E::Fr::zero(),
-                    -power(alpha, 4),
-                    range_index!(1, ell + 1, i + 1 - (6 * H + 1) + 1)
+                    -power(alpha, 4) * power(omega, 3 * H + ell),
+                    power_vector_index!(omega.inverse().unwrap(), ell + 1, i + 1 - (1 - ell) + 1)
                 ),
                 -power(alpha, 2) * mu,
                 vector_index!(
@@ -2164,11 +2179,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             linear_combination!(
                 linear_combination!(
                     E::Fr::zero(),
-                    -power(alpha, 4),
-                    range_index!(
-                        1,
+                    -power(alpha, 4) * power(omega, 3 * H + ell),
+                    power_vector_index!(
+                        omega.inverse().unwrap(),
                         ell + 1,
-                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (6 * H + 1) + 1
+                        -K - 2 * S_a - 2 * S_b - 2 * S_c + i - (1 - ell) + 1
                     )
                 ),
                 -power(alpha, 2) * mu,
@@ -2299,15 +2314,15 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         check_vector_eq!(h_vec_1, hcheck_vec, "h is not expected");
         check_vector_eq!(
             h_vec_1,
-            vector_concat!(h_vec_2, vec!(E::Fr::one()), h_vec_3),
+            vector_concat!(h_vec_2, vec!(E::Fr::zero()), h_vec_3),
             "h != h1 || 0 || h2"
         );
         assert_eq!(
             linear_combination!(
                 linear_combination!(
                     E::Fr::zero(),
-                    -power(alpha, 4),
-                    range_index!(1, ell + 1, 1 - (6 * H + 1) + 1)
+                    -power(alpha, 4) * power(omega, 3 * H + ell),
+                    power_vector_index!(omega.inverse().unwrap(), ell + 1, 1 - (1 - ell) + 1)
                 ),
                 -power(alpha, 2) * mu,
                 vector_index!(v_vec_24, (1 as i64) - (K - shiftlength_10 + 1) as i64 + 1),

@@ -921,6 +921,8 @@ class PIOPFromVOProtocol(object):
             atimesb.generate_vector_combination(omega)
         piopexec.prover_computes_rust(atimesb_computes_rust)
         atimesb_vec = get_named_vector("atimesb")
+        piopexec.prover_computes_rust("// The vector pair here is %s and %s\n" %
+            (a.dumps(), b.dumps()))
         piopexec.prover_computes_rust(
           RustBuilder().let(atimesb_vec).assign(rust_expression_vector_i(
               atimesb_vector_combination.dumpr_at_index(sym_i - (n + max_shift + q) + 1),
@@ -994,7 +996,7 @@ class PIOPFromVOProtocol(object):
               '"h is not expected"')).end()
           .append(rust_check_vector_eq(
               h,
-              rust_vector_concat(h1, rust_vec(rust_one), h2),
+              rust_vector_concat(h1, rust_vec(rust_zero), h2),
               '"h != h1 || 0 || h2"')).end())
 
       piopexec.prover_computes_rust(

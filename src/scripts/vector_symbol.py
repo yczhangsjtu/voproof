@@ -1303,11 +1303,11 @@ class NamedVectorPairCombination(CoeffMap):
                 coeff = left_coeff * right_coeff # convolution(left_coeff, right_coeff, omega)
                 power_power_sparse_tuples.append((left_p, right_p, coeff))
               elif left_key != "one":
-                vector_combination += convolution(left_p * left_coeff, right_coeff, omega)
+                vector_combination += left_p * left_coeff * right_coeff # convolution(left_p * left_coeff, right_coeff, omega)
               elif right_key != "one":
-                vector_combination += convolution(left_coeff, right_coeff * right_p, omega)
+                vector_combination += left_coeff * right_coeff * right_p # convolution(left_coeff, right_coeff * right_p, omega)
               else:
-                vector_combination += convolution(left_coeff, right_coeff, omega)
+                vector_combination += left_coeff * right_coeff # convolution(left_coeff, right_coeff, omega)
 
     for v, p, s in named_power_sparse_tuples:
       vec = get_named_vector("v")
@@ -1375,12 +1375,13 @@ def convolution(left, right, omega):
 
 if __name__ == "__main__":
   H = Symbol("H")
+  ell = Symbol("ell")
   omega = Symbol("omega")
   vpc = NamedVectorPairCombination._from(
           convolution(StructuredVector._from(PowerVector(1, H)),
                       StructuredVector._from(PowerVector(1, H)), omega)) \
           .generate_vector_combination(omega)
-  print(vpc[0].dumpr())
-  print(vpc[1].dumpr_at_index(Symbol("i")))
 
+  conv = convolution(PowerVector(1, ell).shift(H), UnitVector(H), omega)
+  print(conv.dumps())
 
