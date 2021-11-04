@@ -27,11 +27,15 @@ impl<F: Field> ConstraintSystem<F, R1CSSize> for R1CS<F> {
         assert_eq!(self.brows.len(), self.bvals.len());
         assert_eq!(self.crows.len(), self.ccols.len());
         assert_eq!(self.crows.len(), self.cvals.len());
-        let density = max!(self.arows.len(), self.brows.len(), self.crows.len());
+        let adensity = self.arows.len() as u64;
+        let bdensity = self.brows.len() as u64;
+        let cdensity = self.crows.len() as u64;
         R1CSSize {
             nrows: self.nrows,
             ncols: self.ncols,
-            density: density as u64,
+            adensity,
+            bdensity,
+            cdensity,
             input_size: self.input_size,
         }
     }
@@ -105,7 +109,9 @@ impl<F: Field> From<ArkR1CS<F>> for R1CS<F> {
 pub struct R1CSSize {
     pub nrows: u64,
     pub ncols: u64,
-    pub density: u64,
+    pub adensity: u64,
+    pub bdensity: u64,
+    pub cdensity: u64,
     pub input_size: u64,
 }
 

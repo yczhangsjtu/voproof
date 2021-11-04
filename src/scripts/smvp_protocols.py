@@ -273,7 +273,7 @@ class R1CS(VOProtocol):
   def __init__(self):
     super(R1CS, self).__init__("R1CS")
 
-  def preprocess(self, voexec, H, K, s):
+  def preprocess(self, voexec, H, K, sa, sb, sc):
     M = Matrix("M")
     voexec.preprocess(LaTeXBuilder(),
         RustBuilder().let(M).assign(Tuple())
@@ -286,10 +286,12 @@ class R1CS(VOProtocol):
     voexec.M = M
     M._is_preprocessed = True
 
-    SparseMVP().preprocess(voexec, H * 3, K, s)
+    SparseMVP().preprocess(voexec, H * 3, K, sa + sb + sc)
     voexec.r1cs_H = H
     voexec.r1cs_K = K
-    voexec.s = s
+    voexec.sa = sa
+    voexec.sb = sb
+    voexec.sc = sc
     return voexec
 
   def execute(self, voexec, x, w, ell):
@@ -301,7 +303,8 @@ class R1CS(VOProtocol):
     voexec.prover_computes(LaTeXBuilder(),
         RustBuilder().let(w).assign("w.witness.clone()").end())
 
-    H, K, s, n = voexec.r1cs_H, voexec.r1cs_K, voexec.s, voexec.vector_size
+    H, K, sa, sb, sc, n = voexec.r1cs_H, voexec.r1cs_K, \
+                          voexec.sa, voexec.sb, voexec.sc, voexec.vector_size
     M = voexec.M
 
     u = get_named_vector("u")

@@ -22,6 +22,10 @@ s = Symbol("s", positive=True)
 Cc = Symbol("C_c", positive=True)
 Ca = Symbol("C_a", positive=True)
 Cm = Symbol("C_m", positive=True)
+Sa = Symbol("S_a", positive=True)
+Sb = Symbol("S_b", positive=True)
+Sc = Symbol("S_c", positive=True)
+
 k = Symbol("k", positive=True)
 
 def dump_performance(piopexec, zkSNARK, name):
@@ -138,14 +142,17 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
 
 
 def analyzeR1CS():
-  hints = [(S, H + 1), (S, K + 1), (H, K)]
-  size_map = [(H, "nrows"), (K, "ncols"), (S, "density"), (ell, "input_size")]
+  hints = [(H, K), (Sa, K + 1), (Sa, H + 1), (Sb, K + 1), (Sb, H + 1), (Sc, K + 1), (Sc, H + 1),
+           (Sa + Sb + Sc, 3 * K + 3), (Sa + Sb + Sc, 3 * H + 3)]
+  size_map = [(H, "nrows"), (K, "ncols"),
+              (Sa, "adensity"), (Sb, "bdensity"), (Sc, "cdensity"),
+              (ell, "input_size")]
   x = get_named_vector("x")
   x.local_evaluate = True
   x.hint_computation = lambda z: RustMacro("eval_vector_expression").append([
         z, Symbol("i"), x.dumpr_at_index(Symbol("i")), ell
       ])
-  ppargs = (H, K, S*3)
+  ppargs = (H, K, Sa, Sb, Sc)
   execargs = (x, get_named_vector("w"), ell)
   analyzeProtocol(R1CS(), ppargs, execargs, hints, size_map, filename="voproof_r1cs")
 
