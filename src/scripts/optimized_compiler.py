@@ -473,8 +473,11 @@ class CombinePolynomial(object):
       items.append(Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
       if rust_one is None:
         rust_items.append(RustBuilder().letmut(self.poly).assign(
-          RustMacro("expression_vector").append([
-            sym_i, RustMacro("sum").append(poly_sum_rust_items), self.length])).end()
+          RustMacro("expression_vector",
+            sym_i,
+            RustMacro("sum", poly_sum_rust_items),
+            self.length
+          )).end()
           .let(self.poly).assign(RustMacro("poly_from_vec")).append_to_last(self.poly).end())
       else:
         rust_items.append(RustBuilder().letmut(self.poly).assign(

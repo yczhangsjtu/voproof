@@ -94,8 +94,10 @@ class FunctionCall(RustList):
 
 
 class RustMacro(FunctionCall):
-  def __init__(self, macro_name):
+  def __init__(self, macro_name, *args):
     super(RustMacro, self).__init__("%s!" % macro_name)
+    if isinstance(args, list) and len(args) > 0:
+      self.append(args)
 
 
 class Tuple(RustList):
