@@ -797,7 +797,10 @@ class PIOPFromVOProtocol(object):
     original_t = t
     t = get_named_vector("t")
     piopexec.prover_computes(
-        Math(randomizer).sample(Ftoq).comma(t).assign(original_t).double_bar(randomizer),
+        Math(randomizer).sample(Ftoq)
+                        .comma(t)
+                        .assign(original_t)
+                        .double_bar(randomizer),
         RustBuilder(
           RustMacro("define_vec")
           .append(t)
@@ -898,7 +901,7 @@ class PIOPFromVOProtocol(object):
     h1computes_rust = RustBuilder().let(h1).assign(
         RustMacro("expression_vector").append(
           [Symbol("i"),
-           h_vec_combination.dumpr_at_index(Symbol("i") - h_inverse_degree),
+           h_vec_combination.dumpr_at_index(Symbol("i") - h_inverse_degree - 1),
            h_inverse_degree])).end()
     h2computes_rust = RustBuilder().let(h2).assign(
         RustMacro("expression_vector").append(
@@ -924,10 +927,15 @@ class PIOPFromVOProtocol(object):
 
     if self.debug_mode:
       piopexec.prover_computes(LaTeXBuilder(),
+        RustBuilder().append(RustMacro("assert_eq").append(
+          [h_vec_combination.dumpr_at_index(1), "E::Fr::zero()"]
+          )).end())
+
+      piopexec.prover_computes(LaTeXBuilder(),
           RustBuilder().let(h).assign(RustMacro("expression_vector").append(
             [
               Symbol("i"),
-              h_vec_combination.dumpr_at_index(Symbol("i") - h_inverse_degree),
+              h_vec_combination.dumpr_at_index(Symbol("i") - h_inverse_degree - 1),
               h_degree + h_inverse_degree + 1
             ]
             )).end()

@@ -326,8 +326,8 @@ macro_rules! power_linear_combination {
 #[macro_export]
 macro_rules! vector_index {
   ( $v: expr, $i: expr ) => {{
-    if $i >= 1 && ($i as i64) <= $v.len() as i64 {
-      $v[$i as usize - 1]
+    if ($i as i64) >= 1i64 && ($i as i64) <= $v.len() as i64 {
+      $v[($i as i64 - 1) as usize]
     } else {
       E::Fr::zero()
     }
@@ -516,6 +516,13 @@ macro_rules! eval_vector_expression {
       })
       .sum::<E::Fr>()
   }};
+}
+
+#[macro_export]
+macro_rules! eval_vector_as_poly {
+  ($v:expr, $z:expr) => {
+    eval_vector_expression!($z, i, vector_index!($v, i), $v.len())
+  };
 }
 
 #[macro_export]
@@ -825,6 +832,14 @@ mod tests {
   fn test_eval_vector_expression() {
     assert_eq!(
       eval_vector_expression!(to_field::<F>(2), i, to_field::<F>(i as u64), 4),
+      to_field::<F>(49)
+    );
+  }
+
+  #[test]
+  fn test_eval_vector_as_poly() {
+    assert_eq!(
+      eval_vector_as_poly!(to_field!(vec![1, 2, 3, 4]), to_field::<F>(2)),
       to_field::<F>(49)
     );
   }
