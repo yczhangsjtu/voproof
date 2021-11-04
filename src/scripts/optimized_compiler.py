@@ -934,9 +934,11 @@ class PIOPFromVOProtocol(object):
           )).end()
       piopexec.prover_computes(LaTeXBuilder(), h_omega_sum_check)
       piopexec.prover_computes(LaTeXBuilder(),
-          RustBuilder().append(RustMacro("check_vector_eq").append([
-            vecsum, "vec![E::Fr::zero(); (%s) as usize]" % rust(n + max_shift + q), '"sum of hadamards not zero"'
-            ])).end())
+          rust_builder_macro("check_vector_eq",
+            vecsum,
+            "vec![E::Fr::zero(); (%s) as usize]" % rust(n + max_shift + q),
+            '"sum of hadamards not zero"'
+            ).end())
 
     hxcomputes.append(hx_items)
     h = get_named_vector("h")
@@ -996,9 +998,10 @@ class PIOPFromVOProtocol(object):
               '"h != h1 || 0 || h2"'])).end())
 
       piopexec.prover_computes(LaTeXBuilder(),
-        RustBuilder().append(RustMacro("assert_eq").append(
-          [h_vec_combination.dumpr_at_index(1), "E::Fr::zero()"]
-          )).end())
+        rust_builder_macro("assert_eq",
+          h_vec_combination.dumpr_at_index(1),
+          "E::Fr::zero()"
+        ).end())
 
     # For the rust code, use the vector instead
     h1x = h1.to_named_vector_poly()
@@ -1029,9 +1032,12 @@ class PIOPFromVOProtocol(object):
         piopexec.eval_query(y, omega/z, vec_to_poly_dict[key])
         piopexec.prover_computes(
           LaTeXBuilder(),
-          RustBuilder().let(y).assign(RustMacro("eval_vector_expression").append([
-            omega/z, sym_i, vec.dumpr_at_index(sym_i), n + q
-          ])).end()
+          RustBuilder().let(y).assign(RustMacro("eval_vector_expression",
+            omega/z,
+            sym_i,
+            vec.dumpr_at_index(sym_i),
+            n + q
+          )).end()
         )
       else:
         piopexec.verifier_computes(
@@ -1336,12 +1342,11 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           # Only make this check when the query result is an expected constant
           self.prover_computes(LaTeXBuilder(),
                                RustBuilder().append(
-                                   RustMacro("check_poly_eval")
-                                   .append([
+                                   RustMacro("check_poly_eval",
                                      query.poly,
                                      queries[0].point,
                                      "E::Fr::zero()" if query.name == 0
-                                     else query.name])
+                                                     else query.name)
                                ).end())
       ffs.append([rust(query.poly) for query in queries])
       fcomms.append([rust_vk(query.poly.to_comm()) for query in queries])
@@ -1368,8 +1373,8 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     open_computation.paren(array)
 
     open_computation_rust = RustBuilder()
-    open_computation_rust.let("fs").assign(RustMacro("vec").append(fs)).end()
-    open_computation_rust.let("gs").assign(RustMacro("vec").append(gs)).end()
+    open_computation_rust.let("fs").assign(RustMacro("vec", fs)).end()
+    open_computation_rust.let("gs").assign(RustMacro("vec", gs)).end()
     open_computation_rust.let("zz").assign(open_points[1]).end()
     open_computation_rust.let("z").assign(open_points[0]).end()
 
@@ -1402,10 +1407,10 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         .invoke_method("unwrap")).end()
     verify_computation_rust.let("zz").assign(open_points[1]).end()
     verify_computation_rust.let("z").assign(open_points[0]).end()
-    verify_computation_rust.let("f_commitments").assign(RustMacro("vec").append(fcomms)).end()
-    verify_computation_rust.let("g_commitments").assign(RustMacro("vec").append(gcomms)).end()
-    verify_computation_rust.let("f_values").assign(RustMacro("vec").append(fvals)).end()
-    verify_computation_rust.let("g_values").assign(RustMacro("vec").append(gvals)).end()
+    verify_computation_rust.let("f_commitments").assign(RustMacro("vec", fcomms)).end()
+    verify_computation_rust.let("g_commitments").assign(RustMacro("vec", gcomms)).end()
+    verify_computation_rust.let("f_values").assign(RustMacro("vec", fvals)).end()
+    verify_computation_rust.let("g_values").assign(RustMacro("vec", gvals)).end()
 
     self.prover_computes(open_computation, open_computation_rust)
     self.verifier_computes(verify_computation, verify_computation_rust)
