@@ -215,6 +215,18 @@ reserved_words = ['abstract',
                   'yield']
 
 
+def force_lowercase(s):
+    if s.startswith("E::"):
+        return s
+    to_replaces = set()
+    for c in s:
+        if c.isupper():
+            to_replaces.add(c)
+    for c in to_replaces:
+        s = s.replace(c, "cap_%s" % c.lower())
+    return s
+
+
 class RustCodePrinter(CodePrinter):
     """A printer to convert python expressions to strings of Rust code"""
     printmethod = "_rust_code"
@@ -457,6 +469,7 @@ class RustCodePrinter(CodePrinter):
     def _print_Symbol(self, expr):
 
         name = super()._print_Symbol(expr)
+        name = force_lowercase(name)
 
         if expr in self._dereference:
             return '(*%s)' % name

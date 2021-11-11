@@ -13,7 +13,7 @@ pub struct __NAME__VerifierKey<E: PairingEngine> {
     /*{VerifierKey}*/
     pub kzg_vk: VerifierKey<E>,
     pub size: __NAME__Size,
-    pub D: u64,
+    pub degree_bound: u64,
 }
 
 #[derive(Clone)]
@@ -79,7 +79,7 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
                 prepared_beta_h: pp.prepared_beta_h.clone(),
             },
             size,
-            D: pp.powers_of_g.len() as u64,
+            degree_bound: pp.powers_of_g.len() as u64,
         };
         Ok((__NAME__ProverKey::<E> {
             verifier_key: verifier_key.clone(),
@@ -91,10 +91,10 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
     fn prove(pk: &Self::PK, x: &Self::Ins, w: &Self::Wit) -> Result<Self::Pf, Error> {
         let size = pk.verifier_key.size.clone();
         let vk = pk.verifier_key.clone();
-        let D = pk.verifier_key.D as i64;
+        let cap_d = pk.verifier_key.degree_bound as i64;
         let rng = &mut test_rng();
         /*{prove}*/
-        let (W, W_1) = KZG10::batch_open(
+        let (cap_w, cap_w_1) = KZG10::batch_open(
             &pk.powers,
             &fs,
             &gs,
@@ -109,7 +109,7 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
     }
     fn verify(vk: &Self::VK, x: &Self::Ins, proof: &Self::Pf) -> Result<(), Error> {
         let size = vk.size.clone();
-        let D = vk.D as i64;
+        let cap_d = vk.degree_bound as i64;
         let rng = &mut test_rng();
         /*{verify}*/
         if KZG10::<E, DensePoly<E::Fr>>::batch_check(
@@ -122,8 +122,8 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
             &rand_xi_2,
             &f_values,
             &g_values,
-            &proof.W,
-            &proof.W_1,
+            &proof.cap_w,
+            &proof.cap_w_1,
             rng,
         )? {
             Ok(())

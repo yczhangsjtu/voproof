@@ -112,7 +112,7 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
     for i in range(len(temp)):
       if size_mark in temp[i]:
         temp[i] = temp[i].replace(size_mark, "%s\n        (%s) as usize" % 
-                                             (rust(size_init), str(piopexec.max_degree)))
+                                             (rust(size_init), rust(piopexec.max_degree)))
       if vk_definition_mark in temp[i]:
         temp[i] = temp[i].replace(vk_definition_mark, verifier_key_definition)
       if pk_definition_mark in temp[i]:
