@@ -551,12 +551,13 @@ macro_rules! generator_of {
 
 #[macro_export]
 macro_rules! check_poly_eval {
-    ($f:expr, $z:expr, $y:expr) => {
+    ($f:expr, $z:expr, $y:expr, $info:literal) => {
         let y = $f.evaluate(&$z);
         if y != $y.clone() {
             return Err(Error::PolynomialEvaluationUnexpected(
                 y.to_string(),
                 $y.to_string(),
+                $info.to_string(),
             ));
         }
     };

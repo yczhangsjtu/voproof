@@ -3188,9 +3188,370 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         add_expression_vector_to_vector!(
             naive_vec_g,
             i,
-            (vector_index!(h_vec_2, i)) * (-power(z, -cap_d))
+            (vector_index!(h_vec_2, i))
+                * (-power(z, -cap_k - 2 * cap_s_a - 2 * cap_s_b - 2 * cap_s_c))
         );
         add_expression_vector_to_vector!(naive_vec_g, i, (vector_index!(h_vec_3, i)) * (-z));
+        assert_eq!(
+            eval_vector_as_poly!(h_vec_1, z)
+                * power(z, -cap_k - 2 * cap_s_a - 2 * cap_s_b - 2 * cap_s_c),
+            linear_combination!(
+                E::Fr::zero(),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        mu,
+                        range_index!(1, 3 * cap_h, i - (1) + 1),
+                        -to_field::<E::Fr>(1),
+                        power_vector_index!(gamma, 3 * cap_h, i - (1) + 1)
+                    )),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(s_vec, (i as i64) - (1) as i64 + 1)
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        -to_field::<E::Fr>(1),
+                        range_index!(1, 3 * cap_h, i - (1) + 1)
+                    )),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        range_index!(1, 3 * cap_h, i - (1) + 1)
+                    )),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        alpha * nu,
+                        range_index!(1, cap_k, i - (1) + 1),
+                        -alpha,
+                        power_vector_index!(gamma, cap_k, i - (1) + 1)
+                    )),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(h_vec, (i as i64) - (1) as i64 + 1)
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        -alpha,
+                        range_index!(1, cap_k, i - (1) + 1)
+                    )),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        range_index!(1, cap_k, i - (1) + 1)
+                    )),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        power(alpha, 2),
+                        vector_index!(h_vec, (i as i64) - (1) as i64 + 1)
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(
+                        linear_combination!(
+                            E::Fr::zero(),
+                            mu * nu,
+                            range_index!(1, cap_s_a + cap_s_b + cap_s_c, i - (cap_k + 1) + 1)
+                        ),
+                        -mu,
+                        vector_index!(pk.w_vec, (i as i64) - (cap_k + 1) as i64 + 1),
+                        -nu,
+                        vector_index!(pk.u_vec, (i as i64) - (cap_k + 1) as i64 + 1),
+                        to_field::<E::Fr>(1),
+                        vector_index!(pk.y_vec, (i as i64) - (cap_k + 1) as i64 + 1)
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        -power(alpha, 2),
+                        range_index!(1, cap_s_a + cap_s_b + cap_s_c, i - (cap_k + 1) + 1)
+                    )),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        range_index!(1, cap_s_a + cap_s_b + cap_s_c, i - (cap_k + 1) + 1)
+                    )),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        power(alpha, 3),
+                        vector_index!(
+                            u_vec_1,
+                            (i as i64) - (-cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1) as i64
+                                + 1
+                        )
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(
+                            u_vec_1,
+                            (i as i64)
+                                - (-2 * cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1) as i64
+                                + 1
+                        )
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        -power(alpha, 3),
+                        range_index!(
+                            1,
+                            cap_h,
+                            i - (-cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1) + 1
+                        )
+                    )),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(
+                            u_vec_1,
+                            (i as i64)
+                                - (-3 * cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1) as i64
+                                + 1
+                        )
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        power(alpha, 4),
+                        range_index!(1, ell + 1, i - (3 * cap_h + 1) + 1)
+                    )),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(
+                        linear_combination!(multi_delta!(i, -to_field::<E::Fr>(1), 3 * cap_h + 1)),
+                        to_field::<E::Fr>(1),
+                        vector_index!(u_vec_1, (i as i64) - (1) as i64 + 1),
+                        -to_field::<E::Fr>(1),
+                        vector_index!(x_vec, (i as i64) - (3 * cap_h + 2) as i64 + 1)
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        power(alpha, 5),
+                        vector_index!(
+                            u_vec_1,
+                            (i as i64) - (-3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1) as i64 + 1
+                        )
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(
+                            s_vec,
+                            (i as i64) - (-3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1) as i64 + 1
+                        )
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        -power(alpha, 5) * beta,
+                        vector_index!(
+                            h_vec,
+                            (i as i64) - (cap_s_a + cap_s_b + cap_s_c + 1) as i64 + 1
+                        )
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(
+                            s_vec,
+                            (i as i64) - (-3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1) as i64 + 1
+                        )
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        -power(alpha, 5) * beta,
+                        vector_index!(h_vec, (i as i64) - (1) as i64 + 1)
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(pk.v_vec, (i as i64) - (cap_k + 1) as i64 + 1)
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        -power(alpha, 5),
+                        vector_index!(r_vec_tilde, (i as i64) - (1) as i64 + 1),
+                        power(alpha, 5),
+                        vector_index!(r_vec_tilde, (i as i64) - (2) as i64 + 1)
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        range_index!(1, cap_k + cap_s_a + cap_s_b + cap_s_c, i - (1) + 1)
+                    )),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        power(alpha, 6),
+                        vector_index!(r_vec_tilde, (i as i64) - (1) as i64 + 1)
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(linear_combination!(multi_delta!(
+                        i,
+                        to_field::<E::Fr>(1),
+                        cap_k + cap_s_a + cap_s_b + cap_s_c
+                    ))),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    omega / z,
+                    i,
+                    linear_combination!(linear_combination!(
+                        E::Fr::zero(),
+                        -to_field::<E::Fr>(1),
+                        range_index!(
+                            1,
+                            cap_s_a + cap_s_b + cap_s_c + 1,
+                            i - (cap_k + cap_s_a + cap_s_b + cap_s_c + 1) + 1
+                        )
+                    )),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                ),
+                eval_vector_expression!(
+                    z,
+                    i,
+                    linear_combination!(
+                        E::Fr::zero(),
+                        to_field::<E::Fr>(1),
+                        vector_index!(
+                            t_vec_1,
+                            (i as i64) - (cap_k + cap_s_a + cap_s_b + cap_s_c) as i64 + 1
+                        )
+                    ),
+                    cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+                )
+            )
+        );
         let c = sum!(
             z * (mu
                 * (E::Fr::one() - power(omega / z, 3 * cap_h))
@@ -3290,7 +3651,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 (c_6) * (vector_index!(u_vec_1, i)),
                 (c_7) * (vector_index!(pk.v_vec, i)),
                 (c_8) * (vector_index!(t_vec_1, i)),
-                (c_9) * (vector_index!(h_vec_2, i)),
+                (c_9 * power(z, cap_d - cap_k - 2 * cap_s_a - 2 * cap_s_b - 2 * cap_s_c))
+                    * (vector_index!(h_vec_2, i)),
                 (c_10) * (vector_index!(h_vec_3, i))
             ),
             cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
@@ -3316,10 +3678,14 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             )
             .into_affine(),
         );
-        let naive_g_poly = poly_from_vec!(naive_vec_g);
-        check_poly_eval!(naive_g_poly, z, E::Fr::zero());
-        check_vector_eq!(naive_vec_g, g_vec, "g is not computed as expected");
-        check_poly_eval!(g_poly, z, E::Fr::zero());
+        let naive_vec_g_poly = poly_from_vec!(naive_vec_g);
+        check_poly_eval!(
+            naive_vec_g_poly,
+            z,
+            E::Fr::zero(),
+            "naive g does not evaluate to 0 at z"
+        );
+        check_poly_eval!(g_poly, z, E::Fr::zero(), "g does not evaluate to 0 at z");
         let fs = vec![h_vec_poly, u_vec_1_poly, r_vec_tilde_poly];
         let gs = vec![g_poly];
         let zz = z;

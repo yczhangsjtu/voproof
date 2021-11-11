@@ -437,16 +437,16 @@ class CombinePolynomial(object):
   def dump_items(self, has_commit=False, has_poly=False, has_oracle=True):
     oralce_sum_items, poly_sum_items, commit_sum_items, \
         items, rust_items, poly_sum_rust_items, commit_sum_rust_items, \
-        one, rust_one = \
+        one, rust_const = \
         [], [], [], [], [], [], [], None, None
     for key, poly_coeff_lb in self.coeff_latex_builders.items():
       # The coeff here must be Symbol
-      poly, coeff, latex_builder, rust_builder = poly_coeff_lb
+      poly, coeff, latex_builder, rust_builder, shifts = poly_coeff_lb
       items.append(latex_builder)
       rust_items.append(rust_builder)
       if key == "one":
         one = latex(coeff)
-        rust_one = rust(coeff)
+        rust_const = rust(coeff)
       else:
         if has_oracle:
           oracle_sum_items.append("%s\\cdot [%s]" % (latex(coeff), poly.dumps()))
@@ -455,8 +455,14 @@ class CombinePolynomial(object):
           commit_sum_rust_items.append("(%s.0).mul(%s.into_repr())" % (rust_vk(poly.to_comm()), rust(coeff)))
         if has_poly:
           poly_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.dumps()))
-          poly_sum_rust_items.append("(%s) * (%s)" %
-                                     (rust(coeff), poly.dumpr_at_index(sym_i)))
+          poly_sum_rust_items.append(
+              "(%s) * (%s)" % (rust(coeff), poly.dumpr_at_index(sym_i)) if shifts == rust_one
+              # When aligned to right boundary, the original vector is representing
+              # the actual polynomial f(X) shifted left by D - vec.len(), i.e., what should
+              # be added here is f(X), that is f_vec(X) * X^{D-vec.len()}
+              # We then replace this power of X by its eval at z
+              else "(%s) * (%s)" % (rust(coeff * shifts), poly.dumpr_at_index(sym_i))
+          )
 
     if one is not None:
       if has_oracle:
@@ -476,7 +482,7 @@ class CombinePolynomial(object):
       items.append(Math("[%s]" % self.poly.dumps()).assign("+".join(oracle_sum_items)))
     if has_poly:
       items.append(Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
-      if rust_one is None:
+      if rust_const is None:
         rust_items.append(RustBuilder().letmut(self.poly.to_vec()).assign(
           rust_expression_vector_i(
             rust_sum(poly_sum_rust_items),
@@ -488,7 +494,7 @@ class CombinePolynomial(object):
             rust_expression_vector_i(
               rust_sum(poly_sum_rust_items),
               self.length)
-          ).end().append(self.poly.to_vec()).append("[0]").plus_assign(rust_one).end()
+          ).end().append(self.poly.to_vec()).append("[0]").plus_assign(rust_const).end()
           .let(self.poly).assign(rust_poly_from_vec(self.poly.to_vec())).end())
     if has_commit:
       items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
@@ -1133,27 +1139,30 @@ class PIOPFromVOProtocol(object):
           c = Symbol(get_name("c"))
           # Temporarily use list, because the format depends on whether
           # this list size is > 1
-          coeff_builders[_key] = (poly, c, [value], [rust_value])
+          coeff_builders[_key] = (poly, c, [value], [rust_value], rust_one)
         else:
           # Get the existing coefficient for this named polynomial
-          _poly, c, items, rust_items = coeff_builders[_key]
+          _poly, c, items, rust_items, shifts = coeff_builders[_key]
           if _poly != poly:
             raise Exception("%s != %s" % (_poly.dumps(), poly.dumps()))
           items.append(value)
           rust_items.append(rust_value)
 
     # 2. The part contributed by h1(X) and h2(X)
+    # h1(X) is committed aligned to the right boundary of the universal parameters
+    # so we should additionally multiply a power of z to it when computing g(X)
     c = Symbol(get_name("c"))
     coeff_builders[h1x.key()] = (
         h1x, c,
         [- z ** (-self.degree_bound)],
-        [- z ** (-self.degree_bound)])
+        [- z ** (-self.degree_bound)],
+        z ** (self.degree_bound - (h_inverse_degree-1)))
     c = Symbol(get_name("c"))
-    coeff_builders[h2x.key()] = (h2x, c, [- z], [- z])
+    coeff_builders[h2x.key()] = (h2x, c, [- z], [- z], rust_one)
 
     if self.debug_mode:
       piopexec.prover_computes_rust(rust_builder_add_expression_vector_to_vector_i(
-        naive_g, "(%s) * (%s)" % (h1.dumpr_at_index(sym_i), rust(-z**(-self.degree_bound)))
+        naive_g, "(%s) * (%s)" % (h1.dumpr_at_index(sym_i), rust(-z**(-(h_inverse_degree-1))))
       ).end())
       piopexec.prover_computes_rust(rust_builder_add_expression_vector_to_vector_i(
         naive_g, "(%s) * (%s)" % (h2.dumpr_at_index(sym_i), rust(-z))
@@ -1162,10 +1171,25 @@ class PIOPFromVOProtocol(object):
       # make the comparison here.
       piopexec.naive_g = naive_g
 
+      # Check that h(z) = sum_i f_i(omega/z) g_i(z) z^{n+maxshift+q}
+      lc = rust_linear_combination(rust_zero)
+      for had in extended_hadamard:
+        a = VectorCombination._from(had.a)
+        b = VectorCombination._from(had.b)
+        lc.append(
+          rust_eval_vector_expression_i(
+            omega/z, a.dumpr_at_index(sym_i), n + max_shift + q
+          )
+        )
+        lc.append(rust_eval_vector_expression_i(z, b.dumpr_at_index(sym_i), n + max_shift + q))
+      piopexec.prover_computes_rust(rust_builder_assert_eq(
+        rust_builder_eval_vector_as_poly(h, z).mul(z**(-(h_inverse_degree-1))), lc
+      ).end())
+
     # Transform the lists into latex and rust builders
     _coeff_builders = {}
     for key, poly_coeff_lb in coeff_builders.items():
-      poly, coeff, coeff_list, rust_coeff_list = poly_coeff_lb
+      poly, coeff, coeff_list, rust_coeff_list, shifts = poly_coeff_lb
       if len(coeff_list) > 1:
         latex_builder = LaTeXBuilder().start_math().append(coeff).assign() \
                                       .end_math().space("the sum of:")
@@ -1181,7 +1205,7 @@ class PIOPFromVOProtocol(object):
         latex_builder = Math(coeff).assign(coeff_list[0])
         rust_builder = RustBuilder().let(coeff).assign(rust_coeff_list[0]).end()
 
-      _coeff_builders[key] = (poly, coeff, latex_builder, rust_builder)
+      _coeff_builders[key] = (poly, coeff, latex_builder, rust_builder, shifts)
 
     coeff_builders = _coeff_builders
 
@@ -1386,13 +1410,22 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         self.verifier_computes(item, rust_item)
       transcript.append(poly_combine.poly.to_comm())
 
-    if piopexec.debug_mode:
-      naive_g = piopexec.naive_g
-      self.prover_computes_rust(rust_builder_check_vector_eq(
-        naive_g, piopexec.poly_combines[0].poly.to_vec(), "g is not computed as expected"
-        ).end())
-
     queries = piopexec.eval_queries + piopexec.eval_checks
+
+    if piopexec.debug_mode:
+      z = [query.point for query in queries if query.name == 0][0]
+      naive_g = piopexec.naive_g
+      self.prover_computes_rust(RustBuilder().let(naive_g.to_named_vector_poly()).assign(
+        rust_poly_from_vec(naive_g)
+      ).end())
+      self.prover_computes_rust(RustBuilder().append(
+                               RustMacro("check_poly_eval",
+                                 naive_g.to_named_vector_poly(),
+                                 z,
+                                 rust_zero,
+                                 '"naive g does not evaluate to 0 at z"')
+                           ).end())
+
     points_poly_dict = {}
     for query in queries:
       key = latex(query.point)
@@ -1420,7 +1453,8 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
                                      query.poly,
                                      queries[0].point,
                                      rust_zero if query.name == 0
-                                               else query.name)
+                                               else query.name,
+                                     '"g does not evaluate to 0 at z"')
                                ).end())
       ffs.append([rust(query.poly) for query in queries])
       fcomms.append([rust_vk(query.poly.to_comm()) for query in queries])

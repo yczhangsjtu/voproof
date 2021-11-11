@@ -90,9 +90,12 @@ fn run_r1cs_example<E: PairingEngine>() -> Result<(), Error> {
   }
 
   let max_degree = VOProofR1CS::get_max_degree(r1cs.get_size());
-  let universal_params : UniversalParams::<E> = VOProofR1CS::setup(max_degree).unwrap();
+  // Let the universal parameters take a larger size than expected
+  let universal_params : UniversalParams::<E> = VOProofR1CS::setup(max_degree + 10).unwrap();
   println!("Universal parameter size: {}", universal_params.powers_of_g.len());
   let (pk, vk) = VOProofR1CS::index(&universal_params, &r1cs).unwrap();
+  println!("Degree bound: {}", vk.degree_bound);
+  println!("Max degree: {}", pk.max_degree);
   println!("Prover key matrix size: {}", pk.cap_m_mat.0.len());
   println!("Prover key u size: {}", pk.u_vec.len());
   println!("Prover key v size: {}", pk.v_vec.len());

@@ -173,7 +173,7 @@ pub enum Error {
     Unimplemented(String),
     VerificationFail,
     GZNotZero(String),
-    PolynomialEvaluationUnexpected(String, String),
+    PolynomialEvaluationUnexpected(String, String, String),
     VectorNotEqual(String),
 }
 
@@ -264,7 +264,7 @@ impl core::fmt::Display for Error {
             Error::Unimplemented(info) => write!(f, "Unimplemented {}", info),
             Error::VerificationFail => write!(f, "VerificationFail"),
             Error::GZNotZero(info) => write!(f, "GZNotZero {}", info),
-            Error::PolynomialEvaluationUnexpected(info1, info2) => write!(f, "PolynomialEvaluationUnexpected {} {}", info1, info2),
+            Error::PolynomialEvaluationUnexpected(info1, info2, info3) => write!(f, "PolynomialEvaluationUnexpected {} {} {}", info1, info2, info3),
             Error::VectorNotEqual(info) => write!(f, "VectorNotEqual {}", info),
         }
     }

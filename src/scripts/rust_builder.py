@@ -325,6 +325,14 @@ def rust_builder_sum(*args):
   return rust_builder_macro("sum", *args)
 
 
+def rust_linear_combination(*args):
+  return RustMacro("linear_combination", *args)
+
+
+def rust_builder_linear_combination(*args):
+  return rust_builder_macro("linear_combination", *args)
+
+
 def rust_vec(*args):
   return RustMacro("vec", *args)
 
