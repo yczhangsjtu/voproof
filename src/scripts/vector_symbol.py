@@ -851,6 +851,9 @@ class NamedPolynomial(_NamedBasic):
   def to_comm(self):
     return PolynomialCommitment(self)
 
+  def to_vec(self):
+    return NamedVector(self.name, self.modifier, self.subscript, self.has_prime)
+
   def dumpr(self):
     return "%s_poly" % super(NamedPolynomial, self).dumpr()
 

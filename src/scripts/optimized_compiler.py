@@ -477,19 +477,19 @@ class CombinePolynomial(object):
     if has_poly:
       items.append(Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
       if rust_one is None:
-        rust_items.append(RustBuilder().letmut(self.poly).assign(
+        rust_items.append(RustBuilder().letmut(self.poly.to_vec()).assign(
           rust_expression_vector_i(
             rust_sum(poly_sum_rust_items),
             self.length
           )).end()
-          .let(self.poly).assign(rust_poly_from_vec(self.poly)).end())
+          .let(self.poly.to_vec()).assign(rust_poly_from_vec(self.poly.to_vec())).end())
       else:
-        rust_items.append(RustBuilder().letmut(self.poly).assign(
+        rust_items.append(RustBuilder().letmut(self.poly.to_vec()).assign(
             rust_expression_vector_i(
               rust_sum(poly_sum_rust_items),
               self.length)
-          ).end().append(self.poly).append("[0]").plus_assign(rust_one).end()
-          .let(self.poly).assign(rust_poly_from_vec(self.poly)).end())
+          ).end().append(self.poly.to_vec()).append("[0]").plus_assign(rust_one).end()
+          .let(self.poly).assign(rust_poly_from_vec(self.poly.to_vec())).end())
     if has_commit:
       items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
       rust_items.append(RustBuilder().let(self.poly.to_comm())
@@ -588,6 +588,8 @@ class PIOPFromVOProtocol(object):
     voexec = VOProtocolExecution(self.vector_size)
     vec_to_poly_dict = {}
     self.vo.preprocess(voexec, *args)
+    piopexec.debug_mode = self.debug_mode
+
     for pp in voexec.preprocessings:
       piopexec.preprocess(pp.latex_builder, pp.rust_builder)
     for vector, size in voexec.indexer_vectors.vectors:
@@ -892,8 +894,7 @@ class PIOPFromVOProtocol(object):
           )
         ).end()
         piopexec.prover_computes_rust(
-            rust_builder_macro("add_expression_vector_to_vector",
-              vecsum, sym_i,
+            rust_builder_add_expression_vector_to_vector_i(vecsum,
                "(%s) * (%s)" % (a.dumpr_at_index(sym_i),
                                 b.dumpr_at_index(sym_i))).end())
 
@@ -1046,6 +1047,12 @@ class PIOPFromVOProtocol(object):
     gx = get_named_polynomial("g")
     coeff_builders = {} # map: key -> (poly, Symbol(coeff), latex_builder, rust_builder)
 
+    if self.debug_mode:
+      naive_g = get_named_vector("naive_g")
+      piopexec.prover_computes_rust(rust_builder_define_vec_mut(naive_g,
+        rust_vec_size(rust_zero, n + max_shift + q)
+      ).end())
+
     # 1. The part contributed by the extended hadamard query
     for i, side in enumerate(extended_hadamard):
       self.debug("  Extended Hadamard %d" % (i + 1))
@@ -1078,38 +1085,57 @@ class PIOPFromVOProtocol(object):
           rust_builder_assert_eq(
             multiplier,
             rust_eval_vector_expression_i(
-              omega/z, a.dumpr_at_index(sym_i), n + q
+              omega/z, a.dumpr_at_index(sym_i), n + max_shift + q
             )
           ).end()
         )
 
       if multiplier == 0:
         continue
-
       b = VectorCombination._from(side.b) * multiplier
+
+      # The naive way to compute f_i(omega/z) g_i(X), is to directly dump g_i(X)
+      # coefficients on [1..n+max_shift+q], multiplied by the multiplier
+      if self.debug_mode:
+        piopexec.prover_computes_rust(
+          rust_builder_add_expression_vector_to_vector_i(naive_g, b.dumpr_at_index(sym_i))
+          .end())
+
+      # Now decompose g_i(X), i.e., the right side of this Extended Hadamard query
+      # multiply every coefficient by the multiplier f_i(omega/z)
+      # then evaluate the coefficient at z
       for key, vec_value in b.items():
         vec, value = vec_value
         value = simplify(value.to_poly_expr(z))
         if value == 0:
           raise Exception("value should not be zero")
+
+        # This term is normal: i.e., either the constant term that is a structured
+        # polynomial, or a normal NamedVector multiplied by some coefficient
         if (isinstance(vec, NamedVector) and not vec.local_evaluate) or key == "one":
           _key = key
           poly = "one" if key == "one" else vec_to_poly_dict[vec.key()]
           rust_value = rust(value)
           value = latex(value)
-        else: # In case it is locally evaluatable polynomial
+        else: # In case it is locally evaluatable polynomial, this term should be
+          # regarded as part of the constant, instead of a polynomial. Let the verifier
+          # locally evaluate this polynomial at z
           _key = "one"
           poly = "one"
           rust_value = "(%s) * (%s)" % (rust(value), rust(vec.hint_computation(z)))
           value = "%s\\cdot %s" \
                   % (latex(value), vec_to_poly_dict[vec.key()].dumps_var(z))
 
+        # if this polynomial (or constant) has not been handled before, just set the
+        # value as the coefficient for this named polynomial
+        # otherwise, add the value to the current coefficient
         if _key not in coeff_builders:
           c = Symbol(get_name("c"))
           # Temporarily use list, because the format depends on whether
           # this list size is > 1
           coeff_builders[_key] = (poly, c, [value], [rust_value])
         else:
+          # Get the existing coefficient for this named polynomial
           _poly, c, items, rust_items = coeff_builders[_key]
           if _poly != poly:
             raise Exception("%s != %s" % (_poly.dumps(), poly.dumps()))
@@ -1118,9 +1144,23 @@ class PIOPFromVOProtocol(object):
 
     # 2. The part contributed by h1(X) and h2(X)
     c = Symbol(get_name("c"))
-    coeff_builders[h1x.key()] = (h1x, c, [- z ** self.degree_bound], [- z ** self.degree_bound])
+    coeff_builders[h1x.key()] = (
+        h1x, c,
+        [- z ** (-self.degree_bound)],
+        [- z ** (-self.degree_bound)])
     c = Symbol(get_name("c"))
     coeff_builders[h2x.key()] = (h2x, c, [- z], [- z])
+
+    if self.debug_mode:
+      piopexec.prover_computes_rust(rust_builder_add_expression_vector_to_vector_i(
+        naive_g, "(%s) * (%s)" % (h1.dumpr_at_index(sym_i), rust(-z**(-self.degree_bound)))
+      ).end())
+      piopexec.prover_computes_rust(rust_builder_add_expression_vector_to_vector_i(
+        naive_g, "(%s) * (%s)" % (h2.dumpr_at_index(sym_i), rust(-z))
+      ).end())
+      # Pass this variable to the zkSNARK, because g has not been computed, cannot
+      # make the comparison here.
+      piopexec.naive_g = naive_g
 
     # Transform the lists into latex and rust builders
     _coeff_builders = {}
@@ -1145,7 +1185,7 @@ class PIOPFromVOProtocol(object):
 
     coeff_builders = _coeff_builders
 
-    piopexec.combine_polynomial(gx, coeff_builders, n + q)
+    piopexec.combine_polynomial(gx, coeff_builders, n + max_shift + q)
 
     self.debug("Combine polynomial")
     piopexec.eval_check(0, z, gx)
@@ -1162,6 +1202,7 @@ class ZKSNARK(object):
     self.vk = []
     self.pk = []
     self.proof = []
+    self.debug_mode = False
 
   def preprocess(self, latex_builder, rust_builder):
     self.indexer_computations.append(
@@ -1255,6 +1296,7 @@ class ZKSNARK(object):
 class ZKSNARKFromPIOPExecKZG(ZKSNARK):
   def __init__(self, piopexec):
     super(ZKSNARKFromPIOPExecKZG, self).__init__()
+    self.debug_mode = piopexec.debug_mode
 
     transcript = [x for x in piopexec.verifier_inputs]
 
@@ -1343,6 +1385,12 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       for item, rust_item in zip(verifier_items, verifier_rust_items):
         self.verifier_computes(item, rust_item)
       transcript.append(poly_combine.poly.to_comm())
+
+    if piopexec.debug_mode:
+      naive_g = piopexec.naive_g
+      self.prover_computes_rust(rust_builder_check_vector_eq(
+        naive_g, piopexec.poly_combines[0].poly.to_vec(), "g is not computed as expected"
+        ).end())
 
     queries = piopexec.eval_queries + piopexec.eval_checks
     points_poly_dict = {}

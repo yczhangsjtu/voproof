@@ -274,6 +274,13 @@ macro_rules! define_vec {
 }
 
 #[macro_export]
+macro_rules! define_vec_mut {
+    ( $v: ident, $expr: expr ) => {
+        let mut $v: Vec<E::Fr> = $expr;
+    };
+}
+
+#[macro_export]
 macro_rules! delta {
     ( $i: expr, $j: expr ) => {{
         if $i == $j {

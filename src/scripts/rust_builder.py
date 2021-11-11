@@ -353,6 +353,14 @@ def rust_builder_define_vec(v, expr):
   return rust_builder_macro("define_vec", v, expr)
 
 
+def rust_define_vec_mut(v, expr):
+  return RustMacro("define_vec_mut", v, expr)
+
+
+def rust_builder_define_vec_mut(v, expr):
+  return rust_builder_macro("define_vec_mut", v, expr)
+
+
 def rust_check_vector_eq(v, expr, info):
   return RustMacro("check_vector_eq", v, expr, info)
 
@@ -391,3 +399,11 @@ def rust_assert_eq(a, b):
 
 def rust_builder_assert_eq(a, b):
   return rust_builder_macro("assert_eq", a, b)
+
+
+def rust_add_expression_vector_to_vector_i(v, expr):
+  return RustMacro("add_expression_vector_to_vector", v, sym_i, expr)
+
+
+def rust_builder_add_expression_vector_to_vector_i(v, expr):
+  return rust_builder_macro("add_expression_vector_to_vector", v, sym_i, expr)
