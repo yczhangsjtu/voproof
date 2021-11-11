@@ -886,12 +886,10 @@ class PIOPFromVOProtocol(object):
 
       if self.debug_mode:
         h_omega_sum_check.append(h_omega_sum).plus_assign(
-          RustMacro("eval_vector_expression").append([
-            omega, sym_i,
-            "(%s) * (%s)" %
-              (a.dumpr_at_index(sym_i), b.dumpr_at_index(sym_i)),
+          rust_eval_vector_expression_i(omega,
+            "(%s) * (%s)" % (a.dumpr_at_index(sym_i), b.dumpr_at_index(sym_i)),
             rust(n + max_shift + q)
-          ])
+          )
         ).end()
         piopexec.prover_computes_rust(
             rust_builder_macro("add_expression_vector_to_vector",
@@ -938,9 +936,7 @@ class PIOPFromVOProtocol(object):
         )
 
     if self.debug_mode:
-      h_omega_sum_check.append(RustMacro("assert_eq").append(
-          [h_omega_sum, rust_zero]
-          )).end()
+      h_omega_sum_check.append(rust_assert_eq(h_omega_sum, rust_zero)).end()
       piopexec.prover_computes_rust(h_omega_sum_check)
       piopexec.prover_computes_rust(
           rust_builder_check_vector_eq(
@@ -1000,10 +996,8 @@ class PIOPFromVOProtocol(object):
               '"h != h1 || 0 || h2"')).end())
 
       piopexec.prover_computes_rust(
-        rust_builder_macro("assert_eq",
-          h_vec_combination.dumpr_at_index(1),
-          rust_zero
-        ).end())
+        rust_builder_assert_eq(h_vec_combination.dumpr_at_index(1), rust_zero).end()
+      )
 
     # For the rust code, use the vector instead
     h1x = h1.to_named_vector_poly()
@@ -1034,12 +1028,12 @@ class PIOPFromVOProtocol(object):
         piopexec.eval_query(y, omega/z, vec_to_poly_dict[key])
         piopexec.prover_computes(
           LaTeXBuilder(),
-          RustBuilder().let(y).assign(RustMacro("eval_vector_expression",
-            omega/z,
-            sym_i,
-            vec.dumpr_at_index(sym_i),
-            n + q
-          )).end()
+          RustBuilder().let(y).assign(rust_eval_vector_expression_i(
+              omega/z,
+              vec.dumpr_at_index(sym_i),
+              n + q
+            )
+          ).end()
         )
       else:
         piopexec.verifier_computes(
@@ -1055,16 +1049,40 @@ class PIOPFromVOProtocol(object):
     # 1. The part contributed by the extended hadamard query
     for i, side in enumerate(extended_hadamard):
       self.debug("  Extended Hadamard %d" % (i + 1))
+      """
+      assume side.a = f_i(X), side.b = g_i(X)
+      then this query branch contributes a f_i(omega/z) * g_i(X) to the final polynomial g(X)
+      to compute f_i(omega/z), split f_i(X) into linear combination of named polynomials
+      where the coefficients are structured polynomials, i.e.,
+      f_i(omega/z) = s_1(omega/z) p_1(omega/z) + ... + s_k(omega/z) p_k(omega/z) + s_0(omega/z)
+      """
       a = VectorCombination._from(side.a)
       a_items = []
       for key, vec_value in a.items():
         vec, value = vec_value
         if key == "one":
+          # the constant term is a structured polynomial, directly evaluate it at omega/z
           a_items.append(value.to_poly_expr(omega/z))
         else:
+          # directly evaluate the coefficient at omega/z
+          # then multiply with p_1(omega/z) which has been obtained by querying
+          # and stored under the key of p_1 in a dictionary
           a_items.append(query_results[key] * value.to_poly_expr(omega/z))
 
+      # now multiplier should equal f_i(omega/z). if zero, then ignore this term
       multiplier = simplify(sum(a_items))
+
+      # check that multiplier = f_i(omega/z)
+      if self.debug_mode:
+        piopexec.prover_computes_rust(
+          rust_builder_assert_eq(
+            multiplier,
+            rust_eval_vector_expression_i(
+              omega/z, a.dumpr_at_index(sym_i), n + q
+            )
+          ).end()
+        )
+
       if multiplier == 0:
         continue
 

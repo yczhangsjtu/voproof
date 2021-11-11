@@ -367,3 +367,27 @@ def rust_vector_concat(*args):
 
 def rust_builder_vector_concat(*args):
   return rust_builder_macro("vector_concat", *args)
+
+
+def rust_eval_vector_expression_i(z, expr, n):
+  return RustMacro("eval_vector_expression", z, sym_i, expr, n)
+
+
+def rust_builder_eval_vector_expression_i(z, expr, n):
+  return rust_builder_macro("eval_vector_expression", z, sym_i, expr, n)
+
+
+def rust_eval_vector_as_poly(v, z):
+  return RustMacro("eval_vector_as_poly", v, z)
+
+
+def rust_builder_eval_vector_as_poly(v, z):
+  return rust_builder_macro("eval_vector_as_poly", v, z)
+
+
+def rust_assert_eq(a, b):
+  return RustMacro("assert_eq", a, b)
+
+
+def rust_builder_assert_eq(a, b):
+  return rust_builder_macro("assert_eq", a, b)

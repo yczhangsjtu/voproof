@@ -79,15 +79,15 @@ impl<F: Field> From<ArkR1CS<F>> for R1CS<F> {
                          row.iter().map(move |(c, col_index)|
                          (row_index.clone() as u64, *col_index as u64, *c)))
              .collect::<Vec<_>>();
-    let arows = a.iter().map(|(row_index, col_index, c)| *row_index).collect();
-    let acols = a.iter().map(|(row_index, col_index, c)| *col_index).collect();
-    let avals = a.iter().map(|(row_index, col_index, c)| *c).collect();
-    let brows = b.iter().map(|(row_index, col_index, c)| *row_index).collect();
-    let bcols = b.iter().map(|(row_index, col_index, c)| *col_index).collect();
-    let bvals = b.iter().map(|(row_index, col_index, c)| *c).collect();
-    let crows = c.iter().map(|(row_index, col_index, c)| *row_index).collect();
-    let ccols = c.iter().map(|(row_index, col_index, c)| *col_index).collect();
-    let cvals = c.iter().map(|(row_index, col_index, c)| *c).collect();
+    let arows = a.iter().map(|(row_index, _, _)| *row_index).collect();
+    let acols = a.iter().map(|(_, col_index, _)| *col_index).collect();
+    let avals = a.iter().map(|(_, _, c)| *c).collect();
+    let brows = b.iter().map(|(row_index, _, _)| *row_index).collect();
+    let bcols = b.iter().map(|(_, col_index, _)| *col_index).collect();
+    let bvals = b.iter().map(|(_, _, c)| *c).collect();
+    let crows = c.iter().map(|(row_index, _, _)| *row_index).collect();
+    let ccols = c.iter().map(|(_, col_index, _)| *col_index).collect();
+    let cvals = c.iter().map(|(_, _, c)| *c).collect();
     R1CS {
       arows,
       acols,

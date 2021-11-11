@@ -298,7 +298,7 @@ macro_rules! multi_delta {
 #[macro_export]
 macro_rules! linear_combination {
     ( $i: expr ) => {
-        linear_combination!($i, )
+        $i
     };
 
     ( $i: expr, $( $c:expr, $j:expr ),* ) => {

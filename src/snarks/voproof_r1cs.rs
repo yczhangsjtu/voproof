@@ -2414,6 +2414,235 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             vector_index!(r_vec_tilde, i),
             K + S_a + S_b + S_c + 1
         );
+        assert_eq!(
+            z * (mu
+                * (E::Fr::one() - power(omega / z, 3 * H))
+                * (E::Fr::one() * z - gamma * omega)
+                - (E::Fr::one() - power(gamma * omega / z, 3 * H)) * (E::Fr::one() * z - omega))
+                / ((E::Fr::one() * z - omega) * (E::Fr::one() * z - gamma * omega)),
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(linear_combination!(
+                    E::Fr::zero(),
+                    mu,
+                    range_index!(1, 3 * H, i - (1) + 1),
+                    -to_field::<E::Fr>(1),
+                    power_vector_index!(gamma, 3 * H, i - (1) + 1)
+                )),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            z * (-E::Fr::one() + power(omega / z, 3 * H)) / (E::Fr::one() * z - omega),
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(linear_combination!(
+                    E::Fr::zero(),
+                    -to_field::<E::Fr>(1),
+                    range_index!(1, 3 * H, i - (1) + 1)
+                )),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            alpha
+                * z
+                * (nu * (E::Fr::one() - power(omega / z, K)) * (E::Fr::one() * z - gamma * omega)
+                    - (E::Fr::one() - power(gamma * omega / z, K)) * (E::Fr::one() * z - omega))
+                / ((E::Fr::one() * z - omega) * (E::Fr::one() * z - gamma * omega)),
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(linear_combination!(
+                    E::Fr::zero(),
+                    alpha * nu,
+                    range_index!(1, K, i - (1) + 1),
+                    -alpha,
+                    power_vector_index!(gamma, K, i - (1) + 1)
+                )),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            alpha * z * (-E::Fr::one() + power(omega / z, K)) / (E::Fr::one() * z - omega),
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(linear_combination!(
+                    E::Fr::zero(),
+                    -alpha,
+                    range_index!(1, K, i - (1) + 1)
+                )),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            power(alpha, 2) * y,
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(
+                    E::Fr::zero(),
+                    power(alpha, 2),
+                    vector_index!(h_vec, (i as i64) - (1) as i64 + 1)
+                ),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            -power(alpha, 2)
+                * z
+                * power(omega / z, K)
+                * (E::Fr::one() - power(omega / z, S_a + S_b + S_c))
+                / (E::Fr::one() * z - omega),
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(linear_combination!(
+                    E::Fr::zero(),
+                    -power(alpha, 2),
+                    range_index!(1, S_a + S_b + S_c, i - (K + 1) + 1)
+                )),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            power(alpha, 3) * y_1 * power(omega / z, -H + K + S_a + S_b + S_c),
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(
+                    E::Fr::zero(),
+                    power(alpha, 3),
+                    vector_index!(
+                        u_vec_1,
+                        (i as i64) - (-H + K + S_a + S_b + S_c + 1) as i64 + 1
+                    )
+                ),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            -power(alpha, 3)
+                * z
+                * power(omega / z, -H + K + S_a + S_b + S_c)
+                * (E::Fr::one() - power(omega / z, H))
+                / (E::Fr::one() * z - omega),
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(linear_combination!(
+                    E::Fr::zero(),
+                    -power(alpha, 3),
+                    range_index!(1, H, i - (-H + K + S_a + S_b + S_c + 1) + 1)
+                )),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            power(alpha, 4)
+                * z
+                * power(omega / z, 3 * H)
+                * (E::Fr::one() - power(omega / z, ell + 1))
+                / (E::Fr::one() * z - omega),
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(linear_combination!(
+                    E::Fr::zero(),
+                    power(alpha, 4),
+                    range_index!(1, ell + 1, i - (3 * H + 1) + 1)
+                )),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            power(alpha, 5) * y_1 * power(omega / z, -3 * H + S_a + S_b + S_c),
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(
+                    E::Fr::zero(),
+                    power(alpha, 5),
+                    vector_index!(
+                        u_vec_1,
+                        (i as i64) - (-3 * H + S_a + S_b + S_c + 1) as i64 + 1
+                    )
+                ),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            -power(alpha, 5) * beta * y * power(omega / z, S_a + S_b + S_c),
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(
+                    E::Fr::zero(),
+                    -power(alpha, 5) * beta,
+                    vector_index!(h_vec, (i as i64) - (S_a + S_b + S_c + 1) as i64 + 1)
+                ),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            -power(alpha, 5) * beta * y,
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(
+                    E::Fr::zero(),
+                    -power(alpha, 5) * beta,
+                    vector_index!(h_vec, (i as i64) - (1) as i64 + 1)
+                ),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            power(alpha, 5) * y_2 * (omega - z) / z,
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(
+                    E::Fr::zero(),
+                    -power(alpha, 5),
+                    vector_index!(r_vec_tilde, (i as i64) - (1) as i64 + 1),
+                    power(alpha, 5),
+                    vector_index!(r_vec_tilde, (i as i64) - (2) as i64 + 1)
+                ),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            power(alpha, 6) * y_2,
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(
+                    E::Fr::zero(),
+                    power(alpha, 6),
+                    vector_index!(r_vec_tilde, (i as i64) - (1) as i64 + 1)
+                ),
+                K + S_a + S_b + S_c + 1
+            )
+        );
+        assert_eq!(
+            -z * power(omega / z, K + S_a + S_b + S_c)
+                * (E::Fr::one() - power(omega / z, S_a + S_b + S_c + 1))
+                / (E::Fr::one() * z - omega),
+            eval_vector_expression!(
+                omega / z,
+                i,
+                linear_combination!(linear_combination!(
+                    E::Fr::zero(),
+                    -to_field::<E::Fr>(1),
+                    range_index!(1, S_a + S_b + S_c + 1, i - (K + S_a + S_b + S_c + 1) + 1)
+                )),
+                K + S_a + S_b + S_c + 1
+            )
+        );
         let c = sum!(
             z * (mu
                 * (E::Fr::one() - power(omega / z, 3 * H))
