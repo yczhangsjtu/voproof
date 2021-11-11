@@ -72,7 +72,7 @@ class _NamedBasic(object):
 
   # Dump rust name
   def dumpr(self):
-    ret = [self.name]
+    ret = [force_lowercase(self.name)]
     if self._type is not None:
       ret.append(self._type)
     if self.modifier is not None:

@@ -1,6 +1,6 @@
 from sympy import Symbol, latex, sympify, Integer, Expr,\
                   simplify, Max, Add, Mul, Pow, srepr
-from rust import rust_code, rust_code_to_field
+from rust import rust_code, rust_code_to_field, force_lowercase
 
 
 sym_i = Symbol("i")

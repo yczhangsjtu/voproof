@@ -83,18 +83,18 @@ pub fn power<F: Field>(a: F, e: i64) -> F {
 /// representation of the matrix, where the row indices
 /// and column indices start from 0
 pub fn sparse_mvp<F: Field>(
-    H: i64,
-    K: i64,
+    h: i64,
+    k: i64,
     rows: &Vec<u64>,
     cols: &Vec<u64>,
     vals: &Vec<F>,
     right: &Vec<F>,
 ) -> Result<Vec<F>, Error> {
-    assert!(H > 0);
-    assert!(K > 0);
-    assert_eq!(right.len(), K as usize);
+    assert!(h > 0);
+    assert!(k > 0);
+    assert_eq!(right.len(), k as usize);
 
-    let mut res = vec![F::zero(); H as usize];
+    let mut res = vec![F::zero(); h as usize];
     for ((r, c), v) in rows.iter().zip(cols).zip(vals) {
         res[r.clone() as usize] += right[c.clone() as usize] * v;
     }

@@ -1,26 +1,11 @@
-use ark_poly::{
-    univariate::DensePolynomial as DensePoly,
-    UVPolynomial, Polynomial
-};
-use ark_bls12_377::Bls12_377;
-use ark_bls12_381::Bls12_381;
-use ark_bls12_381::Fr as F;
 use ark_ec::PairingEngine;
-use ark_poly_commit::{
-    // kzg10::{KZG10, UniversalParams, Powers, VerifierKey, Randomness},
-    PCRandomness
-};
-use ark_std::{Zero, One, test_rng, UniformRand};
 use ark_ff::fields::PrimeField;
 use ark_relations::{lc, r1cs::{
   ConstraintSynthesizer, ConstraintSystemRef,
   SynthesisError, ConstraintSystem as ArkR1CS, Variable}};
-#[macro_use]
 use voproof::*;
 use voproof::error::Error;
 use voproof::tools::{to_int, to_field};
-use voproof::{accumulate_vector, define_vec, delta,
-              expression_vector, multi_delta, linear_combination};
 use voproof::cs::{ConstraintSystem, r1cs::{R1CS, R1CSInstance, R1CSWitness}};
 use voproof::snarks::{SNARK, voproof_r1cs::*};
 use voproof::kzg::UniversalParams;
@@ -108,14 +93,14 @@ fn run_r1cs_example<E: PairingEngine>() -> Result<(), Error> {
   let universal_params : UniversalParams::<E> = VOProofR1CS::setup(max_degree).unwrap();
   println!("Universal parameter size: {}", universal_params.powers_of_g.len());
   let (pk, vk) = VOProofR1CS::index(&universal_params, &r1cs).unwrap();
-  println!("Prover key matrix size: {}", pk.M_mat.0.len());
+  println!("Prover key matrix size: {}", pk.cap_m_mat.0.len());
   println!("Prover key u size: {}", pk.u_vec.len());
   println!("Prover key v size: {}", pk.v_vec.len());
   println!("Prover key w size: {}", pk.w_vec.len());
 
-  println!("M A row indices: {:?}", pk.M_mat.0);
-  println!("M A col indices: {:?}", pk.M_mat.1);
-  println!("M A vals: {:?}", to_int!(pk.M_mat.2));
+  println!("M A row indices: {:?}", pk.cap_m_mat.0);
+  println!("M A col indices: {:?}", pk.cap_m_mat.1);
+  println!("M A vals: {:?}", to_int!(pk.cap_m_mat.2));
   let vksize = vk.size.clone();
   println!("H: {}", vksize.nrows);
   println!("K: {}", vksize.ncols);

@@ -6,7 +6,7 @@ pub struct R1CSProverKey<E: PairingEngine> {
     pub verifier_key: R1CSVerifierKey<E>,
     pub powers: Vec<E::G1Affine>,
     pub max_degree: u64,
-    pub M_mat: (Vec<u64>, Vec<u64>, Vec<E::Fr>),
+    pub cap_m_mat: (Vec<u64>, Vec<u64>, Vec<E::Fr>),
     pub u_vec: Vec<E::Fr>,
     pub w_vec: Vec<E::Fr>,
     pub v_vec: Vec<E::Fr>,
@@ -104,7 +104,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let cap_s_c = size.cdensity as i64;
         let ell = size.input_size as i64;
         let gamma = generator_of!(E);
-        let M_mat = (
+        let cap_m_mat = (
             cs.arows
                 .iter()
                 .map(|a| *a)
@@ -124,9 +124,9 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 .map(|a| *a)
                 .collect::<Vec<E::Fr>>(),
         );
-        let u_vec = int_array_to_power_vector!(M_mat.0, gamma);
-        let w_vec = int_array_to_power_vector!(M_mat.1, gamma);
-        let v_vec = M_mat.2.to_vec();
+        let u_vec = int_array_to_power_vector!(cap_m_mat.0, gamma);
+        let w_vec = int_array_to_power_vector!(cap_m_mat.1, gamma);
+        let v_vec = cap_m_mat.2.to_vec();
         let y_vec = u_vec
             .iter()
             .zip(w_vec.iter())
@@ -181,7 +181,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 verifier_key: verifier_key.clone(),
                 powers: powers_of_g,
                 max_degree: max_degree as u64,
-                M_mat: M_mat,
+                cap_m_mat: cap_m_mat,
                 u_vec: u_vec,
                 w_vec: w_vec,
                 v_vec: v_vec,
@@ -212,9 +212,9 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let u_vec_1 = sparse_mvp(
             3 * cap_h,
             cap_k,
-            &pk.M_mat.0,
-            &pk.M_mat.1,
-            &pk.M_mat.2,
+            &pk.cap_m_mat.0,
+            &pk.cap_m_mat.1,
+            &pk.cap_m_mat.2,
             &vector_concat!(vec![E::Fr::one()], x_vec, w_vec),
         )
         .unwrap();
@@ -247,9 +247,9 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let c_vec = sparse_mvp(
             cap_k,
             3 * cap_h,
-            &pk.M_mat.1,
-            &pk.M_mat.0,
-            &pk.M_mat.2,
+            &pk.cap_m_mat.1,
+            &pk.cap_m_mat.0,
+            &pk.cap_m_mat.2,
             &r_vec,
         )
         .unwrap();

@@ -374,7 +374,7 @@ where
   }
   */
 
-  pub(crate) fn check_degrees_and_bounds<'a>(
+  pub fn check_degrees_and_bounds<'a>(
     supported_degree: usize,
     max_degree: usize,
     enforced_degree_bounds: Option<&[usize]>,
