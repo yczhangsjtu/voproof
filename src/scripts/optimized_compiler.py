@@ -787,7 +787,10 @@ class PIOPFromVOProtocol(object):
     t = get_named_vector("t")
     max_shift = voexec.simplify_max(Max(*shifts))
     piopexec.verifier_send_randomness(alpha)
-    piopexec.prover_computes_rust(check_individual_hadmard)
+    
+    if self.debug_mode:
+      piopexec.prover_computes_rust(check_individual_hadmard)
+
     tcomputes = LaTeXBuilder().start_math().append(t).assign().end_math() \
                               .space("the sum of:").eol()
     expression_vector = RustMacro("expression_vector", sym_i)

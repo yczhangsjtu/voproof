@@ -205,7 +205,7 @@ def analyzePOVProverEfficient():
   execargs = (x, get_named_vector("a"), get_named_vector("b"), get_named_vector("c"))
   analyzeProtocol(POVProverEfficient(), ppargs, execargs, hints, size_map)
 
-debug_mode = True
+debug_mode = False
 
 def debug(info=""):
   if debug_mode:
