@@ -1019,28 +1019,31 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             / (E::Fr::one() * z - omega);
         let c_9 = -power(z, -cap_d);
         let c_10 = -z;
-        let mut g_vec = expression_vector!(
-            i,
-            sum!(
-                (c) * (vector_index!(s_vec, i)),
-                (c_2) * (vector_index!(h_vec, i)),
-                (c_3) * (vector_index!(pk.w_vec, i)),
-                (c_4) * (vector_index!(pk.u_vec, i)),
-                (c_5) * (vector_index!(pk.y_vec, i)),
-                (c_6) * (vector_index!(u_vec_1, i)),
-                (c_7) * (vector_index!(pk.v_vec, i)),
-                (c_8) * (vector_index!(t_vec_1, i)),
-                (c_9)
-                    * (vector_index!(
-                        h_vec_2,
-                        -cap_d + cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + i
-                    )),
-                (c_10) * (vector_index!(h_vec_3, i))
-            ),
-            cap_d
+        define_vec_mut!(
+            g_vec,
+            expression_vector!(
+                i,
+                sum!(
+                    (c) * (vector_index!(s_vec, i)),
+                    (c_2) * (vector_index!(h_vec, i)),
+                    (c_3) * (vector_index!(pk.w_vec, i)),
+                    (c_4) * (vector_index!(pk.u_vec, i)),
+                    (c_5) * (vector_index!(pk.y_vec, i)),
+                    (c_6) * (vector_index!(u_vec_1, i)),
+                    (c_7) * (vector_index!(pk.v_vec, i)),
+                    (c_8) * (vector_index!(t_vec_1, i)),
+                    (c_9)
+                        * (vector_index!(
+                            h_vec_2,
+                            -cap_d + cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + i
+                        )),
+                    (c_10) * (vector_index!(h_vec_3, i))
+                ),
+                cap_d
+            )
         );
         g_vec[0] += c_1;
-        let g_poly = poly_from_vec!(g_vec);
+        define!(g_poly, poly_from_vec!(g_vec));
         let cm_g = Commitment::<E>(
             sum!(
                 (cm_s_vec.0).mul(c.into_repr()),
@@ -1053,7 +1056,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 (cm_t_vec_1.0).mul(c_8.into_repr()),
                 (cm_h_vec_2.0).mul(c_9.into_repr()),
                 (cm_h_vec_3.0).mul(c_10.into_repr()),
-                commit_scalar!(vk, &c_1)
+                commit_scalar!(vk, c_1)
             )
             .into_affine(),
         );
@@ -1332,7 +1335,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 (cm_t_vec_1.0).mul(c_8.into_repr()),
                 (cm_h_vec_2.0).mul(c_9.into_repr()),
                 (cm_h_vec_3.0).mul(c_10.into_repr()),
-                commit_scalar!(vk, &c_1)
+                commit_scalar!(vk, c_1)
             )
             .into_affine(),
         );

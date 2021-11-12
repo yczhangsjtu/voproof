@@ -489,26 +489,26 @@ class CombinePolynomial(object):
         poly_sum_items.append("%s" % one)
       if has_commit:
         commit_sum_items.append("%s\\cdot \\mathsf{com}(1)" % one)
-        commit_sum_rust_items.append(RustMacro("commit_scalar", "vk", "&%s" % rust_const))
+        commit_sum_rust_items.append(rust_commit_scalar(rust_const))
 
     if has_oracle:
       latex_items.append(Math("[%s]" % self.poly.dumps()).assign("+".join(oracle_sum_items)))
+
     if has_poly:
       latex_items.append(Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
-      if rust_const is None:
-        rust_items.append(RustBuilder().letmut(self.poly.to_vec()).assign(
-          rust_expression_vector_i(
-            rust_sum(poly_sum_rust_items),
-            self.length
-          )).end()
-          .let(self.poly.to_vec()).assign(rust_poly_from_vec(self.poly.to_vec())).end())
-      else:
-        rust_items.append(RustBuilder().letmut(self.poly.to_vec()).assign(
-            rust_expression_vector_i(
-              rust_sum(poly_sum_rust_items),
-              self.length)
-          ).end().append(self.poly.to_vec()).append("[0]").plus_assign(rust_const).end()
-          .let(self.poly).assign(rust_poly_from_vec(self.poly.to_vec())).end())
+      rust_builder = rust_builder_define_vec_mut(self.poly.to_vec(),
+        rust_expression_vector_i(
+          rust_sum(poly_sum_rust_items),
+          self.length
+        )).end()
+      if rust_const is not None:
+        rust_builder.append(self.poly.to_vec()) \
+                    .append("[0]").plus_assign(rust_const).end()
+
+      rust_items.append(rust_builder.append(rust_define(
+        self.poly, rust_poly_from_vec(self.poly.to_vec())
+      )).end())
+
     if has_commit:
       latex_items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
       rust_items.append(RustBuilder().let(self.poly.to_comm())

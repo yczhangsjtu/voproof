@@ -267,6 +267,20 @@ macro_rules! zero_pad_and_concat {
 }
 
 #[macro_export]
+macro_rules! define {
+    ( $v: ident, $expr: expr ) => {
+        let $v = $expr;
+    };
+}
+
+#[macro_export]
+macro_rules! define_mut {
+    ( $v: ident, $expr: expr ) => {
+        let mut $v = $expr;
+    };
+}
+
+#[macro_export]
 macro_rules! define_vec {
     ( $v: ident, $expr: expr ) => {
         let $v: Vec<E::Fr> = $expr;

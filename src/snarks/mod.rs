@@ -47,7 +47,7 @@ pub fn scalar_to_commitment<E: PairingEngine>(
 
 macro_rules! commit_scalar {
   ($vk:expr, $c:expr) => {
-    scalar_to_commitment::<E>(&$vk.kzg_vk.g, $c).unwrap().0.into_projective()
+    scalar_to_commitment::<E>(&$vk.kzg_vk.g, &$c).unwrap().0.into_projective()
   }
 }
 

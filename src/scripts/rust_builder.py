@@ -353,6 +353,22 @@ def rust_builder_poly_from_vec(v):
   return rust_builder_macro("poly_from_vec", v)
 
 
+def rust_define(v, expr):
+  return RustMacro("define", v, expr)
+
+
+def rust_builder_define(v, expr):
+  return rust_builder_macro("define", v, expr)
+
+
+def rust_define_mut(v, expr):
+  return RustMacro("define_mut", v, expr)
+
+
+def rust_builder_define_mut(v, expr):
+  return rust_builder_macro("define_mut", v, expr)
+
+
 def rust_define_vec(v, expr):
   return RustMacro("define_vec", v, expr)
 
@@ -415,3 +431,7 @@ def rust_add_expression_vector_to_vector_i(v, expr):
 
 def rust_builder_add_expression_vector_to_vector_i(v, expr):
   return rust_builder_macro("add_expression_vector_to_vector", v, sym_i, expr)
+
+
+def rust_commit_scalar(c):
+  return RustMacro("commit_scalar", "vk", c)
