@@ -41,7 +41,7 @@ def dump_performance(piopexec, zkSNARK, name):
   n_field_elements = len([p for p in zkSNARK.proof if latex(p).startswith("y")])
   print("%s proof size: %d G + %d F" %
         (name, len(zkSNARK.proof) - n_field_elements, n_field_elements))
-  c_g_exps = sum([len(poly_combine.coeff_latex_builders)
+  c_g_exps = sum([len(poly_combine.coeff_builders)
                  for poly_combine in piopexec.poly_combines])
   v_g_exps = n_evals + 2 * n_distinct - 2 + c_g_exps
   print("%s verifier G-exps: %d" % (name, v_g_exps))

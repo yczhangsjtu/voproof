@@ -428,35 +428,45 @@ class EvalQuery(object):
            % (self.poly.dumps(), tex(self.point), tex(self.name))
 
 
-class CombinePolynomial(object):
-  def __init__(self, poly, coeff_latex_builders, length):
+class CombinationCoeffBuilder(object):
+  def __init__(self, poly, coeff, latex_builder, rust_builder, shifts=0):
+    """The coeff here must be symbol"""
     self.poly = poly
-    self.coeff_latex_builders = coeff_latex_builders
+    self.coeff = coeff
+    self.latex_builder = latex_builder
+    self.rust_builder = rust_builder
+    self.shifts = shifts
+
+class CombinePolynomial(object):
+  def __init__(self, poly, coeff_builders, length):
+    self.poly = poly
+    self.coeff_builders = coeff_builders
     self.length = length
 
   def dump_items(self, has_commit=False, has_poly=False, has_oracle=True):
     oralce_sum_items, poly_sum_items, commit_sum_items, \
-        items, rust_items, poly_sum_rust_items, commit_sum_rust_items, \
+        latex_items, rust_items, poly_sum_rust_items, commit_sum_rust_items, \
         one, rust_const = \
         [], [], [], [], [], [], [], None, None
-    for key, poly_coeff_lb in self.coeff_latex_builders.items():
-      # The coeff here must be Symbol
-      poly, coeff, latex_builder, rust_builder, shifts = poly_coeff_lb
-      items.append(latex_builder)
-      rust_items.append(rust_builder)
+    for key, coeff_builder in self.coeff_builders.items():
+      latex_items.append(coeff_builder.latex_builder)
+      rust_items.append(coeff_builder.rust_builder)
       if key == "one":
-        one = latex(coeff)
-        rust_const = rust(coeff)
+        one = latex(coeff_builder.coeff)
+        rust_const = rust(coeff_builder.coeff)
       else:
         if has_oracle:
-          oracle_sum_items.append("%s\\cdot [%s]" % (latex(coeff), poly.dumps()))
+          oracle_sum_items.append(
+              "%s\\cdot [%s]" % (latex(coeff_builder.coeff), coeff_builder.poly.dumps())
+          )
         if has_commit:
-          commit_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.to_comm()))
-          commit_sum_rust_items.append("(%s.0).mul(%s.into_repr())" % (rust_vk(poly.to_comm()), rust(coeff)))
+          commit_sum_items.append(
+              "%s\\cdot %s" % (latex(coeff_builder.coeff), coeff_builder.poly.to_comm()))
+          commit_sum_rust_items.append("(%s.0).mul(%s.into_repr())" % (rust_vk(coeff_builder.poly.to_comm()), rust(coeff_builder.coeff)))
         if has_poly:
-          poly_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.dumps()))
+          poly_sum_items.append("%s\\cdot %s" % (latex(coeff_builder.coeff), coeff_builder.poly.dumps()))
           poly_sum_rust_items.append(
-              "(%s) * (%s)" % (rust(coeff), poly.dumpr_at_index(sym_i - shifts))
+              "(%s) * (%s)" % (rust(coeff_builder.coeff), coeff_builder.poly.dumpr_at_index(sym_i - coeff_builder.shifts))
           )
 
     if one is not None:
@@ -474,9 +484,9 @@ class CombinePolynomial(object):
                                      .attribute("0").invoke_method("into_projective"))
 
     if has_oracle:
-      items.append(Math("[%s]" % self.poly.dumps()).assign("+".join(oracle_sum_items)))
+      latex_items.append(Math("[%s]" % self.poly.dumps()).assign("+".join(oracle_sum_items)))
     if has_poly:
-      items.append(Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
+      latex_items.append(Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
       if rust_const is None:
         rust_items.append(RustBuilder().letmut(self.poly.to_vec()).assign(
           rust_expression_vector_i(
@@ -492,7 +502,7 @@ class CombinePolynomial(object):
           ).end().append(self.poly.to_vec()).append("[0]").plus_assign(rust_const).end()
           .let(self.poly).assign(rust_poly_from_vec(self.poly.to_vec())).end())
     if has_commit:
-      items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
+      latex_items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
       rust_items.append(RustBuilder().let(self.poly.to_comm())
                        .assign_func("Commitment::<E>")
                        .append_to_last(
@@ -500,7 +510,7 @@ class CombinePolynomial(object):
                          .invoke_method("into_affine")
                        ).end())
 
-    return items, rust_items
+    return latex_items, rust_items
 
 
 class PIOPExecution(PublicCoinProtocolExecution):
@@ -1138,26 +1148,26 @@ class PIOPFromVOProtocol(object):
           c = Symbol(get_name("c"))
           # Temporarily use list, because the format depends on whether
           # this list size is > 1
-          coeff_builders[_key] = (poly, c, [value], [rust_value], 0)
+          coeff_builders[_key] = CombinationCoeffBuilder(poly, c, [value], [rust_value])
         else:
           # Get the existing coefficient for this named polynomial
-          _poly, c, items, rust_items, shifts = coeff_builders[_key]
-          if _poly != poly:
-            raise Exception("%s != %s" % (_poly.dumps(), poly.dumps()))
-          items.append(value)
-          rust_items.append(rust_value)
+          coeff_builder = coeff_builders[_key]
+          if coeff_builder.poly != poly:
+            raise Exception("%s != %s" % (coeff_builder.poly.dumps(), poly.dumps()))
+          coeff_builder.latex_builder.append(value)
+          coeff_builder.rust_builder.append(rust_value)
 
     # 2. The part contributed by h1(X) and h2(X)
     # h1(X) is committed aligned to the right boundary of the universal parameters
     # so we should additionally multiply a power of z to it when computing g(X)
     c = Symbol(get_name("c"))
-    coeff_builders[h1x.key()] = (
+    coeff_builders[h1x.key()] = CombinationCoeffBuilder(
         h1x, c,
         [- z ** (-self.degree_bound)],
         [- z ** (-self.degree_bound)],
         self.degree_bound - (h_inverse_degree-1))
     c = Symbol(get_name("c"))
-    coeff_builders[h2x.key()] = (h2x, c, [- z], [- z], 0)
+    coeff_builders[h2x.key()] = CombinationCoeffBuilder(h2x, c, [- z], [- z], 0)
 
     if self.debug_mode:
       piopexec.prover_computes_rust(rust_builder_add_expression_vector_to_vector_i(
@@ -1186,27 +1196,23 @@ class PIOPFromVOProtocol(object):
       ).end())
 
     # Transform the lists into latex and rust builders
-    _coeff_builders = {}
-    for key, poly_coeff_lb in coeff_builders.items():
-      poly, coeff, coeff_list, rust_coeff_list, shifts = poly_coeff_lb
-      if len(coeff_list) > 1:
-        latex_builder = LaTeXBuilder().start_math().append(coeff).assign() \
+    for key, coeff_builder in coeff_builders.items():
+      if len(coeff_builder.latex_builder) > 1:
+        latex_builder = LaTeXBuilder().start_math().append(coeff_builder.coeff).assign() \
                                       .end_math().space("the sum of:")
         sum_macro = rust_sum()
-        rust_builder = RustBuilder().let(coeff).assign(sum_macro).end()
+        rust_builder = RustBuilder().let(coeff_builder.coeff).assign(sum_macro).end()
         items = Itemize()
-        for item in coeff_list:
+        for item in coeff_builder.latex_builder:
           items.append("$%s$" % item)
-        for item in rust_coeff_list:
+        for item in coeff_builder.rust_builder:
           sum_macro.append(item)
         latex_builder.append(items)
       else:
-        latex_builder = Math(coeff).assign(coeff_list[0])
-        rust_builder = RustBuilder().let(coeff).assign(rust_coeff_list[0]).end()
-
-      _coeff_builders[key] = (poly, coeff, latex_builder, rust_builder, shifts)
-
-    coeff_builders = _coeff_builders
+        latex_builder = Math(coeff_builder.coeff).assign(coeff_builder.latex_builder[0])
+        rust_builder = RustBuilder().let(coeff_builder.coeff).assign(coeff_builder.rust_builder[0]).end()
+      coeff_builder.latex_builder = latex_builder
+      coeff_builder.rust_builder = rust_builder
 
     piopexec.combine_polynomial(gx, coeff_builders, self.degree_bound)
 
