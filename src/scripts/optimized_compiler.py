@@ -444,10 +444,9 @@ class CombinePolynomial(object):
     self.length = length
 
   def dump_items(self, has_commit=False, has_poly=False, has_oracle=True):
-    oralce_sum_items, poly_sum_items, commit_sum_items, \
-        latex_items, rust_items, poly_sum_rust_items, commit_sum_rust_items, \
-        one, rust_const = \
-        [], [], [], [], [], [], [], None, None
+    oracle_sum_items, poly_sum_items, commit_sum_items = [], [], []
+    latex_items, rust_items, poly_sum_rust_items, commit_sum_rust_items = [], [], [], []
+    one, rust_const = None, None
     for key, coeff_builder in self.coeff_builders.items():
       latex_items.append(coeff_builder.latex_builder)
       rust_items.append(coeff_builder.rust_builder)
@@ -457,17 +456,31 @@ class CombinePolynomial(object):
       else:
         if has_oracle:
           oracle_sum_items.append(
-              "%s\\cdot [%s]" % (latex(coeff_builder.coeff), coeff_builder.poly.dumps())
+            "%s\\cdot [%s]" % (
+              latex(coeff_builder.coeff),
+              coeff_builder.poly.dumps()
+            )
           )
         if has_commit:
           commit_sum_items.append(
-              "%s\\cdot %s" % (latex(coeff_builder.coeff), coeff_builder.poly.to_comm()))
-          commit_sum_rust_items.append("(%s.0).mul(%s.into_repr())" % (rust_vk(coeff_builder.poly.to_comm()), rust(coeff_builder.coeff)))
-        if has_poly:
-          poly_sum_items.append("%s\\cdot %s" % (latex(coeff_builder.coeff), coeff_builder.poly.dumps()))
-          poly_sum_rust_items.append(
-              "(%s) * (%s)" % (rust(coeff_builder.coeff), coeff_builder.poly.dumpr_at_index(sym_i - coeff_builder.shifts))
+            "%s\\cdot %s" % (
+              latex(coeff_builder.coeff),
+              coeff_builder.poly.to_comm()
+            )
           )
+          commit_sum_rust_items.append("(%s.0).mul(%s.into_repr())" % (
+            rust_vk(coeff_builder.poly.to_comm()),
+            rust(coeff_builder.coeff)
+          ))
+        if has_poly:
+          poly_sum_items.append("%s\\cdot %s" % (
+            latex(coeff_builder.coeff),
+            coeff_builder.poly.dumps()
+          ))
+          poly_sum_rust_items.append("(%s) * (%s)" % (
+            rust(coeff_builder.coeff),
+            coeff_builder.poly.dumpr_at_index(sym_i - coeff_builder.shifts)
+          ))
 
     if one is not None:
       if has_oracle:
@@ -476,12 +489,7 @@ class CombinePolynomial(object):
         poly_sum_items.append("%s" % one)
       if has_commit:
         commit_sum_items.append("%s\\cdot \\mathsf{com}(1)" % one)
-        commit_sum_rust_items.append(RustBuilder()
-                                     .func("scalar_to_commitment::<E>")
-                                     .append_to_last(
-                                     ["&vk.kzg_vk.g", "&%s" % rust(rust_const)])
-                                     .invoke_method("unwrap")
-                                     .attribute("0").invoke_method("into_projective"))
+        commit_sum_rust_items.append(RustMacro("commit_scalar", "vk", "&%s" % rust_const))
 
     if has_oracle:
       latex_items.append(Math("[%s]" % self.poly.dumps()).assign("+".join(oracle_sum_items)))

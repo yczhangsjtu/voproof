@@ -1,6 +1,3 @@
-pub mod voproof_hpr;
-pub mod voproof_pov;
-pub mod voproof_r1cs;
 // mod template;
 
 use crate::cs::{
@@ -48,6 +45,12 @@ pub fn scalar_to_commitment<E: PairingEngine>(
     KZG10::<E, DensePoly<E::Fr>>::commit_single(g, c)
 }
 
+macro_rules! commit_scalar {
+  ($vk:expr, $c:expr) => {
+    scalar_to_commitment::<E>(&$vk.kzg_vk.g, $c).unwrap().0.into_projective()
+  }
+}
+
 pub trait SNARK<E: PairingEngine> {
     type Size: CSSize;
     type CS: ConstraintSystem<E::Fr, Self::Size>;
@@ -62,3 +65,7 @@ pub trait SNARK<E: PairingEngine> {
     fn prove(pk: &Self::PK, x: &Self::Ins, w: &Self::Wit) -> Result<Self::Pf, Error>;
     fn verify(vk: &Self::VK, x: &Self::Ins, proof: &Self::Pf) -> Result<(), Error>;
 }
+
+pub mod voproof_hpr;
+pub mod voproof_pov;
+pub mod voproof_r1cs;

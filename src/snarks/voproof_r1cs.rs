@@ -1053,10 +1053,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 (cm_t_vec_1.0).mul(c_8.into_repr()),
                 (cm_h_vec_2.0).mul(c_9.into_repr()),
                 (cm_h_vec_3.0).mul(c_10.into_repr()),
-                scalar_to_commitment::<E>(&vk.kzg_vk.g, &c_1)
-                    .unwrap()
-                    .0
-                    .into_projective()
+                commit_scalar!(vk, &c_1)
             )
             .into_affine(),
         );
@@ -1335,10 +1332,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 (cm_t_vec_1.0).mul(c_8.into_repr()),
                 (cm_h_vec_2.0).mul(c_9.into_repr()),
                 (cm_h_vec_3.0).mul(c_10.into_repr()),
-                scalar_to_commitment::<E>(&vk.kzg_vk.g, &c_1)
-                    .unwrap()
-                    .0
-                    .into_projective()
+                commit_scalar!(vk, &c_1)
             )
             .into_affine(),
         );
