@@ -1331,6 +1331,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
                       .assign_func("vector_to_commitment::<E>")
                       .append_to_last("&powers_of_g")
                       .append_to_last("&%s" % rust(poly.vector))
+                      .append_to_last("(%s) as u64" % rust(degree))
                       .invoke_method("unwrap").end())
       self.preprocess_output_vk(poly.to_comm())
       transcript.append(poly.to_comm())
@@ -1378,6 +1379,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
             commit_rust_computation.assign_func("vector_to_commitment::<E>") \
               .append_to_last("&pk.powers") \
               .append_to_last("&%s" % rust(poly.vector)) \
+              .append_to_last("(%s) as u64" % rust(degree)) \
               .invoke_method("unwrap").end()
           else:
             raise Exception("Unrecognized polynomial type: %s" % type(poly))
@@ -1412,6 +1414,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           RustBuilder().func("vector_to_commitment::<E>")
           .append_to_last("&pk.powers")
           .append_to_last("&%s" % rust(poly_combine.poly.to_vec()))
+          .append_to_last("(%s) as u64" % rust(poly_combine.length))
           .invoke_method("unwrap")
         ).end())
 
@@ -1489,8 +1492,8 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     open_computation_rust = RustBuilder()
     open_computation_rust.let("fs").assign(rust_vec(fs)).end()
     open_computation_rust.let("gs").assign(rust_vec(gs)).end()
-    open_computation_rust.let("zz").assign(open_points[1]).end()
-    open_computation_rust.let("z").assign(open_points[0]).end()
+    open_computation_rust.let("z1").assign(open_points[0]).end()
+    open_computation_rust.let("z2").assign(open_points[1]).end()
 
     open_computation_rust.let("rand_xi").assign().func("hash_to_field::<E::Fr>") \
       .append_to_last(RustBuilder().func("to_bytes!") \
@@ -1519,8 +1522,8 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       .append_to_last(RustBuilder().func("to_bytes!") \
         .append_to_last([rust_vk(x) for x in transcript])
         .invoke_method("unwrap")).end()
-    verify_computation_rust.let("zz").assign(open_points[1]).end()
-    verify_computation_rust.let("z").assign(open_points[0]).end()
+    verify_computation_rust.let("z1").assign(open_points[0]).end()
+    verify_computation_rust.let("z2").assign(open_points[1]).end()
     verify_computation_rust.let("f_commitments").assign(rust_vec(fcomms)).end()
     verify_computation_rust.let("g_commitments").assign(rust_vec(gcomms)).end()
     verify_computation_rust.let("f_values").assign(rust_vec(fvals)).end()

@@ -144,10 +144,18 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             y_vec.len(),
             fmt_ff_vector!(y_vec)
         );
-        let cm_u_vec = vector_to_commitment::<E>(&powers_of_g, &u_vec).unwrap();
-        let cm_w_vec = vector_to_commitment::<E>(&powers_of_g, &w_vec).unwrap();
-        let cm_v_vec = vector_to_commitment::<E>(&powers_of_g, &v_vec).unwrap();
-        let cm_y_vec = vector_to_commitment::<E>(&powers_of_g, &y_vec).unwrap();
+        let cm_u_vec =
+            vector_to_commitment::<E>(&powers_of_g, &u_vec, (cap_s_a + cap_s_b + cap_s_c) as u64)
+                .unwrap();
+        let cm_w_vec =
+            vector_to_commitment::<E>(&powers_of_g, &w_vec, (cap_s_a + cap_s_b + cap_s_c) as u64)
+                .unwrap();
+        let cm_v_vec =
+            vector_to_commitment::<E>(&powers_of_g, &v_vec, (cap_s_a + cap_s_b + cap_s_c) as u64)
+                .unwrap();
+        let cm_y_vec =
+            vector_to_commitment::<E>(&powers_of_g, &y_vec, (cap_s_a + cap_s_b + cap_s_c) as u64)
+                .unwrap();
 
         let verifier_key = R1CSVerifierKey::<E> {
             cm_u_vec: cm_u_vec,
@@ -208,7 +216,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         .unwrap();
         let u_vec_1 = vector_concat!(u_vec_1, vec![E::Fr::one()], x_vec, w_vec);
         let u_vec_1 = zero_pad_and_concat!(u_vec_1, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec);
-        let cm_u_vec_1 = vector_to_commitment::<E>(&pk.powers, &u_vec_1).unwrap();
+        let cm_u_vec_1 = vector_to_commitment::<E>(
+            &pk.powers,
+            &u_vec_1,
+            (cap_k + cap_s_a + cap_s_b + cap_s_c + 1) as u64,
+        )
+        .unwrap();
         let u_vec_1_poly = poly_from_vec!(u_vec_1);
         println!(
             "vector u_vec_1 of length {} = \n[{}]",
@@ -247,7 +260,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             .chain(c_vec.iter().map(|a| -*a))
             .collect::<Vec<E::Fr>>();
         let s_vec = zero_pad_and_concat!(s_vec, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec_1);
-        let cm_s_vec = vector_to_commitment::<E>(&pk.powers, &s_vec).unwrap();
+        let cm_s_vec = vector_to_commitment::<E>(
+            &pk.powers,
+            &s_vec,
+            (cap_k + cap_s_a + cap_s_b + cap_s_c + 1) as u64,
+        )
+        .unwrap();
         let s_vec_poly = poly_from_vec!(s_vec);
         println!(
             "vector s_vec of length {} = \n[{}]",
@@ -281,7 +299,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             )
             .collect::<Vec<E::Fr>>();
         let h_vec = zero_pad_and_concat!(h_vec, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec_2);
-        let cm_h_vec = vector_to_commitment::<E>(&pk.powers, &h_vec).unwrap();
+        let cm_h_vec = vector_to_commitment::<E>(
+            &pk.powers,
+            &h_vec,
+            (cap_k + cap_s_a + cap_s_b + cap_s_c + 1) as u64,
+        )
+        .unwrap();
         let h_vec_poly = poly_from_vec!(h_vec);
         println!(
             "vector h_vec of length {} = \n[{}]",
@@ -359,7 +382,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             )
         );
         let r_vec_tilde_poly = poly_from_vec!(r_vec_tilde);
-        let cm_r_vec_tilde = vector_to_commitment::<E>(&pk.powers, &r_vec_tilde).unwrap();
+        let cm_r_vec_tilde = vector_to_commitment::<E>(
+            &pk.powers,
+            &r_vec_tilde,
+            (cap_k + cap_s_a + cap_s_b + cap_s_c + 1) as u64,
+        )
+        .unwrap();
         let alpha = hash_to_field::<E::Fr>(
             to_bytes!(
                 x_vec,
@@ -760,7 +788,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             )
         );
         define_vec!(t_vec_1, vector_concat!(delta_vec_4, t_vec));
-        let cm_t_vec_1 = vector_to_commitment::<E>(&pk.powers, &t_vec_1).unwrap();
+        let cm_t_vec_1 = vector_to_commitment::<E>(
+            &pk.powers,
+            &t_vec_1,
+            (cap_s_a + cap_s_b + cap_s_c + 2) as u64,
+        )
+        .unwrap();
         let omega = hash_to_field::<E::Fr>(
             to_bytes!(
                 x_vec,
@@ -2688,8 +2721,13 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             ),
             E::Fr::zero()
         );
-        let cm_h_vec_2 = vector_to_commitment::<E>(&pk.powers, &h_vec_2).unwrap();
-        let cm_h_vec_3 = vector_to_commitment::<E>(&pk.powers, &h_vec_3).unwrap();
+        let cm_h_vec_2 = vector_to_commitment::<E>(&pk.powers, &h_vec_2, (cap_d) as u64).unwrap();
+        let cm_h_vec_3 = vector_to_commitment::<E>(
+            &pk.powers,
+            &h_vec_3,
+            (cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c) as u64,
+        )
+        .unwrap();
         let z = hash_to_field::<E::Fr>(
             to_bytes!(
                 x_vec,
@@ -3669,7 +3707,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             )
             .into_affine(),
         );
-        assert_eq!(cm_g, vector_to_commitment::<E>(&pk.powers, &g_vec).unwrap());
+        assert_eq!(
+            cm_g,
+            vector_to_commitment::<E>(&pk.powers, &g_vec, (cap_d) as u64).unwrap()
+        );
         let naive_vec_g_poly = poly_from_vec!(naive_vec_g);
         check_poly_eval!(
             naive_vec_g_poly,
@@ -3680,8 +3721,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         check_poly_eval!(g_poly, z, E::Fr::zero(), "g does not evaluate to 0 at z");
         let fs = vec![h_vec_poly, u_vec_1_poly, r_vec_tilde_poly];
         let gs = vec![g_poly];
-        let zz = z;
-        let z = omega / z;
+        let z1 = omega / z;
+        let z2 = z;
         let rand_xi = hash_to_field::<E::Fr>(
             to_bytes!(
                 x_vec,
@@ -3730,7 +3771,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
 
         let (cap_w, cap_w_1) =
-            KZG10::batch_open(&pk.powers, &fs, &gs, &z, &zz, &rand_xi, &rand_xi_2)?;
+            KZG10::batch_open(&pk.powers, &fs, &gs, &z1, &z2, &rand_xi, &rand_xi_2)?;
         Ok(R1CSProof::<E> {
             cm_u_vec_1: cm_u_vec_1,
             cm_s_vec: cm_s_vec,
@@ -4005,8 +4046,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             )
             .unwrap(),
         );
-        let zz = z;
-        let z = omega / z;
+        let z1 = omega / z;
+        let z2 = z;
         let f_commitments = vec![cm_h_vec, cm_u_vec_1, cm_r_vec_tilde];
         let g_commitments = vec![cm_g];
         let f_values = vec![y, y_1, y_2];
@@ -4016,8 +4057,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             &vk.kzg_vk,
             &f_commitments,
             &g_commitments,
-            &z,
-            &zz,
+            &z1,
+            &z2,
             &rand_xi,
             &rand_xi_2,
             &f_values,
