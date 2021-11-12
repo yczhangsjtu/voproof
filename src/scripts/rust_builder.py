@@ -30,6 +30,7 @@ def to_field(expr):
     return rust(RustBuilder().append("-").func("to_field::<E::Fr>").append_to_last(-expr))
   return rust(expr)
 
+
 class Samples(object):
   def __init__(self):
     self.items = []
@@ -264,15 +265,6 @@ class RustBuilder(object):
 def rust_builder_macro(macro_name, *args):
   return RustBuilder().append(RustMacro(macro_name, *args))
 
-class ExpressionVectorRust(object):
-  def __init__(self, expr, length):
-    self.expr = expr
-    self.length = sympify(length)
-
-  def dumpr(self):
-    return "(1..=%s).map(|i| %s).collect::<Vec<E::Fr>>()" \
-           % (rust(self.length), rust(self.expr))
-
 
 class _ArgName(object):
   def __init__(self, argname):
@@ -308,6 +300,7 @@ rust_macro_list = [
     ("sum", None, None, ()),
     ("expression_vector", "expression_vector_i", ("expr", "length"),
       (sym_i, _ArgName("expr"), _ArgName("length"))),
+    ("add_vector_to_vector", None, ("u", "v"), ()),
 ]
 
 

@@ -936,8 +936,8 @@ class PIOPFromVOProtocol(object):
                   omega
                 )).end())
         piopexec.prover_computes_rust(
-            rust_builder_macro("add_vector_to_vector",
-                hcheck_vec, atimesb_vec_naive).end())
+          rust_builder_add_vector_to_vector(hcheck_vec, atimesb_vec_naive)
+        .end())
 
         atimesb_computes_rust, atimesb_vector_combination = \
             atimesb.generate_vector_combination(omega)

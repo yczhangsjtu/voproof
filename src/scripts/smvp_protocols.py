@@ -7,8 +7,7 @@ from vector_symbol import get_named_vector, PowerVector, UnitVector, \
 from latex_builder import Math, AccumulationVector, ExpressionVector, \
                           LaTeXBuilder, ProductAccumulationDivideVector, \
                           add_paren_if_not_atom, tex
-from rust_builder import RustBuilder, Tuple, ExpressionVectorRust, rust,\
-                         RustMacro
+from rust_builder import RustBuilder, Tuple, rust, RustMacro
                          
 
 class SparseMVP(VOProtocol):
