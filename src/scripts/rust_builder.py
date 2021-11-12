@@ -274,18 +274,6 @@ class ExpressionVectorRust(object):
            % (rust(self.length), rust(self.expr))
 
 
-def add_paren_if_add(expr):
-  if isinstance(expr, Add):
-    return "(%s)" % rust(expr)
-  return rust(expr)
-
-
-def add_paren_if_not_atom(vector):
-  if not vector.is_atom():
-    return "(%s)" % rust(vector)
-  return rust(vector)
-
-
 class _ArgName(object):
   def __init__(self, argname):
     self.argname = argname
