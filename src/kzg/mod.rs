@@ -89,7 +89,7 @@ where
 
   /// Outputs a commitment to `polynomial`.
   pub fn commit_with_coefficients(
-    powers: &Vec<E::G1Affine>,
+    powers: &[E::G1Affine],
     coeffs: &Vec<E::Fr>,
   ) -> Result<Commitment<E>, Error> {
     Self::check_degree_is_too_large(coeffs.len() - 1, powers.len())?;

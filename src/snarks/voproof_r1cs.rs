@@ -80,22 +80,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         cs: &R1CS<E::Fr>,
     ) -> Result<(R1CSProverKey<E>, R1CSVerifierKey<E>), Error> {
         let max_degree = Self::get_max_degree(cs.get_size());
-        assert!(pp.powers_of_g.len() > max_degree);
+        let cap_d = pp.powers_of_g.len();
+        assert!(cap_d > max_degree);
 
-        let mut powers_of_g = Vec::<E::G1Affine>::new();
-        // The prover needs both the lowest `max_degree` powers of g,
-        // and the highest `max_degree` powers of g, to make sure that
-        // some polynomials are bounded by particular degree bounds
-        // To save space, store all the needed powers of g in the same
-        // vector, because the lower part and the higher part may share
-        // common powers of g.
-        if pp.powers_of_g.len() >= 2 * (max_degree + 1) {
-            powers_of_g = pp.powers_of_g[..=max_degree].to_vec();
-            powers_of_g
-                .append(&mut pp.powers_of_g[pp.powers_of_g.len() - max_degree - 1..].to_vec());
-        } else {
-            powers_of_g = pp.powers_of_g[..].to_vec();
-        }
+        let powers_of_g = pp.powers_of_g[..].to_vec();
         let size = cs.get_size();
         let cap_h = size.nrows as i64;
         let cap_k = size.ncols as i64;
@@ -174,7 +162,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 prepared_beta_h: pp.prepared_beta_h.clone(),
             },
             size,
-            degree_bound: pp.powers_of_g.len() as u64,
+            degree_bound: cap_d as u64,
         };
         Ok((
             R1CSProverKey::<E> {
@@ -3651,11 +3639,14 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 (c_6) * (vector_index!(u_vec_1, i)),
                 (c_7) * (vector_index!(pk.v_vec, i)),
                 (c_8) * (vector_index!(t_vec_1, i)),
-                (c_9 * power(z, cap_d - cap_k - 2 * cap_s_a - 2 * cap_s_b - 2 * cap_s_c))
-                    * (vector_index!(h_vec_2, i)),
+                (c_9)
+                    * (vector_index!(
+                        h_vec_2,
+                        -cap_d + cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + i
+                    )),
                 (c_10) * (vector_index!(h_vec_3, i))
             ),
-            cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + 1
+            cap_d
         );
         g_vec[0] += c_1;
         let g_poly = poly_from_vec!(g_vec);
@@ -3671,13 +3662,14 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 (cm_t_vec_1.0).mul(c_8.into_repr()),
                 (cm_h_vec_2.0).mul(c_9.into_repr()),
                 (cm_h_vec_3.0).mul(c_10.into_repr()),
-                scalar_to_commitment::<E>(&vk.kzg_vk.g, &c_10)
+                scalar_to_commitment::<E>(&vk.kzg_vk.g, &c_1)
                     .unwrap()
                     .0
                     .into_projective()
             )
             .into_affine(),
         );
+        assert_eq!(cm_g, vector_to_commitment::<E>(&pk.powers, &g_vec).unwrap());
         let naive_vec_g_poly = poly_from_vec!(naive_vec_g);
         check_poly_eval!(
             naive_vec_g_poly,
@@ -3960,7 +3952,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 (cm_t_vec_1.0).mul(c_8.into_repr()),
                 (cm_h_vec_2.0).mul(c_9.into_repr()),
                 (cm_h_vec_3.0).mul(c_10.into_repr()),
-                scalar_to_commitment::<E>(&vk.kzg_vk.g, &c_10)
+                scalar_to_commitment::<E>(&vk.kzg_vk.g, &c_1)
                     .unwrap()
                     .0
                     .into_projective()

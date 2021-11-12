@@ -52,21 +52,10 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
     fn index(pp: &UniversalParams<E>, cs: &__NAME__<E::Fr>)
         -> Result<(__NAME__ProverKey<E>, __NAME__VerifierKey<E>), Error> {
         let max_degree = Self::get_max_degree(cs.get_size());
-        assert!(pp.powers_of_g.len() > max_degree);
+        let cap_d = pp.powers_of_g.len();
+        assert!(cap_d > max_degree);
 
-        let mut powers_of_g = Vec::<E::G1Affine>::new();
-        // The prover needs both the lowest `max_degree` powers of g,
-        // and the highest `max_degree` powers of g, to make sure that
-        // some polynomials are bounded by particular degree bounds
-        // To save space, store all the needed powers of g in the same
-        // vector, because the lower part and the higher part may share
-        // common powers of g.
-        if pp.powers_of_g.len() >= 2 * (max_degree + 1) {
-            powers_of_g = pp.powers_of_g[..=max_degree].to_vec();
-            powers_of_g.append(&mut pp.powers_of_g[pp.powers_of_g.len()-max_degree-1..].to_vec());
-        } else {
-            powers_of_g = pp.powers_of_g[..].to_vec();
-        }
+        let powers_of_g = pp.powers_of_g[..].to_vec();
         let size = cs.get_size();
         /*{index}*/
         let verifier_key = __NAME__VerifierKey::<E> {
@@ -79,7 +68,7 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
                 prepared_beta_h: pp.prepared_beta_h.clone(),
             },
             size,
-            degree_bound: pp.powers_of_g.len() as u64,
+            degree_bound: cap_d as u64,
         };
         Ok((__NAME__ProverKey::<E> {
             verifier_key: verifier_key.clone(),

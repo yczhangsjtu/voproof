@@ -23,11 +23,14 @@ pub trait SNARKProverKey<E: PairingEngine> {}
 pub trait SNARKVerifierKey<E: PairingEngine> {}
 pub trait SNARKProof<E: PairingEngine> {}
 
+// degree_bound can be larger than powers.len() when powers neglect the unused
+// items in the middle.
+// degree_bound always equals the exponent of the largest power + 1
 pub fn vector_to_commitment<E: PairingEngine>(
   powers: &Vec<E::G1Affine>,
   vec: &Vec<E::Fr>,
 ) -> Result<Commitment<E>, Error> {
-  KZG10::<E, DensePoly<E::Fr>>::commit_with_coefficients(powers, vec)
+  KZG10::<E, DensePoly<E::Fr>>::commit_with_coefficients(&powers[..], vec)
 }
 
 pub fn scalar_to_commitment<E: PairingEngine>(

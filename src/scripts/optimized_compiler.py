@@ -456,12 +456,7 @@ class CombinePolynomial(object):
         if has_poly:
           poly_sum_items.append("%s\\cdot %s" % (latex(coeff), poly.dumps()))
           poly_sum_rust_items.append(
-              "(%s) * (%s)" % (rust(coeff), poly.dumpr_at_index(sym_i)) if shifts == rust_one
-              # When aligned to right boundary, the original vector is representing
-              # the actual polynomial f(X) shifted left by D - vec.len(), i.e., what should
-              # be added here is f(X), that is f_vec(X) * X^{D-vec.len()}
-              # We then replace this power of X by its eval at z
-              else "(%s) * (%s)" % (rust(coeff * shifts), poly.dumpr_at_index(sym_i))
+              "(%s) * (%s)" % (rust(coeff), poly.dumpr_at_index(sym_i - shifts))
           )
 
     if one is not None:
@@ -474,7 +469,7 @@ class CombinePolynomial(object):
         commit_sum_rust_items.append(RustBuilder()
                                      .func("scalar_to_commitment::<E>")
                                      .append_to_last(
-                                     ["&vk.kzg_vk.g", "&%s" % rust(coeff)])
+                                     ["&vk.kzg_vk.g", "&%s" % rust(rust_const)])
                                      .invoke_method("unwrap")
                                      .attribute("0").invoke_method("into_projective"))
 
@@ -595,6 +590,7 @@ class PIOPFromVOProtocol(object):
     vec_to_poly_dict = {}
     self.vo.preprocess(voexec, *args)
     piopexec.debug_mode = self.debug_mode
+    piopexec.degree_bound = self.degree_bound
 
     for pp in voexec.preprocessings:
       piopexec.preprocess(pp.latex_builder, pp.rust_builder)
@@ -1139,7 +1135,7 @@ class PIOPFromVOProtocol(object):
           c = Symbol(get_name("c"))
           # Temporarily use list, because the format depends on whether
           # this list size is > 1
-          coeff_builders[_key] = (poly, c, [value], [rust_value], rust_one)
+          coeff_builders[_key] = (poly, c, [value], [rust_value], 0)
         else:
           # Get the existing coefficient for this named polynomial
           _poly, c, items, rust_items, shifts = coeff_builders[_key]
@@ -1156,9 +1152,9 @@ class PIOPFromVOProtocol(object):
         h1x, c,
         [- z ** (-self.degree_bound)],
         [- z ** (-self.degree_bound)],
-        z ** (self.degree_bound - (h_inverse_degree-1)))
+        self.degree_bound - (h_inverse_degree-1))
     c = Symbol(get_name("c"))
-    coeff_builders[h2x.key()] = (h2x, c, [- z], [- z], rust_one)
+    coeff_builders[h2x.key()] = (h2x, c, [- z], [- z], 0)
 
     if self.debug_mode:
       piopexec.prover_computes_rust(rust_builder_add_expression_vector_to_vector_i(
@@ -1209,7 +1205,7 @@ class PIOPFromVOProtocol(object):
 
     coeff_builders = _coeff_builders
 
-    piopexec.combine_polynomial(gx, coeff_builders, n + max_shift + q)
+    piopexec.combine_polynomial(gx, coeff_builders, self.degree_bound)
 
     self.debug("Combine polynomial")
     piopexec.eval_check(0, z, gx)
@@ -1410,6 +1406,15 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         self.verifier_computes(item, rust_item)
       transcript.append(poly_combine.poly.to_comm())
 
+      if piopexec.debug_mode:
+        self.prover_computes_rust(rust_builder_assert_eq(
+          poly_combine.poly.to_comm(),
+          RustBuilder().func("vector_to_commitment::<E>")
+          .append_to_last("&pk.powers")
+          .append_to_last("&%s" % rust(poly_combine.poly.to_vec()))
+          .invoke_method("unwrap")
+        ).end())
+
     queries = piopexec.eval_queries + piopexec.eval_checks
 
     if piopexec.debug_mode:
@@ -1456,6 +1461,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
                                                else query.name,
                                      '"g does not evaluate to 0 at z"')
                                ).end())
+
       ffs.append([rust(query.poly) for query in queries])
       fcomms.append([rust_vk(query.poly.to_comm()) for query in queries])
       fvals.append([rust_zero if query.name == 0 else query.name
