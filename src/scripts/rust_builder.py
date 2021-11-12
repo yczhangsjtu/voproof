@@ -274,29 +274,6 @@ class ExpressionVectorRust(object):
            % (rust(self.length), rust(self.expr))
 
 
-class AccumulationVectorRust(object):
-  def __init__(self, expr, length, accumulator="*"):
-    super(AccumulationVectorRust, self).__init__()
-    self.expr = expr
-    self.length = sympify(length)
-    self.accumulator = accumulator
-
-  def dumpr(self):
-    return "(1..=%s).scan(E::Fr::zero(), |acc, &mut i| {*acc = *acc %s (%s); Some(*acc)})" \
-        ".collect::<Vec<E::Fr>>()" % (rust(self.length), self.accumulator, rust(self.expr))
-
-
-class SumAccumulationVectorRust(AccumulationVectorRust):
-  def __init__(self, named_vector, length):
-    super(SumAccumulationVectorRust, self).__init__(named_vector.slice("i-1"), length, "+")
-
-
-class ProductAccumulationDivideVectorRust(AccumulationVectorRust):
-  def __init__(self, v1, v2, length):
-    super(ProductAccumulationDivideVectorRust, self).__init__(
-        "(%s/%s)" % (v1.slice("i-1").dumpr(), v2.slice("i-1").dumpr()), length, "*")
-
-
 def add_paren_if_add(expr):
   if isinstance(expr, Add):
     return "(%s)" % rust(expr)
