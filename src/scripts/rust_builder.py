@@ -309,129 +309,89 @@ def add_paren_if_not_atom(vector):
   return rust(vector)
 
 
-def rust_expression_vector_i(expr, length):
-  return RustMacro("expression_vector", sym_i, expr, length)
+class _ArgName(object):
+  def __init__(self, argname):
+    self.argname = argname
 
 
-def rust_builder_expression_vector_i(expr, length):
-  return rust_builder_macro("expression_vector", sym_i, expr, length)
+class _ArgProcess(object):
+  def __init__(self, func, *argnames):
+    self.argnames = argnames
+    self.func = func
 
 
-def rust_sum(*args):
-  return RustMacro("sum", *args)
+rust_macro_list = [
+    ("commit_scalar", None, ("c"), ("vk", _ArgName("c"))),
+    ("expression_vector_to_vector", "expression_vector_to_vector_i", ("v", "expr"),
+      (_ArgName("v"), sym_i, _ArgName("expr"))),
+    ("assert_eq", None, ("a", "b"), ()),
+    ("eval_vector_as_poly", None, ("v", "z"), ()),
+    ("eval_vector_expression", "eval_vector_expression_i", ("z", "expr", "n"),
+      (_ArgName("z"), sym_i, _ArgName("expr"), _ArgName("n"))),
+    ("vector_concat", None, None, ()),
+    ("check_vector_eq", None, ("v", "expr", "info"),
+      (_ArgName("v"), _ArgName("expr"), _ArgProcess(lambda info: '"%s"' % info), "info")),
+    ("define_vec_mut", None, ("v", "expr"), ()),
+    ("define_vec", None, ("v", "expr"), ()),
+    ("define_mut", None, ("v", "expr"), ()),
+    ("define", None, ("v", "expr"), ()),
+    ("poly_from_vec", None, ("v"), ()),
+    ("vec", None, None, ()),
+    ("vec", "vec_size", ("e", "length"),
+      (_ArgProcess(lambda e, length: "%s; (%s) as usize" % (rust(e), rust(length))))),
+    ("linear_combination", None, None, ()),
+    ("sum", None, None, ()),
+    ("expression_vector", "expression_vector_i", ("expr", "length"),
+      (sym_i, _ArgName("expr"), _ArgName("length"))),
+]
 
 
-def rust_builder_sum(*args):
-  return rust_builder_macro("sum", *args)
+def _rust_macro(name, argnames, outargs, *args):
+  if argnames is None:
+    return RustMacro(name, *args)
+
+  if len(args) != len(argnames):
+    raise Exception("Macro %s Expect %d arguments (%s), got %d" %
+        (name, len(argnames), ",".join(argnames), len(args)))
+
+  if len(outargs) == 0:
+    return RustMacro(name, *args)
+
+  argdict = {name: value for name, value in zip(argnames, args)}
+
+  macro = RustMacro(name)
+  for e in outargs:
+    if isinstance(e, _ArgName):
+      macro.append(argdict[e.argname])
+    elif isinstance(e, _ArgProcess):
+      macro.append(e.func(*(argdict[argname] for argname in e.argnames)))
+    else:
+      macro.append(e)
+  return macro
 
 
-def rust_linear_combination(*args):
-  return RustMacro("linear_combination", *args)
+def _rust_builder_macro(name, argnames, outargs, *args):
+  return RustBuilder(_rust_macro(name, argnames, outargs, *args))
 
 
-def rust_builder_linear_combination(*args):
-  return rust_builder_macro("linear_combination", *args)
+current_module = __import__(__name__)
+for macro_name, funcname, argnames, outargs in rust_macro_list:
+  if funcname == None:
+    funcname = macro_name
+  setattr(
+      current_module,
+      "rust_%s" % funcname,
+      (lambda macro_name, argnames, outargs:
+        lambda *args:
+          _rust_macro(macro_name, argnames, outargs, *args))(
+        macro_name, argnames, outargs
+      ))
+  setattr(
+      current_module,
+      "rust_builder_%s" % funcname,
+      (lambda macro_name, argnames, outargs:
+        lambda *args:
+          _rust_builder_macro(macro_name, argnames, outargs, *args))(
+        macro_name, argnames, outargs
+      ))
 
-
-def rust_vec(*args):
-  return RustMacro("vec", *args)
-
-
-def rust_vec_size(e, length):
-  return RustMacro("vec", "%s; (%s) as usize" % (rust(e), rust(length)))
-
-
-def rust_builder_vec(*args):
-  return rust_builder_macro("vec", *args)
-
-
-def rust_poly_from_vec(v):
-  return RustMacro("poly_from_vec", v)
-
-
-def rust_builder_poly_from_vec(v):
-  return rust_builder_macro("poly_from_vec", v)
-
-
-def rust_define(v, expr):
-  return RustMacro("define", v, expr)
-
-
-def rust_builder_define(v, expr):
-  return rust_builder_macro("define", v, expr)
-
-
-def rust_define_mut(v, expr):
-  return RustMacro("define_mut", v, expr)
-
-
-def rust_builder_define_mut(v, expr):
-  return rust_builder_macro("define_mut", v, expr)
-
-
-def rust_define_vec(v, expr):
-  return RustMacro("define_vec", v, expr)
-
-
-def rust_builder_define_vec(v, expr):
-  return rust_builder_macro("define_vec", v, expr)
-
-
-def rust_define_vec_mut(v, expr):
-  return RustMacro("define_vec_mut", v, expr)
-
-
-def rust_builder_define_vec_mut(v, expr):
-  return rust_builder_macro("define_vec_mut", v, expr)
-
-
-def rust_check_vector_eq(v, expr, info):
-  return RustMacro("check_vector_eq", v, expr, info)
-
-
-def rust_builder_check_vector_eq(v, expr, info):
-  return rust_builder_macro("check_vector_eq", v, expr, '"%s"' % info)
-
-
-def rust_vector_concat(*args):
-  return RustMacro("vector_concat", *args)
-
-
-def rust_builder_vector_concat(*args):
-  return rust_builder_macro("vector_concat", *args)
-
-
-def rust_eval_vector_expression_i(z, expr, n):
-  return RustMacro("eval_vector_expression", z, sym_i, expr, n)
-
-
-def rust_builder_eval_vector_expression_i(z, expr, n):
-  return rust_builder_macro("eval_vector_expression", z, sym_i, expr, n)
-
-
-def rust_eval_vector_as_poly(v, z):
-  return RustMacro("eval_vector_as_poly", v, z)
-
-
-def rust_builder_eval_vector_as_poly(v, z):
-  return rust_builder_macro("eval_vector_as_poly", v, z)
-
-
-def rust_assert_eq(a, b):
-  return RustMacro("assert_eq", a, b)
-
-
-def rust_builder_assert_eq(a, b):
-  return rust_builder_macro("assert_eq", a, b)
-
-
-def rust_add_expression_vector_to_vector_i(v, expr):
-  return RustMacro("add_expression_vector_to_vector", v, sym_i, expr)
-
-
-def rust_builder_add_expression_vector_to_vector_i(v, expr):
-  return rust_builder_macro("add_expression_vector_to_vector", v, sym_i, expr)
-
-
-def rust_commit_scalar(c):
-  return RustMacro("commit_scalar", "vk", c)
