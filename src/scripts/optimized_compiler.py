@@ -709,7 +709,7 @@ class PIOPFromVOProtocol(object):
                   side.b.dumpr_at_index(sym_i)),
                 rust(n)),
               rust_vec_size(rust_zero, n),
-              '"The %d\'th hadamard check is not satisfied"' % (i+1)
+              "The %d\'th hadamard check is not satisfied" % (i+1)
               )).end()
         else:
           side1 = extended_hadamard[-1]
@@ -725,7 +725,7 @@ class PIOPFromVOProtocol(object):
                   (side2.a * (1/alpha_power)).dumpr_at_index(sym_i),
                   side2.b.dumpr_at_index(sym_i)),
                 rust(n)),
-              '"The %d\'th hadamard check is not satisfied"' % (i+1)
+              "The %d\'th hadamard check is not satisfied" % (i+1)
               )).end()
 
       else: # One sided, and one of the operand is only a structured vector
@@ -1013,11 +1013,11 @@ class PIOPFromVOProtocol(object):
           .append(rust_check_vector_eq(
               h,
               hcheck_vec,
-              '"h is not expected"')).end()
+              "h is not expected")).end()
           .append(rust_check_vector_eq(
               h,
               rust_vector_concat(h1, rust_vec(rust_zero), h2),
-              '"h != h1 || 0 || h2"')).end())
+              "h != h1 || 0 || h2")).end())
 
       piopexec.prover_computes_rust(
         rust_builder_assert_eq(h_vec_combination.dumpr_at_index(1), rust_zero).end()

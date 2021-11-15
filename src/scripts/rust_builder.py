@@ -287,7 +287,7 @@ rust_macro_list = [
       (_ArgName("z"), sym_i, _ArgName("expr"), _ArgName("n"))),
     ("vector_concat", None, None, ()),
     ("check_vector_eq", None, ("v", "expr", "info"),
-      (_ArgName("v"), _ArgName("expr"), _ArgProcess(lambda info: '"%s"' % info), "info")),
+      (_ArgName("v"), _ArgName("expr"), _ArgProcess(lambda info: '"%s"' % info, "info"))),
     ("define_vec_mut", None, ("v", "expr"), ()),
     ("define_vec", None, ("v", "expr"), ()),
     ("define_mut", None, ("v", "expr"), ()),
@@ -295,12 +295,16 @@ rust_macro_list = [
     ("poly_from_vec", None, ("v"), ()),
     ("vec", None, None, ()),
     ("vec", "vec_size", ("e", "length"),
-      (_ArgProcess(lambda e, length: "%s; (%s) as usize" % (rust(e), rust(length))))),
+      (_ArgProcess(lambda e, length:
+        "%s; (%s) as usize" % (rust(e), rust(length)),
+        "e", "length"), )),
     ("linear_combination", None, None, ()),
     ("sum", None, None, ()),
     ("expression_vector", "expression_vector_i", ("expr", "length"),
       (sym_i, _ArgName("expr"), _ArgName("length"))),
     ("add_vector_to_vector", None, ("u", "v"), ()),
+    ("add_expression_vector_to_vector", "add_expression_vector_to_vector_i", ("v", "expr"),
+      (_ArgName("v"), sym_i, _ArgName("expr"))),
 ]
 
 
