@@ -85,13 +85,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
 
         let powers_of_g = pp.powers_of_g[..].to_vec();
         let size = cs.get_size();
-        let cap_h = size.nrows as i64;
-        let cap_k = size.ncols as i64;
-        let cap_s_a = size.adensity as i64;
-        let cap_s_b = size.bdensity as i64;
-        let cap_s_c = size.cdensity as i64;
-        let ell = size.input_size as i64;
-        let gamma = generator_of!(E);
+        init_size!(cap_h, nrows, size);
+        init_size!(cap_s_a, adensity, size);
+        init_size!(cap_s_b, bdensity, size);
+        init_size!(cap_s_c, cdensity, size);
         let cap_m_mat = (
             cs.arows
                 .iter()
@@ -112,6 +109,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 .map(|a| *a)
                 .collect::<Vec<E::Fr>>(),
         );
+        define_generator!(gamma, E);
         let u_vec = int_array_to_power_vector!(cap_m_mat.0, gamma);
         let w_vec = int_array_to_power_vector!(cap_m_mat.1, gamma);
         let v_vec = cap_m_mat.2.to_vec();
@@ -167,20 +165,27 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let vk = pk.verifier_key.clone();
         let cap_d = pk.verifier_key.degree_bound as i64;
         let rng = &mut test_rng();
-        let cap_h = size.nrows as i64;
-        let cap_k = size.ncols as i64;
-        let cap_s_a = size.adensity as i64;
-        let cap_s_b = size.bdensity as i64;
-        let cap_s_c = size.cdensity as i64;
-        let ell = size.input_size as i64;
-        let gamma = generator_of!(E);
-        let x_vec = x.instance.clone();
-        let delta_vec = sample_vec::<E::Fr, _>(rng, 1);
-        let delta_vec_1 = sample_vec::<E::Fr, _>(rng, 1);
-        let delta_vec_2 = sample_vec::<E::Fr, _>(rng, 1);
-        let delta_vec_3 = sample_vec::<E::Fr, _>(rng, 1);
-        let delta_vec_4 = sample_vec::<E::Fr, _>(rng, 1);
-        let w_vec = w.witness.clone();
+        sample_randomizers!(
+            rng,
+            delta_vec,
+            1,
+            delta_vec_1,
+            1,
+            delta_vec_2,
+            1,
+            delta_vec_3,
+            1,
+            delta_vec_4,
+            1
+        );
+        define_vec!(x_vec, x.instance.clone());
+        define_vec!(w_vec, w.witness.clone());
+        init_size!(cap_h, nrows, size);
+        init_size!(cap_k, ncols, size);
+        init_size!(cap_s_a, adensity, size);
+        init_size!(cap_s_b, bdensity, size);
+        init_size!(cap_s_c, cdensity, size);
+        init_size!(ell, input_size, size);
         let u_vec_1 = sparse_mvp(
             3 * cap_h,
             cap_k,
@@ -199,6 +204,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         )
         .unwrap();
         let u_vec_1_poly = poly_from_vec!(u_vec_1);
+        define_generator!(gamma, E);
         let mu = hash_to_field::<E::Fr>(
             to_bytes!(
                 x_vec,
@@ -1145,14 +1151,14 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let y_2 = proof.y_2;
         let cap_w = proof.cap_w;
         let cap_w_1 = proof.cap_w_1;
-        let cap_h = size.nrows as i64;
-        let cap_k = size.ncols as i64;
-        let cap_s_a = size.adensity as i64;
-        let cap_s_b = size.bdensity as i64;
-        let cap_s_c = size.cdensity as i64;
-        let ell = size.input_size as i64;
-        let gamma = generator_of!(E);
-        let x_vec = x.instance.clone();
+        define_vec!(x_vec, x.instance.clone());
+        init_size!(cap_h, nrows, size);
+        init_size!(cap_k, ncols, size);
+        init_size!(cap_s_a, adensity, size);
+        init_size!(cap_s_b, bdensity, size);
+        init_size!(cap_s_c, cdensity, size);
+        init_size!(ell, input_size, size);
+        define_generator!(gamma, E);
         let mu = hash_to_field::<E::Fr>(
             to_bytes!(
                 x_vec,
@@ -1402,8 +1408,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             &rand_xi_2,
             &f_values,
             &g_values,
-            &proof.cap_w,
-            &proof.cap_w_1,
+            &cap_w,
+            &cap_w_1,
             rng,
         )? {
             Ok(())

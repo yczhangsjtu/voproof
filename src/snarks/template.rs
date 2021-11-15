@@ -111,8 +111,8 @@ impl<E: PairingEngine> SNARK<E> for VOProof__NAME__ {
             &rand_xi_2,
             &f_values,
             &g_values,
-            &proof.cap_w,
-            &proof.cap_w_1,
+            &cap_w,
+            &cap_w_1,
             rng,
         )? {
             Ok(())

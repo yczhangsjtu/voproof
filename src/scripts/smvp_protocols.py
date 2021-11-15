@@ -7,7 +7,7 @@ from vector_symbol import get_named_vector, PowerVector, UnitVector, \
 from latex_builder import Math, AccumulationVector, ExpressionVector, \
                           LaTeXBuilder, ProductAccumulationDivideVector, \
                           add_paren_if_not_atom, tex
-from rust_builder import RustBuilder, Tuple, rust, RustMacro
+from rust_builder import *
                          
 
 class SparseMVP(VOProtocol):
@@ -20,6 +20,7 @@ class SparseMVP(VOProtocol):
     w = get_named_vector("w")
     v = get_named_vector("v")
     y = get_named_vector("y")
+    voexec.preprocess_rust(rust_builder_define_generator().end())
     voexec.preprocess(Math(u).assign(
       ExpressionVector("\\gamma^{\\mathsf{row}_i}", ell)
     ), RustBuilder().let(u).assign(
@@ -66,6 +67,7 @@ class SparseMVP(VOProtocol):
     M = voexec.M
 
     mu = Symbol(get_name("mu"))
+    voexec.verifier_computes_rust(rust_builder_define_generator().end())
     voexec.verifier_send_randomness(mu)
     r = get_named_vector("r")
     voexec.prover_computes(Math(r).assign(
@@ -274,7 +276,13 @@ class R1CS(VOProtocol):
 
   def preprocess(self, voexec, H, K, sa, sb, sc):
     M = Matrix("M")
-    voexec.preprocess(LaTeXBuilder(),
+    voexec.preprocess_rust(rust_builder_init_size(H, "nrows").end())
+    # voexec.preprocess_rust(rust_builder_init_size(K, "ncols").end())
+    voexec.preprocess_rust(rust_builder_init_size(sa, "adensity").end())
+    voexec.preprocess_rust(rust_builder_init_size(sb, "bdensity").end())
+    voexec.preprocess_rust(rust_builder_init_size(sc, "cdensity").end())
+
+    voexec.preprocess_rust(
         RustBuilder().let(M).assign(Tuple())
         .append_to_last("cs.arows.iter().map(|a| *a)"
           ".chain(cs.brows.iter().map(|&i| i + %s as u64))"
@@ -298,14 +306,18 @@ class R1CS(VOProtocol):
     voexec.input_instance(x)
     voexec.input_witness(w)
 
-    voexec.verifier_prepare(LaTeXBuilder(),
-        RustBuilder().let(x).assign("x.instance.clone()").end())
-    voexec.prover_computes(LaTeXBuilder(),
-        RustBuilder().let(w).assign("w.witness.clone()").end())
-
     H, K, sa, sb, sc, n = voexec.r1cs_H, voexec.r1cs_K, \
                           voexec.sa, voexec.sb, voexec.sc, voexec.vector_size
     M = voexec.M
+
+    voexec.verifier_computes_rust(rust_builder_define_vec(x, "x.instance.clone()").end())
+    voexec.prover_computes_rust(rust_builder_define_vec(w, "w.witness.clone()").end())
+    voexec.verifier_computes_rust(rust_builder_init_size(H, "nrows").end())
+    voexec.verifier_computes_rust(rust_builder_init_size(K, "ncols").end())
+    voexec.verifier_computes_rust(rust_builder_init_size(sa, "adensity").end())
+    voexec.verifier_computes_rust(rust_builder_init_size(sb, "bdensity").end())
+    voexec.verifier_computes_rust(rust_builder_init_size(sc, "cdensity").end())
+    voexec.verifier_computes_rust(rust_builder_init_size(ell, "input_size").end())
 
     u = get_named_vector("u")
     voexec.prover_computes(Math(u).assign().paren(

@@ -309,6 +309,9 @@ rust_macro_list = [
       (_ArgName("poly"), _ArgName("point"), _ArgName("value"),
        _ArgProcess(lambda info: '"%s"' % info, "info"))),
     ("fmt_ff_vector", None, ("v"), ()),
+    ("define_generator", None, (), ("gamma", "E")),
+    ("init_size", None, ("name", "attr"), (_ArgName("name"), _ArgName("attr"), "size")),
+    ("sample_randomizers", None, (), ("rng", )),
 ]
 
 

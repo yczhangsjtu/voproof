@@ -332,6 +332,13 @@ macro_rules! linear_combination {
 }
 
 #[macro_export]
+macro_rules! sample_randomizers {
+    ( $rng: expr, $( $ident:ident, $size:expr ),+ ) => {
+        $( let $ident = sample_vec::<E::Fr, _>($rng, $size); )+
+    };
+}
+
+#[macro_export]
 macro_rules! power_linear_combination {
     ( $alpha: expr, $( $a:expr ),+ ) => {
         {
@@ -561,6 +568,20 @@ macro_rules! generator_of {
         )
         .unwrap()
     };
+}
+
+#[macro_export]
+macro_rules! define_generator {
+  ($gamma:ident, $e:ident) => {
+    let $gamma = generator_of!($e);
+  }
+}
+
+#[macro_export]
+macro_rules! init_size {
+  ($name:ident, $attr:ident, $size:ident) => {
+    let $name: i64 = $size.$attr as i64;
+  }
 }
 
 #[macro_export]

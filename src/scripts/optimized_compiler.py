@@ -175,6 +175,9 @@ class PublicCoinProtocolExecution(object):
   def preprocess(self, latex_builder, rust_builder):
     self.preprocessings.append(IndexerComputes(latex_builder, rust_builder))
 
+  def preprocess_rust(self, rust_builder):
+    self.preprocess(LaTeXBuilder(), rust_builder)
+
   def preprocess_output_pk(self, expr):
     self.indexer_output_pk.append(expr)
 
@@ -195,6 +198,9 @@ class PublicCoinProtocolExecution(object):
 
   def verifier_computes(self, latex_builder, rust_builder):
     self.interactions.append(VerifierComputes(latex_builder, rust_builder))
+
+  def verifier_computes_rust(self, rust_builder):
+    self.verifier_computes(LaTeXBuilder(), rust_builder)
 
   def verifier_prepare(self, latex_builder, rust_builder):
     self.verifier_preparations.append(VerifierComputes(latex_builder, rust_builder))
@@ -659,8 +665,8 @@ class PIOPFromVOProtocol(object):
     q = Integer(1)
     Ftoq = UnevaluatedExpr(F ** q)
 
-    samples = Samples()
-    piopexec.prover_computes_rust(RustBuilder(samples))
+    samples = rust_sample_randomizers()
+    piopexec.prover_computes_rust(RustBuilder(samples).end())
 
     self.debug("Executing VO protocol")
     self.vo.execute(voexec, *args)
@@ -680,7 +686,7 @@ class PIOPFromVOProtocol(object):
       elif isinstance(interaction, ProverSubmitVectors):
         for v, size in interaction.vectors:
           randomizer = get_named_vector("delta")
-          samples.append(randomizer)
+          samples.append([randomizer, 1])
           poly = v.to_named_vector_poly()
           piopexec.prover_computes(
               Math(randomizer).sample(Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
@@ -792,7 +798,7 @@ class PIOPFromVOProtocol(object):
       piopexec.prover_computes(rcomputes, rcomputes_rust.end())
 
       randomizer = get_named_vector("delta")
-      samples.append(randomizer)
+      samples.append([randomizer, 1])
       rtilde = get_named_vector("r", modifier="tilde")
       fr = rtilde.to_named_vector_poly()
       piopexec.prover_computes(Math(randomizer).sample(Ftoq)
@@ -844,7 +850,7 @@ class PIOPFromVOProtocol(object):
     piopexec.prover_computes(tcomputes, tcomputes_rust.end())
 
     randomizer = get_named_vector("delta")
-    samples.append(randomizer)
+    samples.append([randomizer, 1])
     original_t = t
     t = get_named_vector("t")
     piopexec.prover_computes(
@@ -1328,8 +1334,10 @@ class ZKSNARK(object):
                                   for item in self.proof])
 
   def dump_verifier_rust(self):
-    return self.dump_proof_init() + "".join([computation.dumpr() for computation in self.verifier_preparations] +
-          [computation.dumpr() for computation in self.verifier_computations])
+    return self.dump_proof_init() + \
+        "".join(
+            [computation.dumpr() for computation in self.verifier_preparations] +
+            [computation.dumpr() for computation in self.verifier_computations])
 
   def dump_vk_definition(self):
     return "\n    ".join(["pub %s: %s," % (rust(item), get_rust_type(item)) for item in self.vk])
