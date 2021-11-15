@@ -307,7 +307,8 @@ rust_macro_list = [
       (_ArgName("v"), sym_i, _ArgName("expr"))),
     ("check_poly_eval", None, ("poly", "point", "value", "info"),
       (_ArgName("poly"), _ArgName("point"), _ArgName("value"),
-       _ArgProcess(lambda info: '"%s"' % info, "info")))
+       _ArgProcess(lambda info: '"%s"' % info, "info"))),
+    ("fmt_ff_vector", None, ("v"), ()),
 ]
 
 

@@ -531,6 +531,7 @@ class PIOPExecution(PublicCoinProtocolExecution):
     self.eval_checks = []
     self.prover_polynomials = []
     self.distinct_points = set()
+    self.debug_mode = False
     self._symbol_dict = {}
     self._power_poly_dict = {}
     self._auto_vector_dict = {}
@@ -570,6 +571,30 @@ class PIOPExecution(PublicCoinProtocolExecution):
     self.eval_checks.append(EvalQuery(left, point, poly))
     self.distinct_points.add(tex(point))
 
+  def _format_string(*args):
+    if not isinstance(args[0], str):
+      raise Exception("The first argument must be string")
+    return ('"%s"' % args[0],) + tuple(rust(arg) for arg in args[1:])
+
+  def pp_debug(self, *args):
+    if self.debug_mode:
+      self.preprocess(
+        LaTeXBuilder(),
+        rust_builder_macro(
+          "println",
+          *PIOPExecution._format_string(*args)
+        ).end()
+      )
+
+  def prover_debug(self, *args):
+    if self.debug_mode:
+      self.prover_computes_rust(
+        rust_builder_macro(
+          "println",
+          *PIOPExecution._format_string(*args)
+        ).end()
+      )
+
   def dumps(self):
     ret = Enumerate()
     for pp in self.preprocessings:
@@ -603,6 +628,10 @@ class PIOPFromVOProtocol(object):
     self.degree_bound = degree_bound
     self.debug_mode = False
 
+  def debug(self, info):
+    if self.debug_mode:
+      print(info)
+
   def preprocess(self, piopexec, *args):
     voexec = VOProtocolExecution(self.vector_size)
     vec_to_poly_dict = {}
@@ -617,19 +646,15 @@ class PIOPFromVOProtocol(object):
       piopexec.preprocess_polynomial(poly, size)
       vec_to_poly_dict[vector.key()] = poly
       if self.debug_mode:
-        piopexec.preprocess(LaTeXBuilder(),
-            rust_builder_macro("println",
-              '"vector %s of length {} = \n[{}]"' % rust(vector), "%s.len()" % rust(vector),
-              "fmt_ff_vector!(%s)" % rust(vector)
-              ).end())
+        piopexec.pp_debug(
+          "vector %s of length {} = \n[{}]" % rust(vector),
+          "%s.len()" % rust(vector),
+          "fmt_ff_vector!(%s)" % rust(vector)
+        )
     piopexec.indexer_output_pk = voexec.indexer_output_pk
     piopexec.indexer_output_vk = voexec.indexer_output_vk
     piopexec.reference_to_voexec = voexec
     voexec.vec_to_poly_dict = vec_to_poly_dict
-
-  def debug(self, info):
-    if self.debug_mode:
-      print(info)
 
   def execute(self, piopexec, *args):
     voexec = piopexec.reference_to_voexec
@@ -674,11 +699,10 @@ class PIOPFromVOProtocol(object):
           vec_to_poly_dict[v.key()] = poly
 
           if self.debug_mode:
-            piopexec.prover_computes_rust(
-                rust_builder_macro("println",
-                  '"vector %s of length {} = \\n[{}]"' % rust(v), "%s.len()" % rust(v),
-                  "fmt_ff_vector!(%s)" % rust(v)
-                  ).end())
+            piopexec.prover_debug(
+              "vector %s of length {} = \\n[{}]" % rust(v), "%s.len()" % rust(v),
+              rust_fmt_ff_vector(v),
+            )
       else:
         raise ValueError("Interaction of type %s should not appear" % type(interaction))
 
