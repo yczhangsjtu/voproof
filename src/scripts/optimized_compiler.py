@@ -1443,13 +1443,11 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       self.prover_computes_rust(RustBuilder().let(naive_g.to_named_vector_poly()).assign(
         rust_poly_from_vec(naive_g)
       ).end())
-      self.prover_computes_rust(RustBuilder().append(
-                               RustMacro("check_poly_eval",
+      self.prover_computes_rust(rust_builder_check_poly_eval(
                                  naive_g.to_named_vector_poly(),
                                  z,
                                  rust_zero,
-                                 '"naive g does not evaluate to 0 at z"')
-                           ).end())
+                                 "naive g does not evaluate to 0 at z").end())
 
     points_poly_dict = {}
     for query in queries:
@@ -1472,15 +1470,12 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           transcript.append(query.name)
         else:
           # Only make this check when the query result is an expected constant
-          self.prover_computes_rust(
-                               RustBuilder().append(
-                                   RustMacro("check_poly_eval",
-                                     query.poly,
-                                     queries[0].point,
-                                     rust_zero if query.name == 0
-                                               else query.name,
-                                     '"g does not evaluate to 0 at z"')
-                               ).end())
+          self.prover_computes_rust(rust_builder_check_poly_eval(
+                                    query.poly,
+                                    queries[0].point,
+                                    rust_zero if query.name == 0
+                                              else query.name,
+                                    "g does not evaluate to 0 at z").end())
 
       ffs.append([rust(query.poly) for query in queries])
       fcomms.append([rust_vk(query.poly.to_comm()) for query in queries])
