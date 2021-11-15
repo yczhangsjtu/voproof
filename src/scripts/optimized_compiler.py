@@ -164,7 +164,6 @@ class PublicCoinProtocolExecution(object):
     self.prover_preparations = []
     self.verifier_preparations = []
     self.interactions = []
-    self.verifier_computations = []
 
   def input_instance(self, arg):
     self.verifier_inputs.append(arg)
@@ -195,7 +194,7 @@ class PublicCoinProtocolExecution(object):
     self.prover_preparations.append(ProverComputes(latex_builder, rust_builder))
 
   def verifier_computes(self, latex_builder, rust_builder):
-    self.verifier_computations.append(VerifierComputes(latex_builder, rust_builder))
+    self.interactions.append(VerifierComputes(latex_builder, rust_builder))
 
   def verifier_prepare(self, latex_builder, rust_builder):
     self.verifier_preparations.append(VerifierComputes(latex_builder, rust_builder))
@@ -610,8 +609,6 @@ class PIOPExecution(PublicCoinProtocolExecution):
       ret.append(interaction.dumps())
     for query in self.eval_queries:
       ret.append(query.dumps())
-    for vc in self.verifier_computations:
-      ret.append(vc.dumps())
     for polycom in self.poly_combines:
       for item, rust_items in polycom.dump_items():
         ret.append(VerifierComputes(item, RustBuilder()).dumps())
@@ -669,7 +666,6 @@ class PIOPFromVOProtocol(object):
     self.vo.execute(voexec, *args)
     piopexec.prover_inputs = voexec.prover_inputs
     piopexec.verifier_inputs = voexec.verifier_inputs
-    piopexec.verifier_computations = voexec.verifier_computations
     piopexec.prover_preparations = voexec.prover_preparations
     piopexec.verifier_preparations = voexec.verifier_preparations
 
@@ -677,6 +673,8 @@ class PIOPFromVOProtocol(object):
     for interaction in voexec.interactions:
       if isinstance(interaction, ProverComputes):
         piopexec.prover_computes(interaction.latex_builder, interaction.rust_builder)
+      elif isinstance(interaction, VerifierComputes):
+        piopexec.verifier_computes(interaction.latex_builder, interaction.rust_builder)
       elif isinstance(interaction, VerifierSendRandomnesses):
         piopexec.verifier_send_randomness(*interaction.names)
       elif isinstance(interaction, ProverSubmitVectors):
@@ -1389,6 +1387,9 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     for interaction in piopexec.interactions:
       if isinstance(interaction, ProverComputes):
         self.prover_computes(interaction.latex_builder, interaction.rust_builder)
+      elif isinstance(interaction, VerifierComputes):
+        self.prover_computes(interaction.latex_builder, interaction.rust_builder)
+        self.verifier_computes(interaction.latex_builder, interaction.rust_builder)
       elif isinstance(interaction, VerifierSendRandomnesses):
         for i, r in enumerate(interaction.names):
           compute_hash = Math(r).assign(
@@ -1431,10 +1432,6 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       for query in piopexec.eval_queries])),
       RustBuilder())
     self.proof += [query.name for query in piopexec.eval_queries]
-
-    for computation in piopexec.verifier_computations:
-      self.prover_computes(computation.latex_builder, computation.rust_builder)
-      self.verifier_computes(computation.latex_builder, computation.rust_builder)
 
     for poly_combine in piopexec.poly_combines:
       prover_items, prover_rust_items = poly_combine.dump_items(
