@@ -645,12 +645,11 @@ class PIOPFromVOProtocol(object):
       poly = vector.to_named_vector_poly()
       piopexec.preprocess_polynomial(poly, size)
       vec_to_poly_dict[vector.key()] = poly
-      if self.debug_mode:
-        piopexec.pp_debug(
-          "vector %s of length {} = \n[{}]" % rust(vector),
-          "%s.len()" % rust(vector),
-          "fmt_ff_vector!(%s)" % rust(vector)
-        )
+      piopexec.pp_debug(
+        "vector %s of length {} = \n[{}]" % rust(vector),
+        "%s.len()" % rust(vector),
+        rust_fmt_ff_vector(vector)
+      )
     piopexec.indexer_output_pk = voexec.indexer_output_pk
     piopexec.indexer_output_vk = voexec.indexer_output_vk
     piopexec.reference_to_voexec = voexec
@@ -698,11 +697,10 @@ class PIOPFromVOProtocol(object):
               ).end())
           vec_to_poly_dict[v.key()] = poly
 
-          if self.debug_mode:
-            piopexec.prover_debug(
-              "vector %s of length {} = \\n[{}]" % rust(v), "%s.len()" % rust(v),
-              rust_fmt_ff_vector(v),
-            )
+          piopexec.prover_debug(
+            "vector %s of length {} = \\n[{}]" % rust(v), "%s.len()" % rust(v),
+            rust_fmt_ff_vector(v),
+          )
       else:
         raise ValueError("Interaction of type %s should not appear" % type(interaction))
 
