@@ -585,6 +585,13 @@ macro_rules! redefine_zero_pad_concat_vector {
 }
 
 #[macro_export]
+macro_rules! define_poly_from_vec {
+    ($poly:ident, $v:expr) => {
+        let $poly = poly_from_vec!($v);
+    };
+}
+
+#[macro_export]
 macro_rules! sparse_mvp_vector {
     ($mat:expr, $v:expr, $h:expr, $k:expr) => {
         sparse_mvp($h, $k, &$mat.0, &$mat.1, &$mat.2, &$v).unwrap()

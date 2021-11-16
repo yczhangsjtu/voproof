@@ -175,7 +175,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             pk.powers,
             cap_k + cap_s_a + cap_s_b + cap_s_c + 1
         );
-        let u_vec_1_poly = poly_from_vec!(u_vec_1);
+        define_poly_from_vec!(u_vec_1_poly, u_vec_1);
         define_generator!(gamma, E);
         let mu = hash_to_field::<E::Fr>(
             to_bytes!(
@@ -207,7 +207,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             pk.powers,
             cap_k + cap_s_a + cap_s_b + cap_s_c + 1
         );
-        let s_vec_poly = poly_from_vec!(s_vec);
+        define_poly_from_vec!(s_vec_poly, s_vec);
         let nu = hash_to_field::<E::Fr>(
             to_bytes!(
                 x_vec,
@@ -241,7 +241,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             pk.powers,
             cap_k + cap_s_a + cap_s_b + cap_s_c + 1
         );
-        let h_vec_poly = poly_from_vec!(h_vec);
+        define_poly_from_vec!(h_vec_poly, h_vec);
         let beta = hash_to_field::<E::Fr>(
             to_bytes!(
                 x_vec,
@@ -312,7 +312,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 delta_vec_3
             )
         );
-        let r_vec_tilde_poly = poly_from_vec!(r_vec_tilde);
+        define_poly_from_vec!(r_vec_tilde_poly, r_vec_tilde);
         commit_vector!(
             cm_r_vec_tilde,
             r_vec_tilde,
@@ -1013,7 +1013,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             )
         );
         g_vec[0] += c_1;
-        define!(g_poly, poly_from_vec!(g_vec));
+        define_poly_from_vec!(g_poly, g_vec);
         let cm_g = Commitment::<E>(
             sum!(
                 (cm_s_vec.0).mul(c.into_repr()),

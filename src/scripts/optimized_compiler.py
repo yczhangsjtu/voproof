@@ -504,7 +504,8 @@ class CombinePolynomial(object):
 
     if has_poly:
       latex_items.append(Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
-      rust_builder = rust_builder_define_vec_mut(self.poly.to_vec(),
+      rust_builder = rust_builder_define_vec_mut(
+        self.poly.to_vec(),
         rust_expression_vector_i(
           rust_sum(poly_sum_rust_items),
           self.length
@@ -513,9 +514,11 @@ class CombinePolynomial(object):
         rust_builder.append(self.poly.to_vec()) \
                     .append("[0]").plus_assign(rust_const).end()
 
-      rust_items.append(rust_builder.append(rust_define(
-        self.poly, rust_poly_from_vec(self.poly.to_vec())
-      )).end())
+      rust_items.append(
+        rust_builder.append(rust_define_poly_from_vec(
+            self.poly, self.poly.to_vec()
+          )
+        ).end())
 
     if has_commit:
       latex_items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
@@ -695,11 +698,7 @@ class PIOPFromVOProtocol(object):
               Math(randomizer).sample(Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
               rust_builder_redefine_zero_pad_concat_vector(v, n, randomizer).end())
           piopexec.prover_send_polynomial(poly, self.vector_size + q)
-          piopexec.prover_computes(
-              LaTeXBuilder(),
-              RustBuilder().let(poly).assign(
-                rust_poly_from_vec(v)
-              ).end())
+          piopexec.prover_computes_rust(rust_builder_define_poly_from_vec(poly, v).end())
           vec_to_poly_dict[v.key()] = poly
 
           piopexec.prover_debug(
@@ -811,8 +810,8 @@ class PIOPFromVOProtocol(object):
             RustMacro("accumulate_vector", r, "+"),
             randomizer
           )
-        ).end()
-        .let(fr).assign(rust_poly_from_vec(rtilde)).end())
+        ).end())
+      piopexec.prover_computes_rust(rust_builder_define_poly_from_vec(fr, rtilde).end())
 
       piopexec.prover_send_polynomial(fr, n + q)
       vec_to_poly_dict[rtilde.key()] = fr
@@ -1463,9 +1462,10 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     if piopexec.debug_mode:
       z = [query.point for query in queries if query.name == 0][0]
       naive_g = piopexec.naive_g
-      self.prover_computes_rust(RustBuilder().let(naive_g.to_named_vector_poly()).assign(
-        rust_poly_from_vec(naive_g)
-      ).end())
+      self.prover_computes_rust(
+        rust_builder_define_poly_from_vec(
+          naive_g.to_named_vector_poly(), naive_g
+        ).end())
       self.prover_computes_rust(rust_builder_check_poly_eval(
                                  naive_g.to_named_vector_poly(),
                                  z,
