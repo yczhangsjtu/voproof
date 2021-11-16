@@ -632,8 +632,10 @@ class VectorCombination(CoeffMap):
     return _dump_coeff_map_with_sparse_coeff(self)
 
   def dumpr_at_index(self, index):
+    has_one = "one" in self._dict
     ret = rust_linear_combination(self._dict["one"][1].dumpr_at_index(index)) \
-        if "one" in self._dict else rust_linear_combination_base_zero()
+        if has_one else rust_linear_combination_base_zero()
+
     for key, vec_value in self.items():
       if key == "one":
         continue
@@ -644,6 +646,13 @@ class VectorCombination(CoeffMap):
           to_field(coeff),
           vec.dumpr_at_index(rust_minus_i64(index, unit_vector.position))
         ])
+
+    if len(ret) == 2 and not has_one:
+      if ret[0] == to_field(1):
+        return ret[1]
+      if ret[1] == to_field(1):
+        return ret[0]
+
     return rust(ret)
 
 class PowerVector(object):

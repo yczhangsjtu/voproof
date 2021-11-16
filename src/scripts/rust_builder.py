@@ -22,9 +22,11 @@ def rust(expr, to_field=False):
 
 
 def to_field(expr):
-  if isinstance(expr, Integer):
+  if isinstance(expr, Integer) or isinstance(expr, int):
     if expr == 0:
       return "E::Fr::zero()"
+    if expr == 1:
+      return "E::Fr::one()"
     if expr > 0:
       return rust(RustBuilder().func("to_field::<E::Fr>").append_to_last(expr))
     return rust(RustBuilder().append("-").func("to_field::<E::Fr>").append_to_last(-expr))
@@ -64,6 +66,12 @@ class RustList(object):
     else:
       self.items.append(item)
     return self
+  
+  def __len__(self):
+    return len(self.items)
+
+  def __getitem__(self, index):
+    return self.items[index]
 
   def dumpr(self):
     if self.expand_lines and len(self.items) > 0:
@@ -85,6 +93,7 @@ class FunctionCall(RustList):
 class RustMacro(FunctionCall):
   def __init__(self, macro_name, *args):
     super(RustMacro, self).__init__("%s!" % macro_name)
+    self.macro_name = macro_name
     if (isinstance(args, list) or isinstance(args, tuple)) and len(args) > 0:
       for arg in args:
         self.append(arg)
