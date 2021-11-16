@@ -62,21 +62,20 @@ class SparseMVP(VOProtocol):
       Math(r).assign(ExpressionVector("\\frac{1}{%s-\\gamma^i}" % tex(mu), H)),
       rust_builder_define_expression_vector_inverse_i(
         r,
-        "(%s) - (%s)" % (rust(mu), PowerVector(gamma, H).dumpr_at_index(Symbol("i"))),
+        rust_minus(mu, PowerVector(gamma, H).dumpr_at_index(sym_i)),
         H
       ).end())
     c = get_named_vector("c")
     voexec.prover_computes(Math(c).assign()
                            .transpose(r, paren=False).append("\\boldsymbol{M}"),
-                           rust_builder_define_left_sparse_mvp_vector(c, rust_pk(M), r, H, K).end())
+                           rust_builder_define_left_sparse_mvp_vector(
+                             c, rust_pk(M), r, H, K
+                           ).end())
     s = get_named_vector("s")
-    voexec.prover_computes(Math(s).assign(r).double_bar().paren(-c),
-        RustBuilder().let(s).assign(r).invoke_method("iter")
-        .invoke_method("map").append_to_last("|a| *a")
-        .invoke_method("chain").append_to_last(
-          RustBuilder(c).invoke_method("iter").invoke_method("map")
-          .append_to_last("|a| -*a")
-          ).invoke_method("collect::<Vec<E::Fr>>").end())
+    voexec.prover_computes(
+      Math(s).assign(r).double_bar().paren(-c),
+      rust_builder_define_concat_neg_vector(s, r, c).end())
+
     voexec.prover_submit_vector(s, H + K)
     voexec.hadamard_query(
       mu * PowerVector(1, H) - PowerVector(gamma, H),

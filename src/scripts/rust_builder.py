@@ -320,6 +320,8 @@ rust_macro_list = [
       (_ArgName("name"), sym_i, _ArgName("expr"), _ArgName("n"))),
     ("define_expression_vector_inverse", "define_expression_vector_inverse_i",
       ("name", "expr", "n"), (_ArgName("name"), sym_i, _ArgName("expr"), _ArgName("n"))),
+    ("minus", None, ("u", "v"), ()),
+    ("define_concat_neg_vector", None, ("name", "u", "v"), ()),
 ]
 
 

@@ -249,6 +249,11 @@ macro_rules! to_field {
 }
 
 #[macro_export]
+macro_rules! minus {
+    ($u:expr, $v:expr) => { $u - $v }
+}
+
+#[macro_export]
 macro_rules! zero_pad {
     ( $u: expr, $n: expr ) => {
         (&$u)
@@ -579,6 +584,19 @@ macro_rules! define_concat_vector {
         define_vec!(
             $name,
             vector_concat!( $($u),+ )
+        );
+    };
+}
+
+#[macro_export]
+macro_rules! define_concat_neg_vector {
+    ($name:ident, $u:expr, $v:expr ) => {
+        define_vec!(
+            $name,
+            $u.iter()
+              .map(|a| *a)
+              .chain($v.iter().map(|a| -*a))
+              .collect::<Vec<E::Fr>>()
         );
     };
 }

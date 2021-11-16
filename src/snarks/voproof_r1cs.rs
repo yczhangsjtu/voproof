@@ -189,15 +189,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define_expression_vector_inverse!(
             r_vec,
             i,
-            (mu) - (power_vector_index!(gamma, 3 * cap_h, i)),
+            minus!(mu, power_vector_index!(gamma, 3 * cap_h, i)),
             3 * cap_h
         );
         define_left_sparse_mvp_vector!(c_vec, pk.cap_m_mat, r_vec, 3 * cap_h, cap_k);
-        let s_vec = r_vec
-            .iter()
-            .map(|a| *a)
-            .chain(c_vec.iter().map(|a| -*a))
-            .collect::<Vec<E::Fr>>();
+        define_concat_neg_vector!(s_vec, r_vec, c_vec);
         redefine_zero_pad_concat_vector!(s_vec, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec_1);
         commit_vector!(
             cm_s_vec,
