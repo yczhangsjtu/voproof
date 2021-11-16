@@ -254,6 +254,11 @@ macro_rules! minus {
 }
 
 #[macro_export]
+macro_rules! neg {
+    ($u:expr) => { -$u }
+}
+
+#[macro_export]
 macro_rules! minus_i64 {
     ($u:expr, $v:expr) => { ($u as i64)-($v) as i64+1 }
 }

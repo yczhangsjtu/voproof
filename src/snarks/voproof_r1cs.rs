@@ -251,10 +251,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         s_vec,
                         minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
                     )),
-                    ((linear_combination_base_zero!(
-                        -to_field::<E::Fr>(1),
-                        vector_index!(h_vec, minus_i64!(i, cap_s_a + cap_s_b + cap_s_c + 1))
-                    )) * (vector_index!(
+                    ((neg!(vector_index!(
+                        h_vec,
+                        minus_i64!(i, cap_s_a + cap_s_b + cap_s_c + 1)
+                    ))) * (vector_index!(
                         s_vec,
                         minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
                     ))) - ((vector_index!(h_vec, minus_i64!(i, 1)))

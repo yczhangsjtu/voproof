@@ -649,9 +649,13 @@ class VectorCombination(CoeffMap):
 
     if len(ret) == 2 and not has_one:
       if ret[0] == to_field(1):
-        return ret[1]
+        return rust(ret[1])
+      if ret[0] == to_field(-1):
+        return rust(rust_neg(ret[1]))
       if ret[1] == to_field(1):
-        return ret[0]
+        return rust(ret[0])
+      if ret[1] == to_field(-1):
+        return rust(rust_neg(ret[0]))
 
     return rust(ret)
 
