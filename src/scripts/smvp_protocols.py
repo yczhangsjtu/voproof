@@ -70,14 +70,7 @@ class SparseMVP(VOProtocol):
     c = get_named_vector("c")
     voexec.prover_computes(Math(c).assign()
                            .transpose(r, paren=False).append("\\boldsymbol{M}"),
-                           RustBuilder().let(c).assign_func("sparse_mvp")
-                           .append_to_last([K, H, "&%s.1" % rust_pk(M),
-                                            "&%s.0" % rust_pk(M),
-                                            "&%s.2" % rust_pk(M),
-                                            "&%s" % rust(r)])
-                           .invoke_method("unwrap").end())
-                           # Here K, H and M.rows, M.cols are flipped because the
-                           # vector is multiplied from left
+                           rust_builder_define_left_sparse_mvp_vector(c, rust_pk(M), r, H, K).end())
     s = get_named_vector("s")
     voexec.prover_computes(Math(s).assign(r).double_bar().paren(-c),
         RustBuilder().let(s).assign(r).invoke_method("iter")
@@ -311,12 +304,9 @@ class R1CS(VOProtocol):
           LaTeXBuilder(1).double_bar(x).double_bar(w)
         )
       ).double_bar(1).double_bar(x).double_bar(w),
-      RustBuilder().let(u).assign_func("sparse_mvp")
-                   .append_to_last([H * 3, K, "&%s.0" % rust_pk(M),
-                      "&%s.1" % rust_pk(M), "&%s.2" % rust_pk(M),
-                      RustMacro("&vector_concat").append([
-                        "vec![E::Fr::one()]", x, w
-                        ])]).invoke_method("unwrap").end())
+      rust_builder_define_sparse_mvp_vector(u, rust_pk(M), rust_vector_concat(
+        rust_vec(rust_one), x, w
+        ), H * 3, K).end())
     voexec.prover_computes(LaTeXBuilder(), RustBuilder().let(u).assign(
         RustMacro("vector_concat").append([u, "vec![E::Fr::one()]", x, w])
         ).end())

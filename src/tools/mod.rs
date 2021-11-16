@@ -558,6 +558,20 @@ macro_rules! define_hadamard_vector {
 }
 
 #[macro_export]
+macro_rules! define_sparse_mvp_vector {
+    ($name:ident, $mat:expr, $v:expr, $h:expr, $k:expr) => {
+        let $name = sparse_mvp($h, $k, &$mat.0, &$mat.1, &$mat.2, &$v).unwrap();
+    };
+}
+
+#[macro_export]
+macro_rules! define_left_sparse_mvp_vector {
+    ($name:ident, $mat:expr, $v:expr, $h:expr, $k:expr) => {
+        let $name = sparse_mvp($k, $h, &$mat.1, &$mat.0, &$mat.2, &$v).unwrap();
+    };
+}
+
+#[macro_export]
 macro_rules! vector_poly_mul {
     // Given vectors u, v and field element omega, compute
     // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
