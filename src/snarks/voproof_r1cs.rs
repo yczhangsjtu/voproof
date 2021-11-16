@@ -89,25 +89,9 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         init_size!(cap_s_a, adensity, size);
         init_size!(cap_s_b, bdensity, size);
         init_size!(cap_s_c, cdensity, size);
-        let cap_m_mat = (
-            cs.arows
-                .iter()
-                .map(|a| *a)
-                .chain(cs.brows.iter().map(|&i| i + cap_h as u64))
-                .chain(cs.crows.iter().map(|&i| i + cap_h as u64 * 2))
-                .collect::<Vec<u64>>(),
-            cs.acols
-                .iter()
-                .chain(cs.bcols.iter())
-                .chain(cs.ccols.iter())
-                .map(|a| *a)
-                .collect::<Vec<u64>>(),
-            cs.avals
-                .iter()
-                .chain(cs.bvals.iter())
-                .chain(cs.cvals.iter())
-                .map(|a| *a)
-                .collect::<Vec<E::Fr>>(),
+        concat_matrix_vertically!(
+            cap_m_mat, cap_h, cs.arows, cs.brows, cs.crows, cs.acols, cs.bcols, cs.ccols, cs.avals,
+            cs.bvals, cs.cvals
         );
         define_generator!(gamma, E);
         let u_vec = int_array_to_power_vector!(cap_m_mat.0, gamma);

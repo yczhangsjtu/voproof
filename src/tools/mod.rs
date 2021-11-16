@@ -295,6 +295,35 @@ macro_rules! define_vec_mut {
 }
 
 #[macro_export]
+macro_rules! concat_matrix_vertically {
+  ($result:ident, $h:expr,
+   $arows:expr, $brows:expr, $crows:expr,
+   $acols:expr, $bcols:expr, $ccols:expr,
+   $avals:expr, $bvals:expr, $cvals:expr) => {
+    let $result = (
+        $arows
+            .iter()
+            .map(|a| *a)
+            .chain($brows.iter().map(|&i| i + $h as u64))
+            .chain($crows.iter().map(|&i| i + $h as u64 * 2))
+            .collect::<Vec<u64>>(),
+        $acols
+            .iter()
+            .chain($bcols.iter())
+            .chain($ccols.iter())
+            .map(|a| *a)
+            .collect::<Vec<u64>>(),
+        $avals
+            .iter()
+            .chain($bvals.iter())
+            .chain($cvals.iter())
+            .map(|a| *a)
+            .collect::<Vec<E::Fr>>(),
+    );
+  }
+}
+
+#[macro_export]
 macro_rules! delta {
     ( $i: expr, $j: expr ) => {{
         if $i == $j {

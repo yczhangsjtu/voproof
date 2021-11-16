@@ -283,13 +283,11 @@ class R1CS(VOProtocol):
     voexec.preprocess_rust(rust_builder_init_size(sc, "cdensity").end())
 
     voexec.preprocess_rust(
-        RustBuilder().let(M).assign(Tuple())
-        .append_to_last("cs.arows.iter().map(|a| *a)"
-          ".chain(cs.brows.iter().map(|&i| i + %s as u64))"
-          ".chain(cs.crows.iter().map(|&i| i + %s as u64 * 2)).collect::<Vec<u64>>()"
-          % (rust(H), rust(H)))
-        .append_to_last("cs.acols.iter().chain(cs.bcols.iter()).chain(cs.ccols.iter()).map(|a| *a).collect::<Vec<u64>>()")
-        .append_to_last("cs.avals.iter().chain(cs.bvals.iter()).chain(cs.cvals.iter()).map(|a| *a).collect::<Vec<E::Fr>>()").end())
+      rust_builder_concat_matrix_vertically(M, H,
+        "cs.arows", "cs.brows", "cs.crows",
+        "cs.acols", "cs.bcols", "cs.ccols",
+        "cs.avals", "cs.bvals", "cs.cvals").end())
+
     voexec.preprocess_output_pk(M)
     voexec.M = M
     M._is_preprocessed = True

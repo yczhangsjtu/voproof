@@ -31,22 +31,6 @@ def to_field(expr):
   return rust(expr)
 
 
-class Samples(object):
-  def __init__(self):
-    self.items = []
-    self.q = 1
-
-  def append(self, item):
-    self.items.append(item)
-
-  def dumpr(self):
-    ret = RustBuilder()
-    for item in self.items:
-      ret.let(item).assign_func("sample_vec::<E::Fr, _>") \
-         .append_to_last(["rng", self.q]).end()
-    return rust(ret)
-
-
 class RustArg(object):
   def __init__(self, name, is_ref=False, is_mutable=False):
     self.name = name
@@ -312,6 +296,9 @@ rust_macro_list = [
     ("define_generator", None, (), ("gamma", "E")),
     ("init_size", None, ("name", "attr"), (_ArgName("name"), _ArgName("attr"), "size")),
     ("sample_randomizers", None, (), ("rng", )),
+    ("concat_matrix_vertically", None,
+      ("result", "h", "arows", "brows", "crows",
+        "acols", "bcols", "cols", "avals", "bvals", "cvals"), ())
 ]
 
 
