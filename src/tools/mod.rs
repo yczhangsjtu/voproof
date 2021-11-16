@@ -613,6 +613,15 @@ macro_rules! define_left_sparse_mvp_vector {
 }
 
 #[macro_export]
+macro_rules! get_randomness_from_hash {
+    ($name:ident, $( $item:expr ),+) => {
+        let $name = hash_to_field::<E::Fr>(
+            to_bytes!( $( $item ),+ ).unwrap()
+        );
+    }
+}
+
+#[macro_export]
 macro_rules! vector_poly_mul {
     // Given vectors u, v and field element omega, compute
     // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)

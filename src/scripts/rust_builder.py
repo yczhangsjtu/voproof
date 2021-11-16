@@ -315,6 +315,7 @@ rust_macro_list = [
     ("define_zero_pad_concat_vector", None, None, ()),
     ("redefine_zero_pad_concat_vector", None, None, ()),
     ("define_poly_from_vec", None, ("poly", "v"), ()),
+    ("get_randomness_from_hash", None, None, ()),
 ]
 
 

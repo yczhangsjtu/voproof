@@ -1399,16 +1399,15 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
             "\\mathsf{H}_{%d}(%s)"
             % (i+1, ",".join([tex(x) for x in transcript]))
           )
-          self.prover_computes(compute_hash,
-              RustBuilder().let(r).assign().func("hash_to_field::<E::Fr>")
-              .append_to_last(RustBuilder().func("to_bytes!")
-                .append_to_last([rust_pk_vk(x) for x in transcript])
-                .invoke_method("unwrap")).end())
+          self.prover_computes(
+            compute_hash,
+            rust_builder_get_randomness_from_hash(
+              r, *[rust_pk_vk(x) for x in transcript]
+            ).end())
           self.verifier_computes(compute_hash,
-              RustBuilder().let(r).assign().func("hash_to_field::<E::Fr>")
-              .append_to_last(RustBuilder().func("to_bytes!")
-                .append_to_last([rust_vk(x) for x in transcript])
-                .invoke_method("unwrap")).end())
+            rust_builder_get_randomness_from_hash(
+              r, *[rust_vk(x) for x in transcript]
+            ).end())
       if isinstance(interaction, ProverSendPolynomials):
         for poly, degree in interaction.polynomials:
           commit_computation = Math(poly.to_comm()).assign(
