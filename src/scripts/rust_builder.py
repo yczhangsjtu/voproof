@@ -308,6 +308,8 @@ rust_macro_list = [
       (_ArgName("cm"), _ArgName("v"), "powers_of_g", _ArgName("deg"))),
     ("define_sparse_mvp_vector", None, ("name", "M", "v", "H", "K"), ()),
     ("define_left_sparse_mvp_vector", None, ("name", "M", "v", "H", "K"), ()),
+    ("define_concat_vector", None, None, ()),
+    ("sparse_mvp_vector", None, ("M", "v", "H", "K"), ()),
 ]
 
 

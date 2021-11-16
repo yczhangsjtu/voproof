@@ -156,14 +156,18 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         init_size!(cap_s_b, bdensity, size);
         init_size!(cap_s_c, cdensity, size);
         init_size!(ell, input_size, size);
-        define_sparse_mvp_vector!(
+        define_concat_vector!(
             u_vec_1,
-            pk.cap_m_mat,
-            vector_concat!(vec!(E::Fr::one()), x_vec, w_vec),
-            3 * cap_h,
-            cap_k
+            sparse_mvp_vector!(
+                pk.cap_m_mat,
+                vector_concat!(vec!(E::Fr::one()), x_vec, w_vec),
+                3 * cap_h,
+                cap_k
+            ),
+            vec!(E::Fr::one()),
+            x_vec,
+            w_vec
         );
-        let u_vec_1 = vector_concat!(u_vec_1, vec![E::Fr::one()], x_vec, w_vec);
         let u_vec_1 = zero_pad_and_concat!(u_vec_1, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec);
         let cm_u_vec_1 = vector_to_commitment::<E>(
             &pk.powers,

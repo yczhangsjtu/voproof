@@ -304,12 +304,17 @@ class R1CS(VOProtocol):
           LaTeXBuilder(1).double_bar(x).double_bar(w)
         )
       ).double_bar(1).double_bar(x).double_bar(w),
-      rust_builder_define_sparse_mvp_vector(u, rust_pk(M), rust_vector_concat(
+      rust_builder_define_concat_vector(u,
+        rust_sparse_mvp_vector(
+          rust_pk(M),
+          rust_vector_concat(
+            rust_vec(rust_one), x, w
+          ),
+          H * 3, K
+        ),
         rust_vec(rust_one), x, w
-        ), H * 3, K).end())
-    voexec.prover_computes(LaTeXBuilder(), RustBuilder().let(u).assign(
-        RustMacro("vector_concat").append([u, "vec![E::Fr::one()]", x, w])
-        ).end())
+      ).end())
+
     voexec.prover_submit_vector(u, 3 * H + K)
     voexec.run_subprotocol(SparseMVP(), u)
     voexec.hadamard_query(

@@ -558,9 +558,26 @@ macro_rules! define_hadamard_vector {
 }
 
 #[macro_export]
+macro_rules! define_concat_vector {
+    ($name:ident, $( $u:expr ),+ ) => {
+        define_vec!(
+            $name,
+            vector_concat!( $($u),+ )
+        );
+    };
+}
+
+#[macro_export]
+macro_rules! sparse_mvp_vector {
+    ($mat:expr, $v:expr, $h:expr, $k:expr) => {
+        sparse_mvp($h, $k, &$mat.0, &$mat.1, &$mat.2, &$v).unwrap()
+    };
+}
+
+#[macro_export]
 macro_rules! define_sparse_mvp_vector {
     ($name:ident, $mat:expr, $v:expr, $h:expr, $k:expr) => {
-        let $name = sparse_mvp($h, $k, &$mat.0, &$mat.1, &$mat.2, &$v).unwrap();
+        define_vec!($name, sparse_mvp_vector!($mat, $v, $h, $k));
     };
 }
 
