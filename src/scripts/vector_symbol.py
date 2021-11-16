@@ -547,6 +547,34 @@ def _dump_coeff_map_with_sparse_coeff(v):
   return "".join(items)
 
 
+def _dumpr_at_index_for_sparse_coefficient(v, index):
+  has_one = "one" in v._dict
+  ret = rust_linear_combination(v._dict["one"][1].dumpr_at_index(index)) \
+      if has_one else rust_linear_combination_base_zero()
+
+  for key, vec_value in v.items():
+    if key == "one":
+      continue
+    vec, value = vec_value
+    for key2, uv_coeff in value.items():
+      unit_vector, coeff = uv_coeff
+      ret.append([
+        to_field(coeff),
+        vec.dumpr_at_index(rust_minus_i64(index, unit_vector.position))
+      ])
+
+  if len(ret) == 2 and not has_one:
+    if ret[0] == to_field(1):
+      return rust(ret[1])
+    if ret[0] == to_field(-1):
+      return rust(rust_neg(ret[1]))
+    if ret[1] == to_field(1):
+      return rust(ret[0])
+    if ret[1] == to_field(-1):
+      return rust(rust_neg(ret[0]))
+
+  return rust(ret)
+
 class VectorCombination(CoeffMap):
   def __init__(self):
     super(VectorCombination, self).__init__()
@@ -632,32 +660,7 @@ class VectorCombination(CoeffMap):
     return _dump_coeff_map_with_sparse_coeff(self)
 
   def dumpr_at_index(self, index):
-    has_one = "one" in self._dict
-    ret = rust_linear_combination(self._dict["one"][1].dumpr_at_index(index)) \
-        if has_one else rust_linear_combination_base_zero()
-
-    for key, vec_value in self.items():
-      if key == "one":
-        continue
-      vec, value = vec_value
-      for key2, uv_coeff in value.items():
-        unit_vector, coeff = uv_coeff
-        ret.append([
-          to_field(coeff),
-          vec.dumpr_at_index(rust_minus_i64(index, unit_vector.position))
-        ])
-
-    if len(ret) == 2 and not has_one:
-      if ret[0] == to_field(1):
-        return rust(ret[1])
-      if ret[0] == to_field(-1):
-        return rust(rust_neg(ret[1]))
-      if ret[1] == to_field(1):
-        return rust(ret[0])
-      if ret[1] == to_field(-1):
-        return rust(rust_neg(ret[0]))
-
-    return rust(ret)
+    return _dumpr_at_index_for_sparse_coefficient(self, index)
 
 class PowerVector(object):
   def __init__(self, alpha, size):
@@ -810,20 +813,7 @@ class StructuredVector(CoeffMap):
     return sum(items)
 
   def dumpr_at_index(self, index):
-    ret = RustMacro("linear_combination")
-    ret.append(self._dict["one"][1].dumpr_at_index(index)
-        if "one" in self._dict else "E::Fr::zero()")
-    for key, vec_value in self.items():
-      if key == "one":
-        continue
-      vec, value = vec_value
-      for key2, uv_coeff in value.items():
-        unit_vector, coeff = uv_coeff
-        ret.append([
-          to_field(coeff),
-          vec.dumpr_at_index(rust_minus_plus_one(index, unit_vector.position))
-        ])
-    return rust(ret)
+    return _dumpr_at_index_for_sparse_coefficient(self, index)
 
   def reverse_omega(self, omega):
     ret = StructuredVector()

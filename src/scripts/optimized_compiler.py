@@ -284,9 +284,9 @@ class VOQuery(object):
   def dumpr_at_index(self, index):
     if self.one_sided:
       return self.left_side.dumpr_at_index(index)
-    return "(%s)-(%s)" % (
-        self.left_side.dumpr_at_index(index),
-        self.right_side.dumpr_at_index(index))
+    return rust(rust_minus(
+      self.left_side.dumpr_at_index(index),
+      self.right_side.dumpr_at_index(index)))
 
   def dump_hadamard_difference(self):
     tmp, self.oper = self.oper, "circ"

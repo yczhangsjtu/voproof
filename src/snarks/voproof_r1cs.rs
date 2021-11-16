@@ -254,19 +254,22 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                             minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
                         )
                     ),
-                    (mul!(
-                        neg!(vector_index!(
-                            h_vec,
-                            minus_i64!(i, cap_s_a + cap_s_b + cap_s_c + 1)
-                        )),
-                        vector_index!(
-                            s_vec,
-                            minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
+                    minus!(
+                        mul!(
+                            neg!(vector_index!(
+                                h_vec,
+                                minus_i64!(i, cap_s_a + cap_s_b + cap_s_c + 1)
+                            )),
+                            vector_index!(
+                                s_vec,
+                                minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
+                            )
+                        ),
+                        mul!(
+                            vector_index!(h_vec, minus_i64!(i, 1)),
+                            vector_index!(pk.v_vec, minus_i64!(i, cap_k + 1))
                         )
-                    )) - (mul!(
-                        vector_index!(h_vec, minus_i64!(i, 1)),
-                        vector_index!(pk.v_vec, minus_i64!(i, cap_k + 1))
-                    ))
+                    )
                 ),
                 cap_k + cap_s_a + cap_s_b + cap_s_c
             )
@@ -297,37 +300,35 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 i,
                 sum!(
                     mul!(
-                        linear_combination!(
-                            E::Fr::zero(),
+                        linear_combination_base_zero!(
                             mu,
                             range_index!(
                                 1,
                                 3 * cap_h,
-                                minus_plus_one!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
+                                minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
                             ),
                             -to_field::<E::Fr>(1),
                             power_vector_index!(
                                 gamma,
                                 3 * cap_h,
-                                minus_plus_one!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
+                                minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
                             )
                         ),
                         vector_index!(s_vec, cap_k + cap_s_a + cap_s_b + cap_s_c + i)
                     ),
                     mul!(
-                        linear_combination!(
-                            E::Fr::zero(),
+                        linear_combination_base_zero!(
                             alpha * nu,
                             range_index!(
                                 1,
                                 cap_k,
-                                minus_plus_one!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
+                                minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
                             ),
                             -alpha,
                             power_vector_index!(
                                 gamma,
                                 cap_k,
-                                minus_plus_one!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
+                                minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
                             )
                         ),
                         vector_index!(h_vec, cap_k + cap_s_a + cap_s_b + cap_s_c + i)
@@ -341,16 +342,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                             )
                         ),
                         linear_combination!(
-                            linear_combination!(
-                                E::Fr::zero(),
+                            linear_combination_base_zero!(
                                 mu * nu,
                                 range_index!(
                                     1,
                                     cap_s_a + cap_s_b + cap_s_c,
-                                    minus_plus_one!(
-                                        cap_k + cap_s_a + cap_s_b + cap_s_c + i,
-                                        cap_k + 1
-                                    )
+                                    minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
                                 )
                             ),
                             -mu,
@@ -371,23 +368,18 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         )
                     ),
                     mul!(
-                        linear_combination!(
-                            E::Fr::zero(),
+                        linear_combination_base_zero!(
                             -power(alpha, 2),
                             range_index!(
                                 1,
                                 cap_s_a + cap_s_b + cap_s_c,
-                                minus_plus_one!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
+                                minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
                             )
                         ),
-                        linear_combination!(
-                            E::Fr::zero(),
-                            E::Fr::one(),
-                            range_index!(
-                                1,
-                                cap_s_a + cap_s_b + cap_s_c,
-                                minus_plus_one!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
-                            )
+                        range_index!(
+                            1,
+                            cap_s_a + cap_s_b + cap_s_c,
+                            minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
                         )
                     ),
                     mul!(
@@ -410,13 +402,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         )
                     ),
                     mul!(
-                        linear_combination!(
-                            E::Fr::zero(),
+                        linear_combination_base_zero!(
                             -power(alpha, 3),
                             range_index!(
                                 1,
                                 cap_h,
-                                minus_plus_one!(
+                                minus_i64!(
                                     cap_k + cap_s_a + cap_s_b + cap_s_c + i,
                                     -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1
                                 )
@@ -578,13 +569,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let h_vec_2 = expression_vector!(
             i,
             linear_combination!(
-                linear_combination!(
-                    E::Fr::zero(),
+                linear_combination_base_zero!(
                     -power(alpha, 4) * power(omega, 3 * cap_h + ell),
                     power_vector_index!(
                         omega.inverse().unwrap(),
                         ell + 1,
-                        minus_plus_one!(
+                        minus_i64!(
                             -cap_k - 2 * cap_s_a - 2 * cap_s_b - 2 * cap_s_c + i,
                             1 - ell
                         )
@@ -772,13 +762,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let h_vec_3 = expression_vector!(
             i,
             linear_combination!(
-                linear_combination!(
-                    E::Fr::zero(),
+                linear_combination_base_zero!(
                     -power(alpha, 4) * power(omega, 3 * cap_h + ell),
                     power_vector_index!(
                         omega.inverse().unwrap(),
                         ell + 1,
-                        minus_plus_one!(i + 1, 1 - ell)
+                        minus_i64!(i + 1, 1 - ell)
                     )
                 ),
                 -power(alpha, 2) * mu,
