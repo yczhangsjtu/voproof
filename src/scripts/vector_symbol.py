@@ -572,6 +572,7 @@ def _dumpr_at_index_for_sparse_coefficient(v, index):
       return rust(ret[0])
     if ret[1] == to_field(-1):
       return rust(rust_neg(ret[0]))
+    return rust(rust_mul(ret[0], ret[1]))
 
   return rust(ret)
 

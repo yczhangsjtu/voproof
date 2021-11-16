@@ -334,7 +334,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         vector_index!(h_vec, cap_k + cap_s_a + cap_s_b + cap_s_c + i)
                     ),
                     mul!(
-                        linear_combination_base_zero!(
+                        mul!(
                             power(alpha, 2),
                             vector_index!(
                                 h_vec,
@@ -342,7 +342,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                             )
                         ),
                         linear_combination!(
-                            linear_combination_base_zero!(
+                            mul!(
                                 mu * nu,
                                 range_index!(
                                     1,
@@ -368,7 +368,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         )
                     ),
                     mul!(
-                        linear_combination_base_zero!(
+                        mul!(
                             -power(alpha, 2),
                             range_index!(
                                 1,
@@ -383,7 +383,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         )
                     ),
                     mul!(
-                        linear_combination_base_zero!(
+                        mul!(
                             power(alpha, 3),
                             vector_index!(
                                 u_vec_1,
@@ -402,7 +402,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         )
                     ),
                     mul!(
-                        linear_combination_base_zero!(
+                        mul!(
                             -power(alpha, 3),
                             range_index!(
                                 1,
@@ -422,7 +422,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         )
                     ),
                     mul!(
-                        linear_combination_base_zero!(
+                        mul!(
                             power(alpha, 5),
                             vector_index!(
                                 u_vec_1,
@@ -441,7 +441,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         )
                     ),
                     mul!(
-                        linear_combination_base_zero!(
+                        mul!(
                             -power(alpha, 5) * beta,
                             vector_index!(
                                 h_vec,
@@ -460,7 +460,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         )
                     ),
                     mul!(
-                        linear_combination_base_zero!(
+                        mul!(
                             -power(alpha, 5) * beta,
                             vector_index!(
                                 h_vec,
@@ -569,7 +569,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let h_vec_2 = expression_vector!(
             i,
             linear_combination!(
-                linear_combination_base_zero!(
+                mul!(
                     -power(alpha, 4) * power(omega, 3 * cap_h + ell),
                     power_vector_index!(
                         omega.inverse().unwrap(),
@@ -762,7 +762,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let h_vec_3 = expression_vector!(
             i,
             linear_combination!(
-                linear_combination_base_zero!(
+                mul!(
                     -power(alpha, 4) * power(omega, 3 * cap_h + ell),
                     power_vector_index!(
                         omega.inverse().unwrap(),
