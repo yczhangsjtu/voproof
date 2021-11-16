@@ -96,18 +96,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define_generator!(gamma, E);
         define_matrix_vectors!(u_vec, w_vec, v_vec, cap_m_mat, gamma);
         define_hadamard_vector!(y_vec, u_vec, w_vec);
-        let cm_u_vec =
-            vector_to_commitment::<E>(&powers_of_g, &u_vec, (cap_s_a + cap_s_b + cap_s_c) as u64)
-                .unwrap();
-        let cm_w_vec =
-            vector_to_commitment::<E>(&powers_of_g, &w_vec, (cap_s_a + cap_s_b + cap_s_c) as u64)
-                .unwrap();
-        let cm_v_vec =
-            vector_to_commitment::<E>(&powers_of_g, &v_vec, (cap_s_a + cap_s_b + cap_s_c) as u64)
-                .unwrap();
-        let cm_y_vec =
-            vector_to_commitment::<E>(&powers_of_g, &y_vec, (cap_s_a + cap_s_b + cap_s_c) as u64)
-                .unwrap();
+        commit_vector!(cm_u_vec, u_vec, powers_of_g, cap_s_a + cap_s_b + cap_s_c);
+        commit_vector!(cm_w_vec, w_vec, powers_of_g, cap_s_a + cap_s_b + cap_s_c);
+        commit_vector!(cm_v_vec, v_vec, powers_of_g, cap_s_a + cap_s_b + cap_s_c);
+        commit_vector!(cm_y_vec, y_vec, powers_of_g, cap_s_a + cap_s_b + cap_s_c);
 
         let verifier_key = R1CSVerifierKey::<E> {
             cm_u_vec: cm_u_vec,

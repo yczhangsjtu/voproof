@@ -538,6 +538,13 @@ macro_rules! define_matrix_vectors {
 }
 
 #[macro_export]
+macro_rules! commit_vector {
+    ($cm:ident, $v:expr, $powers:expr, $deg:expr) => {
+        let $cm = vector_to_commitment::<E>(&$powers, &$v, $deg as u64).unwrap();
+    };
+}
+
+#[macro_export]
 macro_rules! define_hadamard_vector {
     ($name:ident, $u:expr, $v:expr) => {
         define_vec!(

@@ -1375,12 +1375,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       self.preprocess(Math(poly.to_comm())
                       .assign("\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
                               % poly.dumps()),
-                      RustBuilder().let(poly.to_comm())
-                      .assign_func("vector_to_commitment::<E>")
-                      .append_to_last("&powers_of_g")
-                      .append_to_last("&%s" % rust(poly.vector))
-                      .append_to_last("(%s) as u64" % rust(degree))
-                      .invoke_method("unwrap").end())
+                      rust_builder_commit_vector(poly.to_comm(), poly.vector, degree).end())
       self.preprocess_output_vk(poly.to_comm())
       transcript.append(poly.to_comm())
 

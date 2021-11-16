@@ -304,6 +304,8 @@ rust_macro_list = [
     ("define_clone_vector", None, ("name", "v"), ()),
     ("define_hadamard_vector", None, ("name", "u", "v"), ()),
     ("define_matrix_vectors", None, ("u", "w", "v", "M", "gamma"), ()),
+    ("commit_vector", None, ("cm", "v", "deg"),
+      (_ArgName("cm"), _ArgName("v"), "powers_of_g", _ArgName("deg"))),
 ]
 
 
