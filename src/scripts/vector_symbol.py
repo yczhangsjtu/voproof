@@ -819,8 +819,10 @@ class StructuredVector(CoeffMap):
       vec, value = vec_value
       for key2, uv_coeff in value.items():
         unit_vector, coeff = uv_coeff
-        ret.append([to_field(coeff), vec.dumpr_at_index(
-          "%s-(%s)+1" % (rust(index), rust(unit_vector.position)))])
+        ret.append([
+          to_field(coeff),
+          vec.dumpr_at_index(rust_minus_plus_one(index, unit_vector.position))
+        ])
     return rust(ret)
 
   def reverse_omega(self, omega):

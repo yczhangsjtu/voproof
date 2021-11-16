@@ -250,9 +250,9 @@ class VOQuerySide(object):
     return VOQuerySide(-self.a, self.b)
 
   def dumpr_at_index(self, index):
-    return "(%s)*(%s)" % (
-        self.a.dumpr_at_index(index),
-        self.b.dumpr_at_index(index))
+    return rust(rust_mul(
+      self.a.dumpr_at_index(index),
+      self.b.dumpr_at_index(index)))
 
 
 class VOQuery(object):
@@ -279,7 +279,7 @@ class VOQuery(object):
   def dump_difference(self):
     if self.one_sided:
       return self.dump_left_side()
-    return "%s-%s" % (self.dump_left_side(), self.dump_right_side())
+    return rust(rust_minus(self.dump_left_side(), self.dump_right_side()))
 
   def dumpr_at_index(self, index):
     if self.one_sided:

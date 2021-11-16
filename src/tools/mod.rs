@@ -254,6 +254,16 @@ macro_rules! minus {
 }
 
 #[macro_export]
+macro_rules! mul {
+    ($u:expr, $v:expr) => { $u * $v }
+}
+
+#[macro_export]
+macro_rules! minus_plus_one {
+    ($u:expr, $v:expr) => { $u - $v + 1 }
+}
+
+#[macro_export]
 macro_rules! neg {
     ($u:expr) => { -$u }
 }

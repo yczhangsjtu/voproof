@@ -244,21 +244,29 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 i,
                 power_linear_combination!(
                     beta,
-                    (vector_index!(
-                        u_vec_1,
-                        minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
-                    )) * (vector_index!(
-                        s_vec,
-                        minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
-                    )),
-                    ((neg!(vector_index!(
-                        h_vec,
-                        minus_i64!(i, cap_s_a + cap_s_b + cap_s_c + 1)
-                    ))) * (vector_index!(
-                        s_vec,
-                        minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
-                    ))) - ((vector_index!(h_vec, minus_i64!(i, 1)))
-                        * (vector_index!(pk.v_vec, minus_i64!(i, cap_k + 1))))
+                    mul!(
+                        vector_index!(
+                            u_vec_1,
+                            minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
+                        ),
+                        vector_index!(
+                            s_vec,
+                            minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
+                        )
+                    ),
+                    (mul!(
+                        neg!(vector_index!(
+                            h_vec,
+                            minus_i64!(i, cap_s_a + cap_s_b + cap_s_c + 1)
+                        )),
+                        vector_index!(
+                            s_vec,
+                            minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
+                        )
+                    )) - (mul!(
+                        vector_index!(h_vec, minus_i64!(i, 1)),
+                        vector_index!(pk.v_vec, minus_i64!(i, cap_k + 1))
+                    ))
                 ),
                 cap_k + cap_s_a + cap_s_b + cap_s_c
             )
@@ -288,172 +296,210 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             expression_vector!(
                 i,
                 sum!(
-                    (linear_combination!(
-                        E::Fr::zero(),
-                        mu,
-                        range_index!(
-                            1,
-                            3 * cap_h,
-                            cap_k + cap_s_a + cap_s_b + cap_s_c + i - (1) + 1
-                        ),
-                        -to_field::<E::Fr>(1),
-                        power_vector_index!(
-                            gamma,
-                            3 * cap_h,
-                            cap_k + cap_s_a + cap_s_b + cap_s_c + i - (1) + 1
-                        )
-                    )) * (vector_index!(s_vec, cap_k + cap_s_a + cap_s_b + cap_s_c + i)),
-                    (linear_combination!(
-                        E::Fr::zero(),
-                        alpha * nu,
-                        range_index!(1, cap_k, cap_k + cap_s_a + cap_s_b + cap_s_c + i - (1) + 1),
-                        -alpha,
-                        power_vector_index!(
-                            gamma,
-                            cap_k,
-                            cap_k + cap_s_a + cap_s_b + cap_s_c + i - (1) + 1
-                        )
-                    )) * (vector_index!(h_vec, cap_k + cap_s_a + cap_s_b + cap_s_c + i)),
-                    (linear_combination_base_zero!(
-                        power(alpha, 2),
-                        vector_index!(
-                            h_vec,
-                            minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
-                        )
-                    )) * (linear_combination!(
+                    mul!(
                         linear_combination!(
                             E::Fr::zero(),
-                            mu * nu,
+                            mu,
+                            range_index!(
+                                1,
+                                3 * cap_h,
+                                minus_plus_one!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
+                            ),
+                            -to_field::<E::Fr>(1),
+                            power_vector_index!(
+                                gamma,
+                                3 * cap_h,
+                                minus_plus_one!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
+                            )
+                        ),
+                        vector_index!(s_vec, cap_k + cap_s_a + cap_s_b + cap_s_c + i)
+                    ),
+                    mul!(
+                        linear_combination!(
+                            E::Fr::zero(),
+                            alpha * nu,
+                            range_index!(
+                                1,
+                                cap_k,
+                                minus_plus_one!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
+                            ),
+                            -alpha,
+                            power_vector_index!(
+                                gamma,
+                                cap_k,
+                                minus_plus_one!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
+                            )
+                        ),
+                        vector_index!(h_vec, cap_k + cap_s_a + cap_s_b + cap_s_c + i)
+                    ),
+                    mul!(
+                        linear_combination_base_zero!(
+                            power(alpha, 2),
+                            vector_index!(
+                                h_vec,
+                                minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
+                            )
+                        ),
+                        linear_combination!(
+                            linear_combination!(
+                                E::Fr::zero(),
+                                mu * nu,
+                                range_index!(
+                                    1,
+                                    cap_s_a + cap_s_b + cap_s_c,
+                                    minus_plus_one!(
+                                        cap_k + cap_s_a + cap_s_b + cap_s_c + i,
+                                        cap_k + 1
+                                    )
+                                )
+                            ),
+                            -mu,
+                            vector_index!(
+                                pk.w_vec,
+                                minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
+                            ),
+                            -nu,
+                            vector_index!(
+                                pk.u_vec,
+                                minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
+                            ),
+                            E::Fr::one(),
+                            vector_index!(
+                                pk.y_vec,
+                                minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
+                            )
+                        )
+                    ),
+                    mul!(
+                        linear_combination!(
+                            E::Fr::zero(),
+                            -power(alpha, 2),
                             range_index!(
                                 1,
                                 cap_s_a + cap_s_b + cap_s_c,
-                                cap_k + cap_s_a + cap_s_b + cap_s_c + i - (cap_k + 1) + 1
+                                minus_plus_one!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
                             )
                         ),
-                        -mu,
-                        vector_index!(
-                            pk.w_vec,
-                            minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
+                        linear_combination!(
+                            E::Fr::zero(),
+                            E::Fr::one(),
+                            range_index!(
+                                1,
+                                cap_s_a + cap_s_b + cap_s_c,
+                                minus_plus_one!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
+                            )
+                        )
+                    ),
+                    mul!(
+                        linear_combination_base_zero!(
+                            power(alpha, 3),
+                            vector_index!(
+                                u_vec_1,
+                                minus_i64!(
+                                    cap_k + cap_s_a + cap_s_b + cap_s_c + i,
+                                    -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1
+                                )
+                            )
                         ),
-                        -nu,
-                        vector_index!(
-                            pk.u_vec,
-                            minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
-                        ),
-                        E::Fr::one(),
-                        vector_index!(
-                            pk.y_vec,
-                            minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
-                        )
-                    )),
-                    (linear_combination!(
-                        E::Fr::zero(),
-                        -power(alpha, 2),
-                        range_index!(
-                            1,
-                            cap_s_a + cap_s_b + cap_s_c,
-                            cap_k + cap_s_a + cap_s_b + cap_s_c + i - (cap_k + 1) + 1
-                        )
-                    )) * (linear_combination!(
-                        E::Fr::zero(),
-                        E::Fr::one(),
-                        range_index!(
-                            1,
-                            cap_s_a + cap_s_b + cap_s_c,
-                            cap_k + cap_s_a + cap_s_b + cap_s_c + i - (cap_k + 1) + 1
-                        )
-                    )),
-                    (linear_combination_base_zero!(
-                        power(alpha, 3),
                         vector_index!(
                             u_vec_1,
                             minus_i64!(
                                 cap_k + cap_s_a + cap_s_b + cap_s_c + i,
-                                -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1
+                                -2 * cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1
                             )
                         )
-                    )) * (vector_index!(
-                        u_vec_1,
-                        minus_i64!(
-                            cap_k + cap_s_a + cap_s_b + cap_s_c + i,
-                            -2 * cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1
-                        )
-                    )),
-                    (linear_combination!(
-                        E::Fr::zero(),
-                        -power(alpha, 3),
-                        range_index!(
-                            1,
-                            cap_h,
-                            cap_k + cap_s_a + cap_s_b + cap_s_c + i
-                                - (-cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1)
-                                + 1
-                        )
-                    )) * (vector_index!(
-                        u_vec_1,
-                        minus_i64!(
-                            cap_k + cap_s_a + cap_s_b + cap_s_c + i,
-                            -3 * cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1
-                        )
-                    )),
-                    (linear_combination_base_zero!(
-                        power(alpha, 5),
+                    ),
+                    mul!(
+                        linear_combination!(
+                            E::Fr::zero(),
+                            -power(alpha, 3),
+                            range_index!(
+                                1,
+                                cap_h,
+                                minus_plus_one!(
+                                    cap_k + cap_s_a + cap_s_b + cap_s_c + i,
+                                    -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1
+                                )
+                            )
+                        ),
                         vector_index!(
                             u_vec_1,
+                            minus_i64!(
+                                cap_k + cap_s_a + cap_s_b + cap_s_c + i,
+                                -3 * cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1
+                            )
+                        )
+                    ),
+                    mul!(
+                        linear_combination_base_zero!(
+                            power(alpha, 5),
+                            vector_index!(
+                                u_vec_1,
+                                minus_i64!(
+                                    cap_k + cap_s_a + cap_s_b + cap_s_c + i,
+                                    -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1
+                                )
+                            )
+                        ),
+                        vector_index!(
+                            s_vec,
                             minus_i64!(
                                 cap_k + cap_s_a + cap_s_b + cap_s_c + i,
                                 -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1
                             )
                         )
-                    )) * (vector_index!(
-                        s_vec,
-                        minus_i64!(
-                            cap_k + cap_s_a + cap_s_b + cap_s_c + i,
-                            -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1
-                        )
-                    )),
-                    (linear_combination_base_zero!(
-                        -power(alpha, 5) * beta,
+                    ),
+                    mul!(
+                        linear_combination_base_zero!(
+                            -power(alpha, 5) * beta,
+                            vector_index!(
+                                h_vec,
+                                minus_i64!(
+                                    cap_k + cap_s_a + cap_s_b + cap_s_c + i,
+                                    cap_s_a + cap_s_b + cap_s_c + 1
+                                )
+                            )
+                        ),
                         vector_index!(
-                            h_vec,
+                            s_vec,
                             minus_i64!(
                                 cap_k + cap_s_a + cap_s_b + cap_s_c + i,
-                                cap_s_a + cap_s_b + cap_s_c + 1
+                                -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1
                             )
                         )
-                    )) * (vector_index!(
-                        s_vec,
-                        minus_i64!(
-                            cap_k + cap_s_a + cap_s_b + cap_s_c + i,
-                            -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1
-                        )
-                    )),
-                    (linear_combination_base_zero!(
-                        -power(alpha, 5) * beta,
-                        vector_index!(
-                            h_vec,
-                            minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
-                        )
-                    )) * (vector_index!(
-                        pk.v_vec,
-                        minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
-                    )),
-                    (linear_combination_base_zero!(
-                        -power(alpha, 5),
-                        vector_index!(
-                            r_vec_tilde,
-                            minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
+                    ),
+                    mul!(
+                        linear_combination_base_zero!(
+                            -power(alpha, 5) * beta,
+                            vector_index!(
+                                h_vec,
+                                minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
+                            )
                         ),
-                        power(alpha, 5),
                         vector_index!(
-                            r_vec_tilde,
-                            minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 2)
+                            pk.v_vec,
+                            minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, cap_k + 1)
                         )
-                    )) * (range_index!(
-                        1,
-                        cap_k + cap_s_a + cap_s_b + cap_s_c,
-                        cap_k + cap_s_a + cap_s_b + cap_s_c + i
-                    ))
+                    ),
+                    mul!(
+                        linear_combination_base_zero!(
+                            -power(alpha, 5),
+                            vector_index!(
+                                r_vec_tilde,
+                                minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 1)
+                            ),
+                            power(alpha, 5),
+                            vector_index!(
+                                r_vec_tilde,
+                                minus_i64!(cap_k + cap_s_a + cap_s_b + cap_s_c + i, 2)
+                            )
+                        ),
+                        range_index!(
+                            1,
+                            cap_k + cap_s_a + cap_s_b + cap_s_c,
+                            cap_k + cap_s_a + cap_s_b + cap_s_c + i
+                        )
+                    )
                 ),
                 cap_s_a + cap_s_b + cap_s_c + 2
             )
@@ -538,7 +584,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     power_vector_index!(
                         omega.inverse().unwrap(),
                         ell + 1,
-                        -cap_k - 2 * cap_s_a - 2 * cap_s_b - 2 * cap_s_c + i - (1 - ell) + 1
+                        minus_plus_one!(
+                            -cap_k - 2 * cap_s_a - 2 * cap_s_b - 2 * cap_s_c + i,
+                            1 - ell
+                        )
                     )
                 ),
                 -power(alpha, 2) * mu,
@@ -726,7 +775,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 linear_combination!(
                     E::Fr::zero(),
                     -power(alpha, 4) * power(omega, 3 * cap_h + ell),
-                    power_vector_index!(omega.inverse().unwrap(), ell + 1, i + 1 - (1 - ell) + 1)
+                    power_vector_index!(
+                        omega.inverse().unwrap(),
+                        ell + 1,
+                        minus_plus_one!(i + 1, 1 - ell)
+                    )
                 ),
                 -power(alpha, 2) * mu,
                 vector_index!(v_vec_1, minus_i64!(i + 1, cap_k - shiftlength + 1)),
