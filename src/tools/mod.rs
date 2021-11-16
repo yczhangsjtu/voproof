@@ -602,6 +602,24 @@ macro_rules! define_concat_neg_vector {
 }
 
 #[macro_export]
+macro_rules! define_concat_uwinverse_vector {
+    ($name:ident, $v:expr, $mu:expr, $u:expr, $nu:expr, $w:expr ) => {
+        define_vec!(
+            $name,
+            $v.iter()
+              .map(|a| *a)
+              .chain(
+                $u.iter()
+                  .map(|a| *a)
+                  .zip($w.iter().map(|a| *a))
+                  .map(|(u, w)| (($mu - u) * ($nu - w)).inverse().unwrap())
+              )
+              .collect::<Vec<E::Fr>>()
+        );
+    };
+}
+
+#[macro_export]
 macro_rules! define_zero_pad_concat_vector {
     ($name:ident, $v:expr, $n:expr, $( $u:expr ),+ ) => {
         define_vec!(

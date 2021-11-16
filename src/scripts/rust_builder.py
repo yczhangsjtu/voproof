@@ -322,6 +322,7 @@ rust_macro_list = [
       ("name", "expr", "n"), (_ArgName("name"), sym_i, _ArgName("expr"), _ArgName("n"))),
     ("minus", None, ("u", "v"), ()),
     ("define_concat_neg_vector", None, ("name", "u", "v"), ()),
+    ("define_concat_uwinverse_vector", None, ("name", "v", "mu", "u", "nu", "w"), ()),
 ]
 
 

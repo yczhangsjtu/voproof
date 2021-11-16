@@ -212,20 +212,13 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_u_vec_1,
             cm_s_vec
         );
-        let mut rnu_vec =
-            expression_vector!(i, (nu) - (power_vector_index!(gamma, cap_k, i)), cap_k);
-        batch_inversion(&mut rnu_vec);
-        let h_vec = rnu_vec
-            .iter()
-            .map(|a| *a)
-            .chain(
-                pk.u_vec
-                    .iter()
-                    .map(|a| *a)
-                    .zip(pk.w_vec.iter().map(|a| *a))
-                    .map(|(u, w)| ((mu - u) * (nu - w)).inverse().unwrap()),
-            )
-            .collect::<Vec<E::Fr>>();
+        define_expression_vector_inverse!(
+            rnu_vec,
+            i,
+            minus!(nu, power_vector_index!(gamma, cap_k, i)),
+            cap_k
+        );
+        define_concat_uwinverse_vector!(h_vec, rnu_vec, mu, pk.u_vec, nu, pk.w_vec);
         redefine_zero_pad_concat_vector!(h_vec, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec_2);
         commit_vector!(
             cm_h_vec,

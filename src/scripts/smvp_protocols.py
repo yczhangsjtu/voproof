@@ -93,31 +93,22 @@ class SparseMVP(VOProtocol):
 
     h = get_named_vector("h")
     rnu = get_named_vector("rnu")
-    voexec.prover_computes(LaTeXBuilder(), RustBuilder().letmut(rnu).assign(
-        RustMacro("expression_vector").append([
-            Symbol("i"),
-            "(%s) - (%s)" % (rust(nu), PowerVector(gamma, K).dumpr_at_index(Symbol("i"))),
-            K]),
-      ).end()
-      .func("batch_inversion").append_to_last("&mut %s" % rust(rnu)).end())
+    voexec.prover_computes(LaTeXBuilder(),
+      rust_builder_define_expression_vector_inverse_i(
+        rnu,
+        rust_minus(nu, PowerVector(gamma, K).dumpr_at_index(sym_i)),
+        K
+      ).end())
     voexec.prover_computes(Math(h).assign(
-      ExpressionVector("\\frac{1}{%s-\\gamma^i}" % tex(nu), K)
-    ).double_bar(
-      ExpressionVector("\\frac{1}{(%s-%s)(%s-%s)}" %
-                       (tex(mu), voexec.u.slice(Symbol("i")).dumps(),
-                        tex(nu), voexec.w.slice(Symbol("i")).dumps()), ell)
-    ), RustBuilder().let(h).assign(rnu).invoke_method("iter")
-                    .invoke_method("map").append_to_last("|a| *a")
-                    .invoke_method("chain").append_to_last(
-                      RustBuilder(rust_pk(voexec.u)).invoke_method("iter")
-                      .invoke_method("map").append_to_last("|a| *a")
-                      .invoke_method("zip").append_to_last(
-                        RustBuilder(rust_pk(voexec.w)).invoke_method("iter")
-                        .invoke_method("map").append_to_last("|a| *a")
-                      )
-                      .invoke_method("map")
-                      .append_to_last("|(u, w)| ((%s - u) * (%s - w)).inverse().unwrap()" % (rust(mu), rust(nu))))
-                    .invoke_method("collect::<Vec<E::Fr>>").end())
+        ExpressionVector("\\frac{1}{%s-\\gamma^i}" % tex(nu), K)
+      ).double_bar(
+        ExpressionVector("\\frac{1}{(%s-%s)(%s-%s)}" %
+                         (tex(mu), voexec.u.slice(Symbol("i")).dumps(),
+                          tex(nu), voexec.w.slice(Symbol("i")).dumps()), ell)
+      ),
+      rust_builder_define_concat_uwinverse_vector(
+        h, rnu, mu, rust_pk(voexec.u), nu, rust_pk(voexec.w)
+      ).end())
     voexec.prover_submit_vector(h, ell + K)
 
     voexec.hadamard_query(
