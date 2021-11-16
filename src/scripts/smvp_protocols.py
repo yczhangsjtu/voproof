@@ -21,20 +21,10 @@ class SparseMVP(VOProtocol):
     v = get_named_vector("v")
     y = get_named_vector("y")
     voexec.preprocess_rust(rust_builder_define_generator().end())
-    voexec.preprocess(
-      Math(u).assign(ExpressionVector("\\gamma^{\\mathsf{row}_i}", ell)),
-      rust_builder_define_int_array_to_power_vector(
-        u, "%s.0" % rust(voexec.M), "gamma"
-      ).end()
-    )
-    voexec.preprocess(
-      Math(w).assign(ExpressionVector("\\gamma^{\\mathsf{col}_i}", ell)),
-      rust_builder_define_int_array_to_power_vector(
-        w, "%s.1" % rust(voexec.M), "gamma"
-      ).end())
-    voexec.preprocess(
-      Math(v).assign(ExpressionVector("\\mathsf{val}_i", ell)),
-      rust_builder_define_clone_vector(v, "%s.2" % rust(voexec.M)).end())
+    voexec.preprocess_latex(Math(u).assign(ExpressionVector("\\gamma^{\\mathsf{row}_i}", ell))),
+    voexec.preprocess_latex(Math(w).assign(ExpressionVector("\\gamma^{\\mathsf{col}_i}", ell))),
+    voexec.preprocess_latex(Math(v).assign(ExpressionVector("\\mathsf{val}_i", ell))),
+    voexec.preprocess_rust(rust_builder_define_matrix_vectors(u, w, v, voexec.M, "gamma").end())
     voexec.preprocess(
       Math(y).assign(u).circ(w),
       rust_builder_define_hadamard_vector(y, u, w).end())

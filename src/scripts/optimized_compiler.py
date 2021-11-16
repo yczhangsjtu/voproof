@@ -178,6 +178,9 @@ class PublicCoinProtocolExecution(object):
   def preprocess_rust(self, rust_builder):
     self.preprocess(LaTeXBuilder(), rust_builder)
 
+  def preprocess_latex(self, latex_builder):
+    self.preprocess(latex_builder, RustBuilder())
+
   def preprocess_output_pk(self, expr):
     self.indexer_output_pk.append(expr)
 

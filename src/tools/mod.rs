@@ -251,10 +251,12 @@ macro_rules! to_field {
 #[macro_export]
 macro_rules! zero_pad {
     ( $u: expr, $n: expr ) => {
-        (&$u).iter().map(|a| *a)
-          .chain((0..($n as usize-$u.len())).map(|_| E::Fr::zero()))
-          .collect::<Vec<_>>()
-    }
+        (&$u)
+            .iter()
+            .map(|a| *a)
+            .chain((0..($n as usize - $u.len())).map(|_| E::Fr::zero()))
+            .collect::<Vec<_>>()
+    };
 }
 
 #[macro_export]
@@ -296,31 +298,31 @@ macro_rules! define_vec_mut {
 
 #[macro_export]
 macro_rules! concat_matrix_vertically {
-  ($result:ident, $h:expr,
+    ($result:ident, $h:expr,
    $arows:expr, $brows:expr, $crows:expr,
    $acols:expr, $bcols:expr, $ccols:expr,
    $avals:expr, $bvals:expr, $cvals:expr) => {
-    let $result = (
-        $arows
-            .iter()
-            .map(|a| *a)
-            .chain($brows.iter().map(|&i| i + $h as u64))
-            .chain($crows.iter().map(|&i| i + $h as u64 * 2))
-            .collect::<Vec<u64>>(),
-        $acols
-            .iter()
-            .chain($bcols.iter())
-            .chain($ccols.iter())
-            .map(|a| *a)
-            .collect::<Vec<u64>>(),
-        $avals
-            .iter()
-            .chain($bvals.iter())
-            .chain($cvals.iter())
-            .map(|a| *a)
-            .collect::<Vec<E::Fr>>(),
-    );
-  }
+        let $result = (
+            $arows
+                .iter()
+                .map(|a| *a)
+                .chain($brows.iter().map(|&i| i + $h as u64))
+                .chain($crows.iter().map(|&i| i + $h as u64 * 2))
+                .collect::<Vec<u64>>(),
+            $acols
+                .iter()
+                .chain($bcols.iter())
+                .chain($ccols.iter())
+                .map(|a| *a)
+                .collect::<Vec<u64>>(),
+            $avals
+                .iter()
+                .chain($bvals.iter())
+                .chain($cvals.iter())
+                .map(|a| *a)
+                .collect::<Vec<E::Fr>>(),
+        );
+    };
 }
 
 #[macro_export]
@@ -527,13 +529,23 @@ macro_rules! define_clone_vector {
 }
 
 #[macro_export]
+macro_rules! define_matrix_vectors {
+    ($u:ident, $w:ident, $v:ident, $mat:expr, $gamma:expr) => {
+        define_int_array_to_power_vector!($u, $mat.0, $gamma);
+        define_int_array_to_power_vector!($w, $mat.1, $gamma);
+        define_clone_vector!($v, $mat.2);
+    };
+}
+
+#[macro_export]
 macro_rules! define_hadamard_vector {
     ($name:ident, $u:expr, $v:expr) => {
-        define_vec!($name,
-          $u.iter()
-            .zip($v.iter())
-            .map(|(a, b)| *a * *b)
-            .collect::<Vec<E::Fr>>()
+        define_vec!(
+            $name,
+            $u.iter()
+                .zip($v.iter())
+                .map(|(a, b)| *a * *b)
+                .collect::<Vec<E::Fr>>()
         );
     };
 }
@@ -627,16 +639,16 @@ macro_rules! generator_of {
 
 #[macro_export]
 macro_rules! define_generator {
-  ($gamma:ident, $e:ident) => {
-    let $gamma = generator_of!($e);
-  }
+    ($gamma:ident, $e:ident) => {
+        let $gamma = generator_of!($e);
+    };
 }
 
 #[macro_export]
 macro_rules! init_size {
-  ($name:ident, $attr:ident, $size:ident) => {
-    let $name: i64 = $size.$attr as i64;
-  }
+    ($name:ident, $attr:ident, $size:ident) => {
+        let $name: i64 = $size.$attr as i64;
+    };
 }
 
 #[macro_export]
@@ -987,20 +999,14 @@ mod tests {
 
     #[test]
     fn test_zero_pad() {
-      assert_eq!(
-          to_int!(zero_pad!(
-              to_field!(vec![1, 2, 3u64]),
-              3
-          )),
-          vec![1, 2, 3]
-      );
-      assert_eq!(
-          to_int!(zero_pad!(
-              to_field!(vec![1, 2, 3u64]),
-              5
-          )),
-          vec![1, 2, 3, 0, 0]
-      );
+        assert_eq!(
+            to_int!(zero_pad!(to_field!(vec![1, 2, 3u64]), 3)),
+            vec![1, 2, 3]
+        );
+        assert_eq!(
+            to_int!(zero_pad!(to_field!(vec![1, 2, 3u64]), 5)),
+            vec![1, 2, 3, 0, 0]
+        );
     }
 
     #[test]
