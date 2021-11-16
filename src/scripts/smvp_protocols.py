@@ -21,11 +21,12 @@ class SparseMVP(VOProtocol):
     v = get_named_vector("v")
     y = get_named_vector("y")
     voexec.preprocess_rust(rust_builder_define_generator().end())
-    voexec.preprocess(Math(u).assign(
-      ExpressionVector("\\gamma^{\\mathsf{row}_i}", ell)
-    ), RustBuilder().let(u).assign(
-        RustMacro("int_array_to_power_vector").append(["%s.0" % rust(voexec.M), "gamma"])
-      ).end())
+    voexec.preprocess(
+      Math(u).assign(ExpressionVector("\\gamma^{\\mathsf{row}_i}", ell)),
+      rust_builder_define_int_array_to_power_vector(
+        u, "%s.0" % rust(voexec.M), "gamma"
+      ).end()
+    )
     voexec.preprocess(Math(w).assign(
       ExpressionVector("\\gamma^{\\mathsf{col}_i}", ell)
     ), RustBuilder().let(w).assign(

@@ -94,7 +94,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cs.bvals, cs.cvals
         );
         define_generator!(gamma, E);
-        let u_vec = int_array_to_power_vector!(cap_m_mat.0, gamma);
+        define_int_array_to_power_vector!(u_vec, cap_m_mat.0, gamma);
         let w_vec = int_array_to_power_vector!(cap_m_mat.1, gamma);
         let v_vec = cap_m_mat.2.to_vec();
         let y_vec = u_vec

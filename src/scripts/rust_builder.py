@@ -298,7 +298,9 @@ rust_macro_list = [
     ("sample_randomizers", None, (), ("rng", )),
     ("concat_matrix_vertically", None,
       ("result", "h", "arows", "brows", "crows",
-        "acols", "bcols", "cols", "avals", "bvals", "cvals"), ())
+        "acols", "bcols", "cols", "avals", "bvals", "cvals"), ()),
+    ("int_array_to_power_vector", None, ("v", "gamma"), ()),
+    ("define_int_array_to_power_vector", None, ("name", "v", "gamma"), ()),
 ]
 
 
