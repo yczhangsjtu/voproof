@@ -169,12 +169,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             w_vec
         );
         redefine_zero_pad_concat_vector!(u_vec_1, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec);
-        let cm_u_vec_1 = vector_to_commitment::<E>(
-            &pk.powers,
-            &u_vec_1,
-            (cap_k + cap_s_a + cap_s_b + cap_s_c + 1) as u64,
-        )
-        .unwrap();
+        commit_vector!(
+            cm_u_vec_1,
+            u_vec_1,
+            pk.powers,
+            cap_k + cap_s_a + cap_s_b + cap_s_c + 1
+        );
         let u_vec_1_poly = poly_from_vec!(u_vec_1);
         define_generator!(gamma, E);
         let mu = hash_to_field::<E::Fr>(
@@ -201,12 +201,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             .chain(c_vec.iter().map(|a| -*a))
             .collect::<Vec<E::Fr>>();
         redefine_zero_pad_concat_vector!(s_vec, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec_1);
-        let cm_s_vec = vector_to_commitment::<E>(
-            &pk.powers,
-            &s_vec,
-            (cap_k + cap_s_a + cap_s_b + cap_s_c + 1) as u64,
-        )
-        .unwrap();
+        commit_vector!(
+            cm_s_vec,
+            s_vec,
+            pk.powers,
+            cap_k + cap_s_a + cap_s_b + cap_s_c + 1
+        );
         let s_vec_poly = poly_from_vec!(s_vec);
         let nu = hash_to_field::<E::Fr>(
             to_bytes!(
@@ -235,12 +235,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             )
             .collect::<Vec<E::Fr>>();
         redefine_zero_pad_concat_vector!(h_vec, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec_2);
-        let cm_h_vec = vector_to_commitment::<E>(
-            &pk.powers,
-            &h_vec,
-            (cap_k + cap_s_a + cap_s_b + cap_s_c + 1) as u64,
-        )
-        .unwrap();
+        commit_vector!(
+            cm_h_vec,
+            h_vec,
+            pk.powers,
+            cap_k + cap_s_a + cap_s_b + cap_s_c + 1
+        );
         let h_vec_poly = poly_from_vec!(h_vec);
         let beta = hash_to_field::<E::Fr>(
             to_bytes!(
@@ -313,12 +313,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             )
         );
         let r_vec_tilde_poly = poly_from_vec!(r_vec_tilde);
-        let cm_r_vec_tilde = vector_to_commitment::<E>(
-            &pk.powers,
-            &r_vec_tilde,
-            (cap_k + cap_s_a + cap_s_b + cap_s_c + 1) as u64,
-        )
-        .unwrap();
+        commit_vector!(
+            cm_r_vec_tilde,
+            r_vec_tilde,
+            pk.powers,
+            cap_k + cap_s_a + cap_s_b + cap_s_c + 1
+        );
         let alpha = hash_to_field::<E::Fr>(
             to_bytes!(
                 x_vec,
@@ -532,12 +532,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             )
         );
         define_vec!(t_vec_1, vector_concat!(delta_vec_4, t_vec));
-        let cm_t_vec_1 = vector_to_commitment::<E>(
-            &pk.powers,
-            &t_vec_1,
-            (cap_s_a + cap_s_b + cap_s_c + 2) as u64,
-        )
-        .unwrap();
+        commit_vector!(
+            cm_t_vec_1,
+            t_vec_1,
+            pk.powers,
+            cap_s_a + cap_s_b + cap_s_c + 2
+        );
         let omega = hash_to_field::<E::Fr>(
             to_bytes!(
                 x_vec,
@@ -859,13 +859,13 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             ),
             cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c
         );
-        let cm_h_vec_2 = vector_to_commitment::<E>(&pk.powers, &h_vec_2, (cap_d) as u64).unwrap();
-        let cm_h_vec_3 = vector_to_commitment::<E>(
-            &pk.powers,
-            &h_vec_3,
-            (cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c) as u64,
-        )
-        .unwrap();
+        commit_vector!(cm_h_vec_2, h_vec_2, pk.powers, cap_d);
+        commit_vector!(
+            cm_h_vec_3,
+            h_vec_3,
+            pk.powers,
+            cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c
+        );
         let z = hash_to_field::<E::Fr>(
             to_bytes!(
                 x_vec,

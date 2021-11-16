@@ -306,6 +306,8 @@ rust_macro_list = [
     ("define_matrix_vectors", None, ("u", "w", "v", "M", "gamma"), ()),
     ("commit_vector", None, ("cm", "v", "deg"),
       (_ArgName("cm"), _ArgName("v"), "powers_of_g", _ArgName("deg"))),
+    ("commit_vector", "commit_vector_with_pk", ("cm", "v", "deg"),
+      (_ArgName("cm"), _ArgName("v"), "pk.powers", _ArgName("deg"))),
     ("define_sparse_mvp_vector", None, ("name", "M", "v", "H", "K"), ()),
     ("define_left_sparse_mvp_vector", None, ("name", "M", "v", "H", "K"), ()),
     ("define_concat_vector", None, None, ()),

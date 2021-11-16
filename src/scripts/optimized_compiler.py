@@ -1416,15 +1416,15 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
             "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
             % (poly.dumps())
             )
-          commit_rust_computation = RustBuilder().let(poly.to_comm())
           if isinstance(poly, NamedPolynomial):
-            commit_rust_computation.assign_func("KZG10::commit").append_to_last(poly).end()
+            commit_rust_computation = RustBuilder() \
+                .let(poly.to_comm()) \
+                .assign_func("KZG10::commit") \
+                .append_to_last(poly).end()
           elif isinstance(poly, NamedVectorPolynomial):
-            commit_rust_computation.assign_func("vector_to_commitment::<E>") \
-              .append_to_last("&pk.powers") \
-              .append_to_last("&%s" % rust(poly.vector)) \
-              .append_to_last("(%s) as u64" % rust(degree)) \
-              .invoke_method("unwrap").end()
+            commit_rust_computation = rust_builder_commit_vector_with_pk(
+              poly.to_comm(), poly.vector, degree
+            ).end()
           else:
             raise Exception("Unrecognized polynomial type: %s" % type(poly))
           self.prover_computes(commit_computation, commit_rust_computation)
