@@ -27,14 +27,14 @@ class SparseMVP(VOProtocol):
         u, "%s.0" % rust(voexec.M), "gamma"
       ).end()
     )
-    voexec.preprocess(Math(w).assign(
-      ExpressionVector("\\gamma^{\\mathsf{col}_i}", ell)
-    ), RustBuilder().let(w).assign(
-        RustMacro("int_array_to_power_vector").append(["%s.1" % rust(voexec.M), "gamma"])
+    voexec.preprocess(
+      Math(w).assign(ExpressionVector("\\gamma^{\\mathsf{col}_i}", ell)),
+      rust_builder_define_int_array_to_power_vector(
+        w, "%s.1" % rust(voexec.M), "gamma"
       ).end())
-    voexec.preprocess(Math(v).assign(
-      ExpressionVector("\\mathsf{val}_i", ell)
-    ), RustBuilder().let(v).assign("%s.2.to_vec()" % rust(voexec.M)).end())
+    voexec.preprocess(
+      Math(v).assign(ExpressionVector("\\mathsf{val}_i", ell)),
+      rust_builder_define_clone_vector(v, "%s.2" % rust(voexec.M)).end())
     voexec.preprocess(Math(y).assign(u).circ(w),
         RustBuilder().let(y)
         .assign(u).invoke_method("iter").invoke_method("zip").append_to_last(

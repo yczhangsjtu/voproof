@@ -520,6 +520,13 @@ macro_rules! define_int_array_to_power_vector {
 }
 
 #[macro_export]
+macro_rules! define_clone_vector {
+    ($name:ident, $v:expr) => {
+        define_vec!($name, $v.to_vec());
+    };
+}
+
+#[macro_export]
 macro_rules! vector_poly_mul {
     // Given vectors u, v and field element omega, compute
     // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)

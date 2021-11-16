@@ -301,6 +301,7 @@ rust_macro_list = [
         "acols", "bcols", "cols", "avals", "bvals", "cvals"), ()),
     ("int_array_to_power_vector", None, ("v", "gamma"), ()),
     ("define_int_array_to_power_vector", None, ("name", "v", "gamma"), ()),
+    ("define_clone_vector", None, ("name", "v"), ()),
 ]
 
 
