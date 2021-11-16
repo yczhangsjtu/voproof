@@ -286,15 +286,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 cap_k + cap_s_a + cap_s_b + cap_s_c
             )
         );
-        define_vec!(
-            r_vec_tilde,
-            vector_concat!(
-                accumulate_vector!(
-          r_vec_1,
-          +),
-                delta_vec_3
-            )
-        );
+        define_concat_vector!(r_vec_tilde, accumulate_vector_plus!(r_vec_1), delta_vec_3);
         define_poly_from_vec!(r_vec_tilde_poly, r_vec_tilde);
         commit_vector!(
             cm_r_vec_tilde,

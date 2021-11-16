@@ -484,6 +484,25 @@ macro_rules! accumulate_vector {
 }
 
 #[macro_export]
+macro_rules! accumulate_vector_plus {
+    ( $i: ident, $init: expr, $v: expr, $n: expr) => {
+        accumulate_vector!($i, $init, $v, $n, +)
+    };
+
+    ( $i: ident, $v: expr, $n: expr) => {
+        accumulate_vector!($i, $v, $n, +)
+    };
+
+    ( $v: expr, $init: expr) => {
+        accumulate_vector!($v, $init, +)
+    };
+
+    ( $v: expr) => {
+        accumulate_vector!($v, +)
+    };
+}
+
+#[macro_export]
 macro_rules! vector_concat {
     ( $u: expr, $( $v: expr ),+ ) => {
         (&$u).iter().map(|a| *a)$(.chain((&$v).iter().map(|a| *a)))+.collect::<Vec<_>>()

@@ -804,12 +804,10 @@ class PIOPFromVOProtocol(object):
       piopexec.prover_computes(Math(randomizer).sample(Ftoq)
         .comma(rtilde).assign(AccumulationVector(r.slice("j"), n))
         .double_bar(randomizer),
-        rust_builder_define_vec(
+        rust_builder_define_concat_vector(
           rtilde,
-          rust_vector_concat(
-            RustMacro("accumulate_vector", r, "+"),
-            randomizer
-          )
+          rust_accumulate_vector_plus(r),
+          randomizer
         ).end())
       piopexec.prover_computes_rust(rust_builder_define_poly_from_vec(fr, rtilde).end())
 
