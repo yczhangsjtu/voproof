@@ -632,17 +632,18 @@ class VectorCombination(CoeffMap):
     return _dump_coeff_map_with_sparse_coeff(self)
 
   def dumpr_at_index(self, index):
-    ret = RustMacro("linear_combination")
-    ret.append(self._dict["one"][1].dumpr_at_index(index)
-        if "one" in self._dict else "E::Fr::zero()")
+    ret = rust_linear_combination(self._dict["one"][1].dumpr_at_index(index)) \
+        if "one" in self._dict else rust_linear_combination_base_zero()
     for key, vec_value in self.items():
       if key == "one":
         continue
       vec, value = vec_value
       for key2, uv_coeff in value.items():
         unit_vector, coeff = uv_coeff
-        ret.append([to_field(coeff), vec.dumpr_at_index(
-          "(%s as i64)-(%s) as i64+1" % (rust(index), rust(unit_vector.position)))])
+        ret.append([
+          to_field(coeff),
+          vec.dumpr_at_index(rust_minus_i64(index, unit_vector.position))
+        ])
     return rust(ret)
 
 class PowerVector(object):

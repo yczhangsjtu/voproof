@@ -254,6 +254,11 @@ macro_rules! minus {
 }
 
 #[macro_export]
+macro_rules! minus_i64 {
+    ($u:expr, $v:expr) => { ($u as i64)-($v) as i64+1 }
+}
+
+#[macro_export]
 macro_rules! zero_pad {
     ( $u: expr, $n: expr ) => {
         (&$u)
@@ -364,6 +369,13 @@ macro_rules! linear_combination {
             $( s = s + $c * $j; )*
             s
         }
+    };
+}
+
+#[macro_export]
+macro_rules! linear_combination_base_zero {
+    ( $( $c:expr, $j:expr ),+ ) => {
+        linear_combination!(E::Fr::zero(), $( $c, $j ),+ )
     };
 }
 
