@@ -58,15 +58,13 @@ class SparseMVP(VOProtocol):
     voexec.verifier_computes_rust(rust_builder_define_generator().end())
     voexec.verifier_send_randomness(mu)
     r = get_named_vector("r")
-    voexec.prover_computes(Math(r).assign(
-      ExpressionVector("\\frac{1}{%s-\\gamma^i}" % tex(mu), H)
-    ), RustBuilder().letmut(r).assign(
-        RustMacro("expression_vector").append([
-            Symbol("i"),
-            "(%s) - (%s)" % (rust(mu), PowerVector(gamma, H).dumpr_at_index(Symbol("i"))),
-            H]),
-      ).end()
-      .func("batch_inversion").append_to_last("&mut %s" % rust(r)).end())
+    voexec.prover_computes(
+      Math(r).assign(ExpressionVector("\\frac{1}{%s-\\gamma^i}" % tex(mu), H)),
+      rust_builder_define_expression_vector_inverse_i(
+        r,
+        "(%s) - (%s)" % (rust(mu), PowerVector(gamma, H).dumpr_at_index(Symbol("i"))),
+        H
+      ).end())
     c = get_named_vector("c")
     voexec.prover_computes(Math(c).assign()
                            .transpose(r, paren=False).append("\\boldsymbol{M}"),

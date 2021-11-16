@@ -425,6 +425,22 @@ macro_rules! expression_vector {
 }
 
 #[macro_export]
+macro_rules! define_expression_vector {
+    ( $name:ident, $i: ident, $v: expr, $n: expr) => {
+        let $name = expression_vector!($i, $v, $n);
+    };
+}
+
+#[macro_export]
+macro_rules! define_expression_vector_inverse {
+    ( $name:ident, $i: ident, $v: expr, $n: expr) => {
+        let mut $name = expression_vector!($i, $v, $n);
+        batch_inversion(&mut $name);
+        let $name = $name;
+    };
+}
+
+#[macro_export]
 macro_rules! add_expression_vector_to_vector {
     ( $u:ident, $i: ident, $v: expr) => {
         for $i in (1i64..=$u.len() as i64) {

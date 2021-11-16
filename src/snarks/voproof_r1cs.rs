@@ -186,12 +186,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             pk.verifier_key.cm_y_vec,
             cm_u_vec_1
         );
-        let mut r_vec = expression_vector!(
+        define_expression_vector_inverse!(
+            r_vec,
             i,
             (mu) - (power_vector_index!(gamma, 3 * cap_h, i)),
             3 * cap_h
         );
-        batch_inversion(&mut r_vec);
         define_left_sparse_mvp_vector!(c_vec, pk.cap_m_mat, r_vec, 3 * cap_h, cap_k);
         let s_vec = r_vec
             .iter()

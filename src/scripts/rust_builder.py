@@ -316,6 +316,10 @@ rust_macro_list = [
     ("redefine_zero_pad_concat_vector", None, None, ()),
     ("define_poly_from_vec", None, ("poly", "v"), ()),
     ("get_randomness_from_hash", None, None, ()),
+    ("define_expression_vector", "define_expression_vector_i", ("name", "expr", "n"),
+      (_ArgName("name"), sym_i, _ArgName("expr"), _ArgName("n"))),
+    ("define_expression_vector_inverse", "define_expression_vector_inverse_i",
+      ("name", "expr", "n"), (_ArgName("name"), sym_i, _ArgName("expr"), _ArgName("n"))),
 ]
 
 
