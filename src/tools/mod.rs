@@ -250,27 +250,37 @@ macro_rules! to_field {
 
 #[macro_export]
 macro_rules! minus {
-    ($u:expr, $v:expr) => { $u - $v }
+    ($u:expr, $v:expr) => {
+        $u - $v
+    };
 }
 
 #[macro_export]
 macro_rules! mul {
-    ($u:expr, $v:expr) => { $u * $v }
+    ($u:expr, $v:expr) => {
+        $u * $v
+    };
 }
 
 #[macro_export]
 macro_rules! minus_plus_one {
-    ($u:expr, $v:expr) => { $u - $v + 1 }
+    ($u:expr, $v:expr) => {
+        $u - $v + 1
+    };
 }
 
 #[macro_export]
 macro_rules! neg {
-    ($u:expr) => { -$u }
+    ($u:expr) => {
+        -$u
+    };
 }
 
 #[macro_export]
 macro_rules! minus_i64 {
-    ($u:expr, $v:expr) => { ($u as i64)-($v) as i64+1 }
+    ($u:expr, $v:expr) => {
+        ($u as i64) - ($v) as i64 + 1
+    };
 }
 
 #[macro_export]
@@ -318,6 +328,13 @@ macro_rules! define_vec {
 macro_rules! define_vec_mut {
     ( $v: ident, $expr: expr ) => {
         let mut $v: Vec<E::Fr> = $expr;
+    };
+}
+
+#[macro_export]
+macro_rules! define_shift_minus_one {
+    ( $name:ident, $vec:expr ) => {
+        let $name = $vec.len() as i64 - 1;
     };
 }
 
@@ -640,9 +657,9 @@ macro_rules! define_concat_neg_vector {
         define_vec!(
             $name,
             $u.iter()
-              .map(|a| *a)
-              .chain($v.iter().map(|a| -*a))
-              .collect::<Vec<E::Fr>>()
+                .map(|a| *a)
+                .chain($v.iter().map(|a| -*a))
+                .collect::<Vec<E::Fr>>()
         );
     };
 }
@@ -653,14 +670,14 @@ macro_rules! define_concat_uwinverse_vector {
         define_vec!(
             $name,
             $v.iter()
-              .map(|a| *a)
-              .chain(
-                $u.iter()
-                  .map(|a| *a)
-                  .zip($w.iter().map(|a| *a))
-                  .map(|(u, w)| (($mu - u) * ($nu - w)).inverse().unwrap())
-              )
-              .collect::<Vec<E::Fr>>()
+                .map(|a| *a)
+                .chain(
+                    $u.iter()
+                        .map(|a| *a)
+                        .zip($w.iter().map(|a| *a))
+                        .map(|(u, w)| (($mu - u) * ($nu - w)).inverse().unwrap())
+                )
+                .collect::<Vec<E::Fr>>()
         );
     };
 }
