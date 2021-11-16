@@ -310,6 +310,8 @@ rust_macro_list = [
     ("define_left_sparse_mvp_vector", None, ("name", "M", "v", "H", "K"), ()),
     ("define_concat_vector", None, None, ()),
     ("sparse_mvp_vector", None, ("M", "v", "H", "K"), ()),
+    ("define_zero_pad_concat_vector", None, None, ()),
+    ("redefine_zero_pad_concat_vector", None, None, ()),
 ]
 
 

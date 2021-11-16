@@ -693,9 +693,7 @@ class PIOPFromVOProtocol(object):
           poly = v.to_named_vector_poly()
           piopexec.prover_computes(
               Math(randomizer).sample(Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
-              RustBuilder().let(v).assign(RustMacro("zero_pad_and_concat").append(
-                [v, n, randomizer]
-                )).end())
+              rust_builder_redefine_zero_pad_concat_vector(v, n, randomizer).end())
           piopexec.prover_send_polynomial(poly, self.vector_size + q)
           piopexec.prover_computes(
               LaTeXBuilder(),

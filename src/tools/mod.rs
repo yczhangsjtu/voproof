@@ -568,6 +568,23 @@ macro_rules! define_concat_vector {
 }
 
 #[macro_export]
+macro_rules! define_zero_pad_concat_vector {
+    ($name:ident, $v:expr, $n:expr, $( $u:expr ),+ ) => {
+        define_vec!(
+            $name,
+            zero_pad_and_concat!( $v, $n, $($u),+ )
+        );
+    };
+}
+
+#[macro_export]
+macro_rules! redefine_zero_pad_concat_vector {
+    ($name:ident, $n:expr, $( $u:expr ),+ ) => {
+        define_zero_pad_concat_vector!($name, $name, $n, $($u),+);
+    };
+}
+
+#[macro_export]
 macro_rules! sparse_mvp_vector {
     ($mat:expr, $v:expr, $h:expr, $k:expr) => {
         sparse_mvp($h, $k, &$mat.0, &$mat.1, &$mat.2, &$v).unwrap()

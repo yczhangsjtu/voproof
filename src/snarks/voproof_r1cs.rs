@@ -168,7 +168,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             x_vec,
             w_vec
         );
-        let u_vec_1 = zero_pad_and_concat!(u_vec_1, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec);
+        redefine_zero_pad_concat_vector!(u_vec_1, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec);
         let cm_u_vec_1 = vector_to_commitment::<E>(
             &pk.powers,
             &u_vec_1,
@@ -200,7 +200,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             .map(|a| *a)
             .chain(c_vec.iter().map(|a| -*a))
             .collect::<Vec<E::Fr>>();
-        let s_vec = zero_pad_and_concat!(s_vec, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec_1);
+        redefine_zero_pad_concat_vector!(s_vec, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec_1);
         let cm_s_vec = vector_to_commitment::<E>(
             &pk.powers,
             &s_vec,
@@ -234,7 +234,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     .map(|(u, w)| ((mu - u) * (nu - w)).inverse().unwrap()),
             )
             .collect::<Vec<E::Fr>>();
-        let h_vec = zero_pad_and_concat!(h_vec, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec_2);
+        redefine_zero_pad_concat_vector!(h_vec, cap_k + cap_s_a + cap_s_b + cap_s_c, delta_vec_2);
         let cm_h_vec = vector_to_commitment::<E>(
             &pk.powers,
             &h_vec,
