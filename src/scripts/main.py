@@ -58,9 +58,12 @@ def get_minimal_vector_size(protocol, ppargs, execargs, simplify_hints):
   reset_name_counters()
   return voexec.vector_size_bound
 
-def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filename=None):
+def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, set_parameters,
+    filename=None):
   name = protocol.__class__.__name__
   n = get_minimal_vector_size(protocol, ppargs, execargs, simplify_hints)
+  set_parameters()
+
   debug("Start analyzing %s..." % name)
   piop = PIOPFromVOProtocol(protocol, n, D)
   piop.debug_mode = debug_mode
@@ -131,7 +134,17 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, filena
   reset_name_counters()
 
 
+def set_r1cs_parameters():
+  H = Symbol(get_name("H"), positive=True)
+  K = Symbol(get_name("K"), positive=True)
+  Sa = Symbol(get_name("S_a"), positive=True)
+  Sb = Symbol(get_name("S_b"), positive=True)
+  Sc = Symbol(get_name("S_c"), positive=True)
+  ell = Symbol(get_name("ell"), positive=True)
+  return H, K, Sa, Sb, Sc, ell
+
 def analyzeR1CS():
+  H, K, Sa, Sb, Sc, ell = set_r1cs_parameters()
   hints = [(H, K), (Sa, K + 1), (Sa, H + 1), (Sb, K + 1), (Sb, H + 1), (Sc, K + 1), (Sc, H + 1),
            (Sa + Sb + Sc, 3 * K + 3), (Sa + Sb + Sc, 3 * H + 3)]
   size_map = [(H, "nrows"), (K, "ncols"),
@@ -144,56 +157,87 @@ def analyzeR1CS():
       ])
   ppargs = (H, K, Sa, Sb, Sc)
   execargs = (x, get_named_vector("w"), ell)
-  analyzeProtocol(R1CS(), ppargs, execargs, hints, size_map, filename="voproof_r1cs")
+  analyzeProtocol(R1CS(), ppargs, execargs, hints, size_map, set_r1cs_parameters,
+      filename="voproof_r1cs")
+
+def set_r1cs_prover_efficient_parameters():
+  H = Symbol(get_name("H"), positive=True)
+  K = Symbol(get_name("K"), positive=True)
+  S = Symbol(get_name("S"), positive=True)
+  ell = Symbol(get_name("ell"), positive=True)
+  return H, K, S, ell
 
 def analyzeR1CSProverEfficient():
+  H, K, S, ell = set_r1cs_prover_efficient_parameters()
   hints = [(S, H + 1), (S, K + 1), (H, K)]
   size_map = [(H, "nrows"), (K, "ncols"), (S, "density")]
   x = get_named_vector("x")
   x.local_evaluate = True
   ppargs = (H, K, S*3)
   execargs = (x, get_named_vector("w"), ell)
-  analyzeProtocol(R1CSProverEfficient(), ppargs, execargs, hints, size_map)
+  analyzeProtocol(R1CSProverEfficient(), ppargs, execargs, hints, size_map,
+      set_r1cs_prover_efficient_parameters)
+
+def set_hpr_parameters():
+  H = Symbol(get_name("H"), positive=True)
+  K = Symbol(get_name("K"), positive=True)
+  S = Symbol(get_name("S"), positive=True)
+  ell = Symbol(get_name("ell"), positive=True)
+  Sp = Symbol(get_name("S'"), positive=True)
+  return H, K, S, ell, Sp
 
 def analyzeHPR():
-  Sp = Symbol(get_name("S'"), positive=True)
+  H, K, S, ell, Sp = set_hpr_parameters()
+
   hints = [(S, H + 1), (S, K + 1), (H, Sp), (K, ell), (H, ell), (S, ell + 1)]
   size_map = [(H, "nrows"), (K, "ncols"), (S, "density"), (Sp, "d_density")]
   x = get_named_vector("x")
   x.local_evaluate = True
   ppargs = (H, K, S*3+Sp)
   execargs = (x, get_named_vector("w"), get_named_vector("w"), get_named_vector("w"), ell)
-  analyzeProtocol(HPR(), ppargs, execargs, hints, size_map, filename="voproof_hpr")
+  analyzeProtocol(HPR(), ppargs, execargs, hints, size_map, set_hpr_parameters,
+      filename="voproof_hpr")
 
 def analyzeHPRProverEfficient():
-  Sp = Symbol(get_name("S'"), positive=True)
+  H, K, S, ell, Sp = set_hpr_parameters()
+
   hints = [(S, H + 1), (S, K + 1), (H, Sp), (K, ell), (H, ell), (S, ell + 1), (H, K)]
   size_map = [(H, "nrows"), (K, "ncols"), (S, "density"), (Sp, "d_density")]
   x = get_named_vector("x")
   x.local_evaluate = True
   ppargs = (H, K, S*3+Sp)
   execargs = (x, get_named_vector("w"), get_named_vector("w"), get_named_vector("w"), ell)
-  analyzeProtocol(HPRProverEfficient(), ppargs, execargs, hints, size_map)
+  analyzeProtocol(HPRProverEfficient(), ppargs, execargs, hints, size_map, set_hpr_parameters)
+
+def set_pov_parameters():
+  C = Symbol(get_name("C"), positive=True)
+  Ca = Symbol(get_name("C_a"), positive=True)
+  Cm = Symbol(get_name("C_m"), positive=True)
+  Cc = Symbol(get_name("C_c"), positive=True)
+  return C, Ca, Cm, Cc
 
 def analyzePOV():
-  C = Symbol(get_name("C"), positive=True)
+  C, Ca, Cm, Cc = set_pov_parameters()
+
   hints = [(C, Ca + Cm + 1), (C, 1), (Ca, 1), (Cm, 1)]
   size_map = [(C, "nconsts + size.nadd + size.nmul"), (Ca, "nadd"), (Cm, "nmul"), (Cc, "nconsts")]
   x = get_named_vector("x")
   x.local_evaluate = True
   ppargs = (get_named_vector("d"), C - Ca - Cm, Ca, Cm)
   execargs = (x, get_named_vector("a"), get_named_vector("b"), get_named_vector("c"))
-  analyzeProtocol(POV(), ppargs, execargs, hints, size_map, filename="voproof_pov")
+  analyzeProtocol(POV(), ppargs, execargs, hints, size_map, set_pov_parameters,
+      filename="voproof_pov")
 
 def analyzePOVProverEfficient():
-  C = Symbol(get_name("C"), positive=True)
+  C, Ca, Cm, Cc = set_pov_parameters()
+
   hints = [(C, Ca + Cm + 1), (C, 1), (Ca, 1), (Cm, 1)]
   size_map = [(C, "nconsts + size.nadd + size.nmul"), (Ca, "nadd"), (Cm, "nmul"), (Cc, "nconsts")]
   x = get_named_vector("x")
   x.local_evaluate = True
   ppargs = (get_named_vector("d"), C - Ca - Cm, Ca, Cm)
   execargs = (x, get_named_vector("a"), get_named_vector("b"), get_named_vector("c"))
-  analyzeProtocol(POVProverEfficient(), ppargs, execargs, hints, size_map)
+  analyzeProtocol(POVProverEfficient(), ppargs, execargs, hints, size_map, set_pov_parameters)
 
 debug_mode = False
 
