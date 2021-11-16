@@ -302,6 +302,7 @@ rust_macro_list = [
     ("int_array_to_power_vector", None, ("v", "gamma"), ()),
     ("define_int_array_to_power_vector", None, ("name", "v", "gamma"), ()),
     ("define_clone_vector", None, ("name", "v"), ()),
+    ("define_hadamard_vector", None, ("name", "u", "v"), ()),
 ]
 
 

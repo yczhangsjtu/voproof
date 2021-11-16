@@ -35,13 +35,10 @@ class SparseMVP(VOProtocol):
     voexec.preprocess(
       Math(v).assign(ExpressionVector("\\mathsf{val}_i", ell)),
       rust_builder_define_clone_vector(v, "%s.2" % rust(voexec.M)).end())
-    voexec.preprocess(Math(y).assign(u).circ(w),
-        RustBuilder().let(y)
-        .assign(u).invoke_method("iter").invoke_method("zip").append_to_last(
-          RustBuilder(w).invoke_method("iter")
-        ).invoke_method("map").append_to_last("|(a, b)| *a * *b")
-        .invoke_method("collect::<Vec<E::Fr>>")
-        .end())
+    voexec.preprocess(
+      Math(y).assign(u).circ(w),
+      rust_builder_define_hadamard_vector(y, u, w).end())
+
     voexec.preprocess_vector(u, ell)
     voexec.preprocess_vector(w, ell)
     voexec.preprocess_vector(v, ell)

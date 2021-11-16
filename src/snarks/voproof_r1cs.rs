@@ -97,11 +97,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define_int_array_to_power_vector!(u_vec, cap_m_mat.0, gamma);
         define_int_array_to_power_vector!(w_vec, cap_m_mat.1, gamma);
         define_clone_vector!(v_vec, cap_m_mat.2);
-        let y_vec = u_vec
-            .iter()
-            .zip(w_vec.iter())
-            .map(|(a, b)| *a * *b)
-            .collect::<Vec<E::Fr>>();
+        define_hadamard_vector!(y_vec, u_vec, w_vec);
         let cm_u_vec =
             vector_to_commitment::<E>(&powers_of_g, &u_vec, (cap_s_a + cap_s_b + cap_s_c) as u64)
                 .unwrap();

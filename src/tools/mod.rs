@@ -527,6 +527,18 @@ macro_rules! define_clone_vector {
 }
 
 #[macro_export]
+macro_rules! define_hadamard_vector {
+    ($name:ident, $u:expr, $v:expr) => {
+        define_vec!($name,
+          $u.iter()
+            .zip($v.iter())
+            .map(|(a, b)| *a * *b)
+            .collect::<Vec<E::Fr>>()
+        );
+    };
+}
+
+#[macro_export]
 macro_rules! vector_poly_mul {
     // Given vectors u, v and field element omega, compute
     // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
