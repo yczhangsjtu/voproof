@@ -613,12 +613,11 @@ class PIOPExecution(PublicCoinProtocolExecution):
 
   def pp_debug(self, *args):
     if self.debug_mode:
-      self.preprocess(
-        LaTeXBuilder(),
-        rust_line_macro(
+      self.preprocess_rust(
+        rust_builder_macro(
           "println",
           *PIOPExecution._format_string(*args)
-        )
+        ).end()
       )
 
   def prover_debug(self, *args):

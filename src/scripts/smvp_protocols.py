@@ -25,8 +25,7 @@ class SparseMVP(VOProtocol):
     voexec.preprocess_latex(Math(w).assign(ExpressionVector("\\gamma^{\\mathsf{col}_i}", ell))),
     voexec.preprocess_latex(Math(v).assign(ExpressionVector("\\mathsf{val}_i", ell))),
     voexec.preprocess_rust(rust_line_define_matrix_vectors(u, w, v, voexec.M, "gamma"))
-    voexec.preprocess(
-      Math(y).assign(u).circ(w),
+    voexec.preprocess(Math(y).assign(u).circ(w),
       rust_line_define_hadamard_vector(y, u, w))
 
     voexec.preprocess_vector(u, ell)
@@ -59,7 +58,7 @@ class SparseMVP(VOProtocol):
       voexec.rust_vector_size = voexec.verifier_redefine_symbol_rust(n, "n")
     rust_n = voexec.rust_vector_size
     rust_ell = voexec.verifier_redefine_symbol_rust(ell, "ell")
-    voexec.verifier_computes_rust(rust_line_define_generator())
+    voexec.verifier_rust_define_generator()
     voexec.verifier_send_randomness(mu)
     r = get_named_vector("r")
     voexec.prover_computes(
@@ -281,14 +280,14 @@ class R1CS(VOProtocol):
                           voexec.sa, voexec.sb, voexec.sc, voexec.vector_size
     M = voexec.M
 
-    voexec.verifier_computes_rust(rust_line_define_vec(x, "x.instance.clone()"))
-    voexec.prover_computes_rust(rust_line_define_vec(w, "w.witness.clone()"))
-    voexec.verifier_computes_rust(rust_line_init_size(H, "nrows"))
-    voexec.verifier_computes_rust(rust_line_init_size(K, "ncols"))
-    voexec.verifier_computes_rust(rust_line_init_size(sa, "adensity"))
-    voexec.verifier_computes_rust(rust_line_init_size(sb, "bdensity"))
-    voexec.verifier_computes_rust(rust_line_init_size(sc, "cdensity"))
-    voexec.verifier_computes_rust(rust_line_init_size(ell, "input_size"))
+    voexec.verifier_rust_define_vec(x, "x.instance.clone()")
+    voexec.prover_rust_define_vec(w, "w.witness.clone()")
+    voexec.verifier_rust_init_size(H, "nrows")
+    voexec.verifier_rust_init_size(K, "ncols")
+    voexec.verifier_rust_init_size(sa, "adensity")
+    voexec.verifier_rust_init_size(sb, "bdensity")
+    voexec.verifier_rust_init_size(sc, "cdensity")
+    voexec.verifier_rust_init_size(ell, "input_size")
     if voexec.rust_vector_size is None:
       voexec.rust_vector_size = voexec.verifier_redefine_symbol_rust(n, "n")
     rust_n = voexec.rust_vector_size
