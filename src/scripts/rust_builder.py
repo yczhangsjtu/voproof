@@ -28,8 +28,8 @@ def to_field(expr):
     if expr == 1:
       return "E::Fr::one()"
     if expr > 0:
-      return rust(RustBuilder().func("to_field::<E::Fr>").append_to_last(expr))
-    return rust(RustBuilder().append("-").func("to_field::<E::Fr>").append_to_last(-expr))
+      return rust(rust_to_field(expr))
+    return "-%s" % rust(rust_to_field(-expr))
   return rust(expr)
 
 
@@ -289,6 +289,7 @@ rust_macro_list = [
     ("define_mut", None, ("v", "expr"), ()),
     ("define", None, ("v", "expr"), ()),
     ("poly_from_vec", None, ("v"), ()),
+    ("scalar_to_field", "to_field", ("c"), ()),
     ("vec", None, None, ()),
     ("vec", "vec_size", ("e", "length"),
       (_ArgProcess(lambda e, length:

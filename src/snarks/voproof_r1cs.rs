@@ -293,7 +293,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     linear_combination_base_zero!(
                         mu,
                         range_index!(1, 3 * cap_h, minus_i64!(i + n, 1)),
-                        -to_field::<E::Fr>(1),
+                        -scalar_to_field!(1),
                         power_vector_index!(gamma, 3 * cap_h, minus_i64!(i + n, 1))
                     ),
                     vector_index!(s_vec, i + n),
@@ -778,7 +778,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         get_randomness_from_hash!(
             rand_xi_2,
-            to_field::<E::Fr>(2),
+            scalar_to_field!(2),
             x_vec,
             vk.cm_u_vec,
             vk.cm_w_vec,
@@ -1059,7 +1059,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         get_randomness_from_hash!(
             rand_xi_2,
-            to_field::<E::Fr>(2),
+            scalar_to_field!(2),
             x_vec,
             vk.cm_u_vec,
             vk.cm_w_vec,
