@@ -693,21 +693,27 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             g_vec,
             expression_vector!(
                 i,
-                sum!(
-                    (c) * (vector_index!(s_vec, i)),
-                    (c_2) * (vector_index!(h_vec, i)),
-                    (c_3) * (vector_index!(pk.w_vec, i)),
-                    (c_4) * (vector_index!(pk.u_vec, i)),
-                    (c_5) * (vector_index!(pk.y_vec, i)),
-                    (c_6) * (vector_index!(u_vec_1, i)),
-                    (c_7) * (vector_index!(pk.v_vec, i)),
-                    (c_8) * (vector_index!(t_vec_1, i)),
-                    (c_9)
-                        * (vector_index!(
-                            h_vec_2,
-                            -cap_d + cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c + i
-                        )),
-                    (c_10) * (vector_index!(h_vec_3, i))
+                linear_combination_base_zero!(
+                    c,
+                    vector_index!(s_vec, i),
+                    c_2,
+                    vector_index!(h_vec, i),
+                    c_3,
+                    vector_index!(pk.w_vec, i),
+                    c_4,
+                    vector_index!(pk.u_vec, i),
+                    c_5,
+                    vector_index!(pk.y_vec, i),
+                    c_6,
+                    vector_index!(u_vec_1, i),
+                    c_7,
+                    vector_index!(pk.v_vec, i),
+                    c_8,
+                    vector_index!(t_vec_1, i),
+                    c_9,
+                    vector_index!(h_vec_2, -cap_d + i + maxshift + n),
+                    c_10,
+                    vector_index!(h_vec_3, i)
                 ),
                 cap_d
             )

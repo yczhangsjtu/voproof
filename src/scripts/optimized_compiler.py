@@ -498,10 +498,8 @@ class CombinePolynomial(object):
             latex(coeff_builder.coeff),
             coeff_builder.poly.dumps()
           ))
-          poly_sum_rust_items.append("(%s) * (%s)" % (
-            rust(coeff_builder.coeff),
-            coeff_builder.poly.dumpr_at_index(sym_i - coeff_builder.shifts)
-          ))
+          poly_sum_rust_items.append(rust(coeff_builder.coeff))
+          poly_sum_rust_items.append(coeff_builder.poly.dumpr_at_index(sym_i - coeff_builder.shifts))
 
     if one is not None:
       if has_oracle:
@@ -519,7 +517,7 @@ class CombinePolynomial(object):
       rust_builder = rust_builder_define_vec_mut(
         self.poly.to_vec(),
         rust_expression_vector_i(
-          rust_sum(poly_sum_rust_items),
+          rust_linear_combination_base_zero(poly_sum_rust_items),
           self.length
         )).end()
       if rust_const is not None:
@@ -1114,7 +1112,7 @@ class PIOPFromVOProtocol(object):
     if self.debug_mode:
       naive_g = get_named_vector("naive_g")
       piopexec.prover_computes_rust(rust_builder_define_vec_mut(naive_g,
-        rust_vec_size(rust_zero, rust_n + max_shift + q)
+        rust_vec_size(rust_zero, rust_n + rust_max_shift + q)
       ).end())
 
     # 1. The part contributed by the extended hadamard query
@@ -1149,7 +1147,7 @@ class PIOPFromVOProtocol(object):
           rust_builder_assert_eq(
             multiplier,
             rust_eval_vector_expression_i(
-              omega/z, a.dumpr_at_index(sym_i), rust_n + max_shift + q
+              omega/z, a.dumpr_at_index(sym_i), rust_n + rust_max_shift + q
             )
           ).end()
         )
@@ -1214,7 +1212,7 @@ class PIOPFromVOProtocol(object):
         h1x, c,
         [- z ** (-self.degree_bound)],
         [- z ** (-self.degree_bound)],
-        self.degree_bound - (h_inverse_degree-1))
+        self.degree_bound - (rust_h_inverse_degree-1))
     c = Symbol(get_name("c"))
     coeff_builders[h2x.key()] = CombinationCoeffBuilder(h2x, c, [- z], [- z], 0)
 
@@ -1236,12 +1234,12 @@ class PIOPFromVOProtocol(object):
         b = VectorCombination._from(had.b)
         lc.append(
           rust_eval_vector_expression_i(
-            omega/z, a.dumpr_at_index(sym_i), rust_n + max_shift + q
+            omega/z, a.dumpr_at_index(sym_i), rust_n + rust_max_shift + q
           )
         )
-        lc.append(rust_eval_vector_expression_i(z, b.dumpr_at_index(sym_i), rust_n + max_shift + q))
+        lc.append(rust_eval_vector_expression_i(z, b.dumpr_at_index(sym_i), rust_n + rust_max_shift + q))
       piopexec.prover_computes_rust(rust_builder_assert_eq(
-        rust_builder_eval_vector_as_poly(h, z).mul(z**(-(h_inverse_degree-1))), lc
+        rust_builder_eval_vector_as_poly(h, z).mul(z**(-(rust_h_inverse_degree-1))), lc
       ).end())
 
     # Transform the lists into latex and rust builders
