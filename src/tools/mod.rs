@@ -780,6 +780,13 @@ macro_rules! vector_power_mul {
 }
 
 #[macro_export]
+macro_rules! define_vector_power_mul {
+    ($name:ident, $v:expr, $alpha:expr, $n:expr) => {
+        define_vec!($name, vector_power_mul!($v, $alpha, $n));
+    };
+}
+
+#[macro_export]
 macro_rules! power_power_mul {
     // Given two power vector, compute the coefficient vector
     // of their product

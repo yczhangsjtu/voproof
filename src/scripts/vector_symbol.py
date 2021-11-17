@@ -1315,8 +1315,9 @@ class NamedVectorPairCombination(CoeffMap):
 
     for v, p, s in named_power_sparse_tuples:
       vec = get_named_vector("v")
-      ret.let(vec).assign(RustMacro("vector_power_mul")
-        .append([rust_pk(v), rust(p.alpha, to_field=True), p.size])).end()
+      ret.append(rust_define_vector_power_mul(
+        vec, rust_pk(v), rust(p.alpha, to_field=True), p.size
+      )).end()
       vector_combination += vec * s
 
     for p1, p2, s in power_power_sparse_tuples:

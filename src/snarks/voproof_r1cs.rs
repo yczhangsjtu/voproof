@@ -450,21 +450,37 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define_vector_poly_mul_shift!(v_vec_7, h_vec, s_vec, omega, shiftlength_6);
         define_vector_poly_mul_shift!(v_vec_8, h_vec, pk.v_vec, omega, shiftlength_7);
         define_vector_reverse_omega_shift!(v_vec_9, r_vec_tilde, omega, shiftlength_8);
-        let v_vec_10 = vector_power_mul!(s_vec, omega.inverse().unwrap(), 3 * cap_h);
-        let v_vec_11 = vector_power_mul!(s_vec, to_field::<E::Fr>(1) / (gamma * omega), 3 * cap_h);
-        let v_vec_12 = vector_power_mul!(h_vec, omega.inverse().unwrap(), cap_k);
-        let v_vec_13 = vector_power_mul!(h_vec, to_field::<E::Fr>(1) / (gamma * omega), cap_k);
-        let v_vec_14 =
-            vector_power_mul!(v_vec_2, to_field::<E::Fr>(1), cap_s_a + cap_s_b + cap_s_c);
-        let v_vec_15 = vector_power_mul!(u_vec_1, omega.inverse().unwrap(), cap_h);
-        let v_vec_16 = vector_power_mul!(u_vec_1, omega.inverse().unwrap(), ell + 1);
-        let v_vec_17 = vector_power_mul!(x_vec, omega.inverse().unwrap(), ell + 1);
-        let v_vec_18 = vector_power_mul!(
+        define_vector_power_mul!(v_vec_10, s_vec, omega.inverse().unwrap(), 3 * cap_h);
+        define_vector_power_mul!(
+            v_vec_11,
+            s_vec,
+            to_field::<E::Fr>(1) / (gamma * omega),
+            3 * cap_h
+        );
+        define_vector_power_mul!(v_vec_12, h_vec, omega.inverse().unwrap(), cap_k);
+        define_vector_power_mul!(
+            v_vec_13,
+            h_vec,
+            to_field::<E::Fr>(1) / (gamma * omega),
+            cap_k
+        );
+        define_vector_power_mul!(
+            v_vec_14,
+            v_vec_2,
+            to_field::<E::Fr>(1),
+            cap_s_a + cap_s_b + cap_s_c
+        );
+        define_vector_power_mul!(v_vec_15, u_vec_1, omega.inverse().unwrap(), cap_h);
+        define_vector_power_mul!(v_vec_16, u_vec_1, omega.inverse().unwrap(), ell + 1);
+        define_vector_power_mul!(v_vec_17, x_vec, omega.inverse().unwrap(), ell + 1);
+        define_vector_power_mul!(
+            v_vec_18,
             v_vec_9,
             to_field::<E::Fr>(1),
             cap_k + cap_s_a + cap_s_b + cap_s_c
         );
-        let v_vec_19 = vector_power_mul!(
+        define_vector_power_mul!(
+            v_vec_19,
             t_vec_1,
             omega.inverse().unwrap(),
             cap_s_a + cap_s_b + cap_s_c + 1
