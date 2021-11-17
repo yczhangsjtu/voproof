@@ -173,13 +173,12 @@ class PublicCoinProtocolExecution(object):
     for attr in dir(rust_builder):
       if attr.startswith("rust_line_"):
         f = getattr(rust_builder, attr)
-        name = attr[len("rust_line_"):]
-        setattr(self, "prover_rust_" + name,
-            (lambda f: lambda *args: self.prover_computes_rust(f(*args)))(f))
-        setattr(self, "verifier_rust_" + name,
-            (lambda f: lambda *args: self.verifier_computes_rust(f(*args)))(f))
-        setattr(self, "pp_rust_" + name,
-            (lambda f: lambda *args: self.preprocess_rust(f(*args)))(f))
+        setattr(self, "prover_rust_" + attr[len("rust_line_"):],
+            lambda *args: self.prover_computes_rust(f(*args)))
+        setattr(self, "verifier_rust_" + attr[len("rust_line_"):],
+            lambda *args: self.verifier_computes_rust(f(*args)))
+        setattr(self, "pp_rust_" + attr[len("rust_line_"):],
+            lambda *args: self.preprocess_rust(f(*args)))
 
   def input_instance(self, arg):
     self.verifier_inputs.append(arg)
@@ -621,10 +620,10 @@ class PIOPExecution(PublicCoinProtocolExecution):
   def prover_debug(self, *args):
     if self.debug_mode:
       self.prover_computes_rust(
-        rust_builder_macro(
+        rust_line_macro(
           "println",
           *PIOPExecution._format_string(*args)
-        ).end()
+        )
       )
 
   def dumps(self):
@@ -727,7 +726,7 @@ class PIOPFromVOProtocol(object):
               Math(randomizer).sample(Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
               rust_line_redefine_zero_pad_concat_vector(v, rust_n, randomizer))
           piopexec.prover_send_polynomial(poly, self.vector_size + q, rust_n + q)
-          piopexec.prover_rust_define_poly_from_vec(poly, v)
+          piopexec.prover_computes_rust(rust_line_define_poly_from_vec(poly, v))
           vec_to_poly_dict[v.key()] = poly
 
           piopexec.prover_debug(
