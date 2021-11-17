@@ -339,6 +339,7 @@ rust_macro_list = [
     ("define_concat_uwinverse_vector", None, ("name", "v", "mu", "u", "nu", "w"), ()),
     ("accumulate_vector_plus", None, ("v"), ()),
     ("define_shift_minus_one", None, ("name", "vec"), ()),
+    ("define_vector_poly_mul_shift", None, ("name", "u", "v", "omega", "shiftname"), ()),
 ]
 
 

@@ -1264,13 +1264,11 @@ class NamedVectorPairCombination(CoeffMap):
       if key == "one":
         structured_vector_pair_combination = coeff
       elif vector_pair.u is not None and vector_pair.v is not None:
-        mul = RustMacro("vector_poly_mul").append([rust_pk(vector_pair.u), rust_pk(vector_pair.v), omega])
         v = get_named_vector("v")
-        ret.let(v).assign(mul).attribute("coeffs").end()
-        # After the reverse, the vector should be shifted left by |u|-1
-        # this shift is applied to the coefficient instead
         to_shift = Symbol(get_name("shiftlength"))
-        ret.append(rust_define_shift_minus_one(to_shift, vector_pair.u)).end()
+        ret.append(rust_define_vector_poly_mul_shift(
+          v, rust_pk(vector_pair.u), rust_pk(vector_pair.v), omega, to_shift
+        )).end()
         named_vector_structure_pairs.append((v, coeff.shift(-to_shift)))
       elif vector_pair.u is not None:
         v = get_named_vector("v")

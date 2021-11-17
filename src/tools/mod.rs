@@ -746,6 +746,16 @@ macro_rules! vector_poly_mul {
 }
 
 #[macro_export]
+macro_rules! define_vector_poly_mul_shift {
+    // Given vectors u, v and field element omega, compute
+    // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
+    ($name:ident, $u:expr, $v:expr, $omega:expr, $shiftname:ident) => {
+        let $name = vector_poly_mul!($u, $v, $omega).coeffs;
+        define_shift_minus_one!($shiftname, $u);
+    };
+}
+
+#[macro_export]
 macro_rules! vector_power_mul {
     // Given vector v, element alpha, length n, compute
     // the coefficient vector of v * power(alpha, n)
