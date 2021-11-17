@@ -1395,10 +1395,13 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       self.preprocess(preprocess.latex_builder, preprocess.rust_builder)
 
     for poly, degree, rust_degree in piopexec.indexer_polynomials.polynomials:
-      self.preprocess(Math(poly.to_comm())
-                      .assign("\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
-                              % poly.dumps()),
-                      rust_builder_commit_vector(poly.to_comm(), poly.vector, degree).end())
+      self.preprocess(
+          Math(poly.to_comm()).assign(
+            "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)" % poly.dumps()
+          ),
+          rust_builder_commit_vector(
+            poly.to_comm(), poly.vector, rust_degree
+          ).end())
       self.preprocess_output_vk(poly.to_comm())
       transcript.append(poly.to_comm())
 
@@ -1447,7 +1450,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
                 .append_to_last(poly).end()
           elif isinstance(poly, NamedVectorPolynomial):
             commit_rust_computation = rust_builder_commit_vector_with_pk(
-              poly.to_comm(), poly.vector, degree
+              poly.to_comm(), poly.vector, rust_degree
             ).end()
           else:
             raise Exception("Unrecognized polynomial type: %s" % type(poly))
