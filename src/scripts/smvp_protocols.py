@@ -303,12 +303,10 @@ class R1CS(VOProtocol):
       rust_builder_define_concat_vector(u,
         rust_sparse_mvp_vector(
           rust_pk(M),
-          rust_vector_concat(
-            rust_vec(rust_one()), x, w
-          ),
+          rust_concat_and_one(x, w),
           H * 3, K
         ),
-        rust_vec(rust_one()), x, w
+        rust_concat_and_one(x, w),
       ).end())
 
     voexec.prover_submit_vector(u, 3 * H + K)

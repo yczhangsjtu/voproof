@@ -282,6 +282,7 @@ rust_macro_list = [
       ("name", "z", "expr", "n"),
       (_ArgName("name"), _ArgName("z"), sym_i, _ArgName("expr"), _ArgName("n"))),
     ("vector_concat", None, None, ()),
+    ("concat_and_one", None, ("u", "v"), ()),
     ("check_vector_eq", None, ("v", "expr", "info"),
       (_ArgName("v"), _ArgName("expr"), _ArgProcess(lambda info: '"%s"' % info, "info"))),
     ("define_vec_mut", None, ("v", "expr"), ()),

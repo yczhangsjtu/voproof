@@ -618,6 +618,13 @@ macro_rules! vector_concat {
 }
 
 #[macro_export]
+macro_rules! concat_and_one {
+    ( $u: expr, $v: expr ) => {
+        vector_concat!(vec!(one!()), $u, $v)
+    }
+}
+
+#[macro_export]
 macro_rules! max {
     ($h:expr) => ($h);
     ($h:expr, $($v: expr),+) => {
