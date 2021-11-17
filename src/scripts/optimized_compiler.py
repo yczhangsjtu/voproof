@@ -741,10 +741,10 @@ class PIOPFromVOProtocol(object):
   """
   Check that the hadamard product of a query is indeed zero
   """
-  def _check_hadamard_sides(self, side1, side2=None):
+  def _check_hadamard_sides(self, check_individual_hadamard, side1, side2=None):
     if side2 is None:
       side = side1
-      check_individual_hadmard.append(rust_check_vector_eq(
+      check_individual_hadamard.append(rust_check_vector_eq(
           rust_expression_vector_i(
             rust_mul(
               (side.a * (1/alpha_power)).dumpr_at_index(sym_i),
@@ -754,7 +754,7 @@ class PIOPFromVOProtocol(object):
           "The %d\'th hadamard check is not satisfied" % (i+1)
           )).end()
     else:
-      check_individual_hadmard.append(rust_check_expression_vector_eq(
+      check_individual_hadamard.append(rust_check_expression_vector_eq(
         rust_mul(
           (side1.a * (1/alpha_power)).dumpr_at_index(sym_i),
           side1.b.dumpr_at_index(sym_i)),
@@ -785,10 +785,9 @@ class PIOPFromVOProtocol(object):
                       .space("the sum of:").eol()
                       .append(
                         Itemize().append([
-                         inner.dump_hadamard_difference_with_beta_power(beta, i)
-                         for i, inner in enumerate(voexec.inner_products)
-                        ])
-                      ))
+                          inner.dump_hadamard_difference_with_beta_power(beta, i)
+                          for i, inner in enumerate(voexec.inner_products)
+                        ])))
 
     piopexec.prover_rust_define_expression_vector_i(r,
         rust_power_linear_combination(beta).append([
@@ -798,15 +797,19 @@ class PIOPFromVOProtocol(object):
 
     randomizer = self._generate_new_randomizer(samples, 1)
     rtilde = get_named_vector("r", modifier="tilde")
-    fr = rtilde.to_named_vector_poly()
-    piopexec.prover_computes(Math(randomizer).sample(self.Ftoq)
+
+    """
+    tilde{r} is the accumulation vector of r combined with the randomizer
+    """
+    piopexec.prover_computes_latex(Math(randomizer).sample(self.Ftoq)
       .comma(rtilde).assign(AccumulationVector(r.slice("j"), n))
-      .double_bar(randomizer),
-      rust_line_define_concat_vector(
-        rtilde,
-        rust_accumulate_vector_plus(r),
-        randomizer
-      ))
+      .double_bar(randomizer))
+    piopexec.prover_rust_define_concat_vector(
+      rtilde,
+      rust_accumulate_vector_plus(r),
+      randomizer)
+
+    fr = rtilde.to_named_vector_poly()
     piopexec.prover_rust_define_poly_from_vec(fr, rtilde)
 
     piopexec.prover_send_polynomial(fr, n + self.q, rust_n + self.q)
@@ -821,7 +824,7 @@ class PIOPFromVOProtocol(object):
                              VOQuerySide(rtilde, UnitVector(n, rust_n)))
 
     # This last hadamard check involves only a named vector times
-    # a unit vector, it does not contribuets to t
+    # a unit vector, it does not contributes to t
     ignore_in_t.add(len(extended_hadamard) - 1)
 
   def _process_extended_hadamards(self, piopexec, samples):
@@ -874,9 +877,17 @@ class PIOPFromVOProtocol(object):
 
       if self.debug_mode:
         if had.one_sided:
-          self._check_hadamard_sides(extended_hadamard[-1])
+          self._check_hadamard_sides(
+              check_individual_hadmard,
+              extended_hadamard[-1])
         else:
-          self._check_hadamard_sides(extended_hadamard[-1], extended_hadamard[-2])
+          self._check_hadamard_sides(
+              check_individual_hadmard,
+              extended_hadamard[-1],
+              extended_hadamard[-2])
+    
+    if self.debug_mode:
+      piopexec.prover_computes_rust(check_individual_hadmard)
 
     self.debug("Process inner products")
     if len(voexec.inner_products) > 0:
@@ -885,25 +896,25 @@ class PIOPFromVOProtocol(object):
     max_shift = voexec.simplify_max(Max(*shifts))
     rust_max_shift = piopexec.prover_redefine_symbol_rust(max_shift, "maxshift")
     piopexec.verifier_send_randomness(alpha)
-    
-    if self.debug_mode:
-      piopexec.prover_computes_rust(check_individual_hadmard)
 
     self.debug("Process vector t")
     t = get_named_vector("t")
-    compute_sum = rust_linear_combination_base_zero()
-    t_items = Itemize()
-    for i, side in enumerate(extended_hadamard):
-      if not i in ignore_in_t:
-        compute_sum.append(side.a.dumpr_at_index(simplify(sym_i + rust_n)))
-        compute_sum.append(side.b.dumpr_at_index(simplify(sym_i + rust_n)))
-        t_items.append("$%s$" % side._dumps("circ"))
+
     piopexec.prover_computes_latex(
         LaTeXBuilder().start_math().append(t).assign().end_math()
-                      .space("the sum of:").eol().append(t_items))
+                      .space("the sum of:").eol().append(Itemize().append([
+                        "$%s$" % side._dumps("circ")
+                        for i, side in enumerate(extended_hadamard)
+                        if not i in ignore_in_t
+                      ])))
+
     piopexec.prover_rust_define_expression_vector_i(t,
-      compute_sum, 2 * self.q + rust_max_shift
-    )
+      rust_linear_combination_base_zero(*[
+        operand.dumpr_at_index(simplify(sym_i + rust_n))
+        for i, side in enumerate(extended_hadamard)
+        for operand in [side.a, side.b]
+        if not i in ignore_in_t
+      ]), 2 * self.q + rust_max_shift)
 
     randomizer = self._generate_new_randomizer(samples, 1)
     original_t = t
