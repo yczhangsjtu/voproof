@@ -1272,13 +1272,10 @@ class NamedVectorPairCombination(CoeffMap):
         named_vector_structure_pairs.append((v, coeff.shift(-to_shift)))
       elif vector_pair.u is not None:
         v = get_named_vector("v")
-        ret.let(v).assign(
-            RustMacro("vector_reverse_omega")
-            .append([vector_pair.u, omega])).end()
         to_shift = Symbol(get_name("shiftlength"))
-        ret.append(rust_define_shift_minus_one(to_shift, vector_pair.u)).end()
-        # After the reverse, the vector should be shifted left by |v|-1
-        # this shift is applied to the coefficient instead
+        ret.append(rust_define_vector_reverse_omega_shift(
+          v, vector_pair.u, omega, to_shift
+        )).end()
         named_vector_structure_pairs.append((v, coeff.shift(-to_shift)))
       elif vector_pair.v is not None:
         named_vector_structure_pairs.append((vector_pair.v, coeff))

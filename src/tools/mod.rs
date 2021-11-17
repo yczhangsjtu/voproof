@@ -592,6 +592,14 @@ macro_rules! vector_reverse_omega {
 }
 
 #[macro_export]
+macro_rules! define_vector_reverse_omega_shift {
+    ($name: ident, $v: expr, $omega:expr, $shiftname:ident) => {
+        define_vec!($name, vector_reverse_omega!($v, $omega));
+        define_shift_minus_one!($shiftname, $v);
+    };
+}
+
+#[macro_export]
 macro_rules! int_array_to_power_vector {
     ($v:expr, $gamma:expr) => {
         expression_vector!(i, power($gamma, $v[i - 1] as i64), $v.len())

@@ -442,16 +442,14 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_t_vec_1
         );
         define_vector_poly_mul_shift!(v_vec_1, h_vec, pk.w_vec, omega, shiftlength);
-        let v_vec_2 = vector_reverse_omega!(h_vec, omega);
-        define_shift_minus_one!(shiftlength_1, h_vec);
+        define_vector_reverse_omega_shift!(v_vec_2, h_vec, omega, shiftlength_1);
         define_vector_poly_mul_shift!(v_vec_3, h_vec, pk.u_vec, omega, shiftlength_2);
         define_vector_poly_mul_shift!(v_vec_4, h_vec, pk.y_vec, omega, shiftlength_3);
         define_vector_poly_mul_shift!(v_vec_5, u_vec_1, u_vec_1, omega, shiftlength_4);
         define_vector_poly_mul_shift!(v_vec_6, u_vec_1, s_vec, omega, shiftlength_5);
         define_vector_poly_mul_shift!(v_vec_7, h_vec, s_vec, omega, shiftlength_6);
         define_vector_poly_mul_shift!(v_vec_8, h_vec, pk.v_vec, omega, shiftlength_7);
-        let v_vec_9 = vector_reverse_omega!(r_vec_tilde, omega);
-        define_shift_minus_one!(shiftlength_8, r_vec_tilde);
+        define_vector_reverse_omega_shift!(v_vec_9, r_vec_tilde, omega, shiftlength_8);
         let v_vec_10 = vector_power_mul!(s_vec, omega.inverse().unwrap(), 3 * cap_h);
         let v_vec_11 = vector_power_mul!(s_vec, to_field::<E::Fr>(1) / (gamma * omega), 3 * cap_h);
         let v_vec_12 = vector_power_mul!(h_vec, omega.inverse().unwrap(), cap_k);
