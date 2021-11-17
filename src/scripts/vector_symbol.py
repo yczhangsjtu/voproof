@@ -155,8 +155,8 @@ class NamedVector(_NamedBasic):
   def __div__(self, other):
     return VectorCombination._from(self).__div__(other)
 
-  def shift(self, length):
-    return self.__mul__(UnitVector(length + 1))
+  def shift(self, length, rust_length=None):
+    return self.__mul__(UnitVector(length + 1, rust_length))
 
   def dumpr_at_index(self, index):
     return rust(RustMacro("vector_index").append([rust_pk(self), rust(index)]))
@@ -198,9 +198,11 @@ class VectorSlice(object):
 
 
 class UnitVector(object):
-  def __init__(self, position):
+  def __init__(self, position, rust_position=None):
     # position can be Symbol, Expr or Integer
     self.position = simplify(sympify(position))
+    self.rust_position = self.position if rust_position is None \
+                                       else simplify(sympify(rust_position))
 
   def dumps(self):
     return "\\vec{e}_{%s}" % (latex(self.position))
@@ -234,7 +236,9 @@ class UnitVector(object):
 
   def __mul__(self, other):
     if isinstance(other, UnitVector):
-      return UnitVector(self.position + other.position - 1)
+      return UnitVector(
+          self.position + other.position - 1,
+          self.rust_position + other.rust_position - 1)
     return SparseVector._from(self).__mul__(other)
 
   def __rmul__(self, other):
@@ -244,7 +248,7 @@ class UnitVector(object):
     return SparseVector._from(self).__div__(other)
   
   def dumpr_at_index(self, index):
-    return rust(RustMacro("delta").append([rust(index), rust(self.position)]))
+    return rust(RustMacro("delta").append([rust(index), rust(self.rust_position)]))
   
   def reverse_omega(self, omega):
     return SparseVector._from(self).reverse_omega(omega)
@@ -355,10 +359,10 @@ class SparseVector(CoeffMap):
   def __init__(self):
     super(SparseVector, self).__init__()
 
-  def set(self, position, value):
+  def set(self, position, value, rust_position=None):
     value = simplify(sympify(value))
     if not isinstance(position, UnitVector):
-      unit_vector = UnitVector(position)
+      unit_vector = UnitVector(position, rust_position)
     else:
       unit_vector = position
     if value == 0:
@@ -366,9 +370,9 @@ class SparseVector(CoeffMap):
       return self
     return super(SparseVector, self).set(unit_vector, value)
 
-  def get(self, position):
+  def get(self, position, rust_position=None):
     if not isinstance(position, UnitVector):
-      unit_vector = UnitVector(position)
+      unit_vector = UnitVector(position, rust_position)
     else:
       unit_vector = position
     if not self.has(unit_vector):
@@ -473,8 +477,9 @@ class SparseVector(CoeffMap):
   def shifts(self):
     return []
 
-  def shift(self, length):
-    return self.__mul__(UnitVector(length + 1))
+  def shift(self, length, rust_length=None):
+    return self.__mul__(UnitVector(length + 1,
+      rust_length + 1 if rust_length is not None else None))
 
   def to_poly_expr(self, var):
     items = []
@@ -641,8 +646,9 @@ class VectorCombination(CoeffMap):
       vec, value = vec_value
       return value.is_atom()
 
-  def shift(self, length):
-    return self.__mul__(UnitVector(length + 1))
+  def shift(self, length, rust_length=None):
+    return self.__mul__(UnitVector(length + 1,
+      rust_length + 1 if rust_length is not None else None))
 
   def shifts(self):
     lengths = []
@@ -708,8 +714,9 @@ class PowerVector(object):
   def __div__(self, other):
     return StructuredVector._from(self).__div__(other)
 
-  def shift(self, length):
-    return self.__mul__(UnitVector(length + 1))
+  def shift(self, length, rust_length=None):
+    return self.__mul__(UnitVector(length + 1,
+      rust_length + 1 if rust_length is not None else None))
 
   def to_poly_expr(self, var):
     return ((self.alpha * var) ** self.size - Symbol("E::Fr::one()")) / (self.alpha * var - Symbol("E::Fr::one()"))
@@ -799,8 +806,9 @@ class StructuredVector(CoeffMap):
   def shifts(self):
     return []
 
-  def shift(self, length):
-    return self.__mul__(UnitVector(length + 1))
+  def shift(self, length, rust_length=None):
+    return self.__mul__(UnitVector(length + 1,
+      rust_length + 1 if rust_length is not None else None))
 
   def to_poly_expr(self, var):
     items = []
