@@ -55,7 +55,9 @@ class SparseMVP(VOProtocol):
     M = voexec.M
 
     mu = Symbol(get_name("mu"))
-    rust_n = voexec.verifier_redefine_symbol_rust(n, "n")
+    if voexec.rust_vector_size is None:
+      voexec.rust_vector_size = voexec.verifier_redefine_symbol_rust(n, "n")
+    rust_n = voexec.rust_vector_size
     rust_ell = voexec.verifier_redefine_symbol_rust(ell, "ell")
     voexec.verifier_computes_rust(rust_builder_define_generator().end())
     voexec.verifier_send_randomness(mu)
@@ -287,6 +289,10 @@ class R1CS(VOProtocol):
     voexec.verifier_computes_rust(rust_builder_init_size(sb, "bdensity").end())
     voexec.verifier_computes_rust(rust_builder_init_size(sc, "cdensity").end())
     voexec.verifier_computes_rust(rust_builder_init_size(ell, "input_size").end())
+    if voexec.rust_vector_size is None:
+      voexec.rust_vector_size = voexec.verifier_redefine_symbol_rust(n, "n")
+    rust_n = voexec.rust_vector_size
+    voexec.rust_vector_size = rust_n
 
     u = get_named_vector("u")
     voexec.prover_computes(Math(u).assign().paren(
@@ -308,10 +314,10 @@ class R1CS(VOProtocol):
     voexec.prover_submit_vector(u, 3 * H + K)
     voexec.run_subprotocol(SparseMVP(), u)
     voexec.hadamard_query(
-      u.shift(n-H),
-      u.shift(n-H*2),
-      PowerVector(1, H).shift(n-H),
-      u.shift(n-H*3),
+      u.shift(n-H, rust_n-H),
+      u.shift(n-H*2, rust_n-H*2),
+      PowerVector(1, H).shift(n-H, rust_n-H),
+      u.shift(n-H*3, rust_n-H*3),
     )
     voexec.hadamard_query(
       PowerVector(1, ell+1).shift(H*3),

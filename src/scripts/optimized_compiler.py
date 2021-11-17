@@ -338,6 +338,7 @@ class VOProtocolExecution(PublicCoinProtocolExecution):
     super(VOProtocolExecution, self).__init__()
     self.args = args
     self.vector_size = vector_size
+    self.rust_vector_size = None
     self.indexer_vectors = None
     self.hadamards = []
     self.inner_products = []
@@ -694,8 +695,8 @@ class PIOPFromVOProtocol(object):
     piopexec.verifier_inputs = voexec.verifier_inputs
     piopexec.prover_preparations = voexec.prover_preparations
     piopexec.verifier_preparations = voexec.verifier_preparations
-    rust_n = None
     self.debug("Process interactions")
+    rust_n = None
     for interaction in voexec.interactions:
       if isinstance(interaction, ProverComputes):
         piopexec.prover_computes(interaction.latex_builder, interaction.rust_builder)
@@ -704,8 +705,14 @@ class PIOPFromVOProtocol(object):
       elif isinstance(interaction, VerifierSendRandomnesses):
         piopexec.verifier_send_randomness(*interaction.names)
       elif isinstance(interaction, ProverSubmitVectors):
+
+        # Must be postponed to here because now it is guaranteed that all the
+        # necessary variables that n depends on are defined
         if rust_n is None:
-          rust_n = piopexec.prover_redefine_symbol_rust(n, "n")
+          if voexec.rust_vector_size is None:
+            voexec.rust_vector_size = piopexec.prover_redefine_symbol_rust(n, "n")
+          rust_n = voexec.rust_vector_size
+
         for v, size, rust_size in interaction.vectors:
           randomizer = get_named_vector("delta")
           samples.append([randomizer, 1])
