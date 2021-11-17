@@ -55,6 +55,7 @@ class SparseMVP(VOProtocol):
     M = voexec.M
 
     mu = Symbol(get_name("mu"))
+    rust_n = voexec.verifier_redefine_symbol_rust(n, "n")
     voexec.verifier_computes_rust(rust_builder_define_generator().end())
     voexec.verifier_send_randomness(mu)
     r = get_named_vector("r")
@@ -84,8 +85,8 @@ class SparseMVP(VOProtocol):
       PowerVector(1, H),
     )
     voexec.inner_product_query(
-      a.shift(n - H - K),
-      s.shift(n - H - K),
+      a.shift(n - H - K, rust_n - H - K),
+      s.shift(n - H - K, rust_n - H - K),
     )
 
     nu = Symbol(get_name("nu"))
@@ -127,10 +128,10 @@ class SparseMVP(VOProtocol):
     )
 
     voexec.inner_product_query(
-      - h.shift(n - K),
-      s.shift(n - H - K),
-      h.shift(n - ell - K),
-      voexec.v.shift(n - ell),
+      - h.shift(n - K, rust_n - K),
+      s.shift(n - H - K, rust_n - H - K),
+      h.shift(n - ell - K, rust_n - ell - K),
+      voexec.v.shift(n - ell, rust_n - ell),
     )
 
 
