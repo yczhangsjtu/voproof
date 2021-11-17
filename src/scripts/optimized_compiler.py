@@ -883,7 +883,7 @@ class PIOPFromVOProtocol(object):
     piopexec.prover_send_polynomial(tx, 2 * q + max_shift, 2 * q + rust_max_shift)
     extended_hadamard.append(VOQuerySide(-PowerVector(
       1, max_shift + q, rust_max_shift + q
-    ).shift(n), t.shift(n - q)))
+    ).shift(n, rust_n), t.shift(n - q, rust_n - q)))
 
     self.debug("Process polynomial h")
     omega = Symbol(get_name('omega'))
