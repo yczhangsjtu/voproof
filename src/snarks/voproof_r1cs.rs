@@ -178,6 +178,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         define_poly_from_vec!(u_vec_1_poly, u_vec_1);
         define!(n, cap_k + cap_s_a + cap_s_b + cap_s_c);
+        define!(ell_1, cap_s_a + cap_s_b + cap_s_c);
         define_generator!(gamma, E);
         get_randomness_from_hash!(
             mu,
@@ -323,11 +324,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     linear_combination!(
                         mul!(
                             mu * nu,
-                            range_index!(
-                                1,
-                                cap_s_a + cap_s_b + cap_s_c,
-                                minus_i64!(i + n_1, cap_k + 1)
-                            )
+                            range_index!(1, ell_1, minus_i64!(i + n_1, cap_k + 1))
                         ),
                         -mu,
                         vector_index!(pk.w_vec, minus_i64!(i + n_1, cap_k + 1)),
@@ -338,17 +335,9 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     ),
                     mul!(
                         -power(alpha, 2),
-                        range_index!(
-                            1,
-                            cap_s_a + cap_s_b + cap_s_c,
-                            minus_i64!(i + n_1, cap_k + 1)
-                        )
+                        range_index!(1, ell_1, minus_i64!(i + n_1, cap_k + 1))
                     ),
-                    range_index!(
-                        1,
-                        cap_s_a + cap_s_b + cap_s_c,
-                        minus_i64!(i + n_1, cap_k + 1)
-                    ),
+                    range_index!(1, ell_1, minus_i64!(i + n_1, cap_k + 1)),
                     mul!(
                         power(alpha, 3),
                         vector_index!(
@@ -987,6 +976,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         init_size!(cap_s_c, cdensity, size);
         init_size!(ell, input_size, size);
         define!(n, cap_k + cap_s_a + cap_s_b + cap_s_c);
+        define!(ell_1, cap_s_a + cap_s_b + cap_s_c);
         define_generator!(gamma, E);
         get_randomness_from_hash!(
             mu,

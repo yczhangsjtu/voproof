@@ -56,6 +56,7 @@ class SparseMVP(VOProtocol):
 
     mu = Symbol(get_name("mu"))
     rust_n = voexec.verifier_redefine_symbol_rust(n, "n")
+    rust_ell = voexec.verifier_redefine_symbol_rust(ell, "ell")
     voexec.verifier_computes_rust(rust_builder_define_generator().end())
     voexec.verifier_send_randomness(mu)
     r = get_named_vector("r")
@@ -110,7 +111,7 @@ class SparseMVP(VOProtocol):
       rust_builder_define_concat_uwinverse_vector(
         h, rnu, mu, rust_pk(voexec.u), nu, rust_pk(voexec.w)
       ).end())
-    voexec.prover_submit_vector(h, ell + K)
+    voexec.prover_submit_vector(h, ell + K, rust_ell + K)
 
     voexec.hadamard_query(
       nu * PowerVector(1, K) - PowerVector(gamma, K),
@@ -121,17 +122,17 @@ class SparseMVP(VOProtocol):
 
     voexec.hadamard_query(
       h,
-      (mu * nu * PowerVector(1, ell) - mu * voexec.w -
+      (mu * nu * PowerVector(1, ell, rust_ell) - mu * voexec.w -
        nu * voexec.u + voexec.y).shift(K),
-      PowerVector(1, ell).shift(K),
-      PowerVector(1, ell).shift(K),
+      PowerVector(1, ell, rust_ell).shift(K),
+      PowerVector(1, ell, rust_ell).shift(K),
     )
 
     voexec.inner_product_query(
       - h.shift(n - K, rust_n - K),
       s.shift(n - H - K, rust_n - H - K),
-      h.shift(n - ell - K, rust_n - ell - K),
-      voexec.v.shift(n - ell, rust_n - ell),
+      h.shift(n - ell - K, rust_n - rust_ell - K),
+      voexec.v.shift(n - ell, rust_n - rust_ell),
     )
 
 
