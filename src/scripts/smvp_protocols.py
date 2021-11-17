@@ -290,7 +290,6 @@ class R1CS(VOProtocol):
     voexec.verifier_rust_init_size(ell, "input_size")
     voexec.try_verifier_redefine_vector_size_rust("n", n)
     rust_n = voexec.rust_vector_size
-    voexec.rust_vector_size = rust_n
 
     u = get_named_vector("u")
     voexec.prover_computes(Math(u).assign().paren(
