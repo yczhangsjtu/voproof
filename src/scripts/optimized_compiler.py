@@ -82,29 +82,31 @@ class VerifierSendRandomnesses(object):
 
 
 class SubmitVectors(object):
-  def __init__(self, submitter, vector, size):
+  def __init__(self, submitter, vector, size, rust_size=None):
+    rust_size = size if rust_size is None else rust_size
     self.submitter = submitter
-    self.vectors = [(vector, size)]
+    self.vectors = [(vector, size, rust_size)]
 
   def __len__(self):
     return len(self.vectors)
 
-  def add_vector(self, vector, size):
-    self.vectors.append((vector, size))
+  def add_vector(self, vector, size, rust_size=None):
+    rust_size = size if rust_size is None else rust_size
+    self.vectors.append((vector, size, rust_size))
 
   def dumps(self):
     return "\\%s submits $%s$ to $\\cOV$" % \
-           (self.submitter, ",".join([v.dumps() for v, size in self.vectors]))
+           (self.submitter, ",".join([v.dumps() for v, size, _ in self.vectors]))
 
 
 class ProverSubmitVectors(SubmitVectors):
-  def __init__(self, vector, size):
-    super(ProverSubmitVectors, self).__init__("prover", vector, size)
+  def __init__(self, vector, size, rust_size=None):
+    super(ProverSubmitVectors, self).__init__("prover", vector, size, rust_size)
 
 
 class IndexerSubmitVectors(SubmitVectors):
-  def __init__(self, vector, size):
-    super(IndexerSubmitVectors, self).__init__("indexer", vector, size)
+  def __init__(self, vector, size, rust_size=None):
+    super(IndexerSubmitVectors, self).__init__("indexer", vector, size, rust_size)
 
 
 class InvokeSubprotocol(object):
@@ -128,30 +130,32 @@ class IndexerInvokeSubprotocol(object):
 
 
 class SendPolynomials(object):
-  def __init__(self, sender, polynomial, degree):
+  def __init__(self, sender, polynomial, degree, rust_degree=None):
+    rust_degree = degree if rust_degree is None else rust_degree
     self.sender = sender
-    self.polynomials = [(polynomial, degree)]
+    self.polynomials = [(polynomial, degree, rust_degree)]
 
   def __len__(self):
     return len(self.polynomials)
 
-  def add_polynomial(self, polynomial, degree):
-    self.polynomials.append((polynomial, degree))
+  def add_polynomial(self, polynomial, degree, rust_degree=None):
+    rust_degree = degree if rust_degree is None else rust_degree
+    self.polynomials.append((polynomial, degree, rust_degree))
 
   def dumps(self):
     return "\\%s sends %s to \\verifier" % (self.sender,
            ", ".join(["$[%s]$ of degree $%s$" % (p.dumps(), tex(degree-1))
-                      for p, degree in self.polynomials]))
+                      for p, degree, rust_degree in self.polynomials]))
 
 
 class ProverSendPolynomials(SendPolynomials):
-  def __init__(self, polynomial, degree):
-    super(ProverSendPolynomials, self).__init__("prover", polynomial, degree)
+  def __init__(self, polynomial, degree, rust_degree):
+    super(ProverSendPolynomials, self).__init__("prover", polynomial, degree, rust_degree)
 
 
 class IndexerSendPolynomials(SendPolynomials):
-  def __init__(self, polynomial, degree):
-    super(IndexerSendPolynomials, self).__init__("indexer", polynomial, degree)
+  def __init__(self, polynomial, degree, rust_degree):
+    super(IndexerSendPolynomials, self).__init__("indexer", polynomial, degree, rust_degree)
 
 
 class PublicCoinProtocolExecution(object):
@@ -359,12 +363,12 @@ class VOProtocolExecution(PublicCoinProtocolExecution):
     self.vector_size_bound = self.simplify_max(Max(self.vector_size_bound, size))
     self.vector_size_sum += size
 
-  def prover_submit_vector(self, vector, size):
+  def prover_submit_vector(self, vector, size, rust_size=None):
     if len(self.interactions) > 0 and \
       isinstance(self.interactions[-1], ProverSubmitVectors):
-      self.interactions[-1].add_vector(vector, size)
+      self.interactions[-1].add_vector(vector, size, rust_size)
     else:
-      self.interactions.append(ProverSubmitVectors(vector, size))
+      self.interactions.append(ProverSubmitVectors(vector, size, rust_size))
     self._update_vector_size_bound(size)
 
   def hadamard_query(self, a, b, c=None, d=None):
@@ -385,7 +389,7 @@ class VOProtocolExecution(PublicCoinProtocolExecution):
     for pp in self.preprocessings:
       ret.preprocesses.append(pp)
     if self.indexer_vectors is not None:
-      for v, size in self.indexer_vectors.vectors:
+      for v, size, _ in self.indexer_vectors.vectors:
         ret.output_pk.append(v)
         ret.output_vk.append(v)
     for interaction in self.interactions:
@@ -557,21 +561,21 @@ class PIOPExecution(PublicCoinProtocolExecution):
     self._power_poly_dict = {}
     self._auto_vector_dict = {}
 
-  def preprocess_polynomial(self, polynomial, degree):
+  def preprocess_polynomial(self, polynomial, degree, rust_degree=None):
     polynomial._is_preprocessed = True
     if self.indexer_polynomials is not None:
-      self.indexer_polynomials.add_polynomial(polynomial, degree)
+      self.indexer_polynomials.add_polynomial(polynomial, degree, rust_degree)
     else:
-      self.indexer_polynomials = IndexerSendPolynomials(polynomial, degree)
+      self.indexer_polynomials = IndexerSendPolynomials(polynomial, degree, rust_degree)
 
-  def prover_send_polynomial(self, polynomial, degree):
+  def prover_send_polynomial(self, polynomial, degree, rust_degree=None):
     if len(self.interactions) > 0 and \
       isinstance(self.interactions[-1], ProverSendPolynomials):
-      self.interactions[-1].add_polynomial(polynomial, degree)
+      self.interactions[-1].add_polynomial(polynomial, degree, rust_degree)
     else:
-      self.interactions.append(ProverSendPolynomials(polynomial, degree))
+      self.interactions.append(ProverSendPolynomials(polynomial, degree, rust_degree))
 
-    self.prover_polynomials.append(ProverSendPolynomials(polynomial, degree))
+    self.prover_polynomials.append(ProverSendPolynomials(polynomial, degree, rust_degree))
 
   def eval_query(self, name, point, poly):
     self.eval_queries.append(EvalQuery(name, point, poly))
@@ -660,7 +664,7 @@ class PIOPFromVOProtocol(object):
 
     for pp in voexec.preprocessings:
       piopexec.preprocess(pp.latex_builder, pp.rust_builder)
-    for vector, size in voexec.indexer_vectors.vectors:
+    for vector, size, _ in voexec.indexer_vectors.vectors:
       poly = vector.to_named_vector_poly()
       piopexec.preprocess_polynomial(poly, size)
       vec_to_poly_dict[vector.key()] = poly
@@ -702,7 +706,7 @@ class PIOPFromVOProtocol(object):
       elif isinstance(interaction, ProverSubmitVectors):
         if rust_n is None:
           rust_n = piopexec.prover_redefine_symbol_rust(n, "n")
-        for v, size in interaction.vectors:
+        for v, size, rust_size in interaction.vectors:
           randomizer = get_named_vector("delta")
           samples.append([randomizer, 1])
           poly = v.to_named_vector_poly()
@@ -1379,7 +1383,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     for preprocess in piopexec.preprocessings:
       self.preprocess(preprocess.latex_builder, preprocess.rust_builder)
 
-    for poly, degree in piopexec.indexer_polynomials.polynomials:
+    for poly, degree, rust_degree in piopexec.indexer_polynomials.polynomials:
       self.preprocess(Math(poly.to_comm())
                       .assign("\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
                               % poly.dumps()),
@@ -1420,7 +1424,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
               r, *[rust_vk(x) for x in transcript]
             ).end())
       if isinstance(interaction, ProverSendPolynomials):
-        for poly, degree in interaction.polynomials:
+        for poly, degree, rust_degree in interaction.polynomials:
           commit_computation = Math(poly.to_comm()).assign(
             "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
             % (poly.dumps())
