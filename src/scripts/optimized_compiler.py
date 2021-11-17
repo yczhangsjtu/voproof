@@ -697,61 +697,39 @@ class PIOPFromVOProtocol(object):
     piopexec.reference_to_voexec = voexec
     voexec.vec_to_poly_dict = vec_to_poly_dict
 
-  def execute(self, piopexec, *args):
+  def _generate_new_randomizer(self, samples, k):
+    randomizer = get_named_vector("delta")
+    samples.append([randomizer, k])
+    return randomizer
+
+  def _process_prover_submitted_vector(self, piopexec, v, size, rust_size, samples):
     voexec = piopexec.reference_to_voexec
-    n = self.vector_size
-    vec_to_poly_dict = voexec.vec_to_poly_dict
-    q = Integer(1)
-    Ftoq = UnevaluatedExpr(F ** q)
+    # Sample the randomizer
+    randomizer = self._generate_new_randomizer(samples, 1)
+    poly = v.to_named_vector_poly()
+    # Zero pad the vector to size n then append the randomizer
+    piopexec.prover_computes(
+        Math(randomizer).sample(self.Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
+        rust_line_redefine_zero_pad_concat_vector(v, voexec.rust_vector_size, randomizer))
+    piopexec.prover_send_polynomial(
+        poly, self.vector_size + self.q, voexec.rust_vector_size + self.q)
+    piopexec.prover_rust_define_poly_from_vec(poly, v)
+    voexec.vec_to_poly_dict[v.key()] = poly
 
-    samples = rust_sample_randomizers()
-    piopexec.prover_computes_rust(RustBuilder(samples).end())
+    piopexec.prover_debug(
+      "vector %s of length {} = \\n[{}]" % rust(v), "%s.len()" % rust(v),
+      rust_fmt_ff_vector(v),
+    )
 
-    self.debug("Executing VO protocol")
-    self.vo.execute(voexec, *args)
-    piopexec.prover_inputs = voexec.prover_inputs
-    piopexec.verifier_inputs = voexec.verifier_inputs
-    piopexec.prover_preparations = voexec.prover_preparations
-    piopexec.verifier_preparations = voexec.verifier_preparations
-    self.debug("Process interactions")
-    rust_n = None
-    for interaction in voexec.interactions:
-      if isinstance(interaction, ProverComputes):
-        piopexec.prover_computes(interaction.latex_builder, interaction.rust_builder)
-      elif isinstance(interaction, VerifierComputes):
-        piopexec.verifier_computes(interaction.latex_builder, interaction.rust_builder)
-      elif isinstance(interaction, VerifierSendRandomnesses):
-        piopexec.verifier_send_randomness(*interaction.names)
-      elif isinstance(interaction, ProverSubmitVectors):
-
-        # Must be postponed to here because now it is guaranteed that all the
-        # necessary variables that n depends on are defined
-        if rust_n is None:
-          voexec.try_verifier_redefine_vector_size_rust("n", n, piopexec)
-          rust_n = voexec.rust_vector_size
-
-        for v, size, rust_size in interaction.vectors:
-          randomizer = get_named_vector("delta")
-          samples.append([randomizer, 1])
-          poly = v.to_named_vector_poly()
-          piopexec.prover_computes(
-              Math(randomizer).sample(Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
-              rust_line_redefine_zero_pad_concat_vector(v, rust_n, randomizer))
-          piopexec.prover_send_polynomial(poly, self.vector_size + q, rust_n + q)
-          piopexec.prover_rust_define_poly_from_vec(poly, v)
-          vec_to_poly_dict[v.key()] = poly
-
-          piopexec.prover_debug(
-            "vector %s of length {} = \\n[{}]" % rust(v), "%s.len()" % rust(v),
-            rust_fmt_ff_vector(v),
-          )
-      else:
-        raise ValueError("Interaction of type %s should not appear" % type(interaction))
-
-    self.debug("Prepare extended hadamard")
+  def _process_extended_hadamards(self, piopexec, samples):
     alpha = Symbol(get_name('alpha'))
     extended_hadamard = []
     shifts = []
+
+    voexec = piopexec.reference_to_voexec
+    rust_n = voexec.rust_vector_size
+    n = voexec.vector_size
+
     if self.debug_mode:
       check_individual_hadmard = RustBuilder()
     # Some hadamard checks are guaranteed to be zero
@@ -837,11 +815,10 @@ class PIOPFromVOProtocol(object):
       expression_vector.append([linear_combination, rust_n])
       piopexec.prover_computes(rcomputes, rcomputes_rust.end())
 
-      randomizer = get_named_vector("delta")
-      samples.append([randomizer, 1])
+      randomizer = self._generate_new_randomizer(samples, 1)
       rtilde = get_named_vector("r", modifier="tilde")
       fr = rtilde.to_named_vector_poly()
-      piopexec.prover_computes(Math(randomizer).sample(Ftoq)
+      piopexec.prover_computes(Math(randomizer).sample(self.Ftoq)
         .comma(rtilde).assign(AccumulationVector(r.slice("j"), n))
         .double_bar(randomizer),
         rust_line_define_concat_vector(
@@ -851,8 +828,8 @@ class PIOPFromVOProtocol(object):
         ))
       piopexec.prover_rust_define_poly_from_vec(fr, rtilde)
 
-      piopexec.prover_send_polynomial(fr, n + q, rust_n + q)
-      vec_to_poly_dict[rtilde.key()] = fr
+      piopexec.prover_send_polynomial(fr, n + self.q, rust_n + self.q)
+      voexec.vec_to_poly_dict[rtilde.key()] = fr
 
       extended_hadamard.append((- alpha_power) *
                                VOQuerySide(rtilde - rtilde.shift(1),
@@ -865,8 +842,6 @@ class PIOPFromVOProtocol(object):
       # a unit vector, it does not contribuets to t
       ignore_in_t.add(len(extended_hadamard) - 1)
 
-    self.debug("Process vector t")
-    t = get_named_vector("t")
     max_shift = voexec.simplify_max(Max(*shifts))
     rust_max_shift = piopexec.prover_redefine_symbol_rust(max_shift, "maxshift")
     piopexec.verifier_send_randomness(alpha)
@@ -874,6 +849,8 @@ class PIOPFromVOProtocol(object):
     if self.debug_mode:
       piopexec.prover_computes_rust(check_individual_hadmard)
 
+    self.debug("Process vector t")
+    t = get_named_vector("t")
     tcomputes = LaTeXBuilder().start_math().append(t).assign().end_math() \
                               .space("the sum of:").eol()
     expression_vector = RustMacro("expression_vector", sym_i)
@@ -885,27 +862,74 @@ class PIOPFromVOProtocol(object):
         compute_sum.append(side.a.dumpr_at_index(simplify(sym_i + rust_n)))
         compute_sum.append(side.b.dumpr_at_index(simplify(sym_i + rust_n)))
         t_items.append("$%s$" % side._dumps("circ"))
-    expression_vector.append([compute_sum, 2 * q + rust_max_shift])
+    expression_vector.append([compute_sum, 2 * self.q + rust_max_shift])
     tcomputes.append(t_items)
     piopexec.prover_computes(tcomputes, tcomputes_rust.end())
 
-    randomizer = get_named_vector("delta")
-    samples.append([randomizer, 1])
+    randomizer = self._generate_new_randomizer(samples, 1)
     original_t = t
     t = get_named_vector("t")
     piopexec.prover_computes(
-        Math(randomizer).sample(Ftoq)
+        Math(randomizer).sample(self.Ftoq)
                         .comma(t)
                         .assign(original_t)
                         .double_bar(randomizer),
         rust_line_define_vec(t, rust_vector_concat(randomizer, original_t)))
 
     tx = t.to_named_vector_poly()
-    vec_to_poly_dict[t.key()] = tx
-    piopexec.prover_send_polynomial(tx, 2 * q + max_shift, 2 * q + rust_max_shift)
+    voexec.vec_to_poly_dict[t.key()] = tx
+    piopexec.prover_send_polynomial(tx, 2 * self.q + max_shift, 2 * self.q + rust_max_shift)
     extended_hadamard.append(VOQuerySide(-PowerVector(
-      1, max_shift + q, rust_max_shift + q
-    ).shift(n, rust_n), t.shift(n - q, rust_n - q)))
+      1, max_shift + self.q, rust_max_shift + self.q
+    ).shift(n, rust_n), t.shift(n - self.q, rust_n - self.q)))
+
+    return extended_hadamard, max_shift, rust_max_shift
+
+  def execute(self, piopexec, *args):
+    voexec = piopexec.reference_to_voexec
+    n = self.vector_size
+    vec_to_poly_dict = voexec.vec_to_poly_dict
+    q = Integer(1)
+    Ftoq = UnevaluatedExpr(F ** q)
+    self.q = q
+    self.Ftoq = Ftoq
+
+    samples = rust_sample_randomizers()
+    piopexec.prover_computes_rust(RustBuilder(samples).end())
+
+    self.debug("Executing VO protocol")
+    self.vo.execute(voexec, *args)
+    piopexec.prover_inputs = voexec.prover_inputs
+    piopexec.verifier_inputs = voexec.verifier_inputs
+    piopexec.prover_preparations = voexec.prover_preparations
+    piopexec.verifier_preparations = voexec.verifier_preparations
+    self.debug("Process interactions")
+    # Since the value n can be long and complex, define a new symbol in rust
+    # and put the long expression of n in this new symbol. This rust version
+    # of symbol should never be used outside rust context
+    rust_n = None
+    for interaction in voexec.interactions:
+      if isinstance(interaction, ProverComputes):
+        piopexec.prover_computes(interaction.latex_builder, interaction.rust_builder)
+      elif isinstance(interaction, VerifierComputes):
+        piopexec.verifier_computes(interaction.latex_builder, interaction.rust_builder)
+      elif isinstance(interaction, VerifierSendRandomnesses):
+        piopexec.verifier_send_randomness(*interaction.names)
+      elif isinstance(interaction, ProverSubmitVectors):
+        # Must be postponed to here because only now it is guaranteed that all the
+        # necessary variables that n depends on are defined
+        if rust_n is None:
+          voexec.try_verifier_redefine_vector_size_rust("n", n, piopexec)
+          rust_n = voexec.rust_vector_size
+
+        for v, size, rust_size in interaction.vectors:
+          self._process_prover_submitted_vector(piopexec, v, size, rust_size, samples)
+      else:
+        raise ValueError("Interaction of type %s should not appear" % type(interaction))
+
+    self.debug("Prepare extended hadamard")
+    extended_hadamard, max_shift, rust_max_shift = \
+        self._process_extended_hadamards(piopexec, samples)
 
     self.debug("Process polynomial h")
     omega = Symbol(get_name('omega'))
