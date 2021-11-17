@@ -754,6 +754,70 @@ class PIOPFromVOProtocol(object):
         "The %d\'th hadamard check is not satisfied" % (i+1)
       )).end()
 
+  def _process_inner_product(self, piopexec, extended_hadamard, shifts, samples, ignore_in_t):
+    voexec = piopexec.reference_to_voexec
+    beta = Symbol(get_name("beta"))
+    piopexec.verifier_send_randomness(beta)
+    r = get_named_vector("r")
+    rust_n = voexec.rust_vector_size
+    n = voexec.vector_size
+
+    rcomputes = LaTeXBuilder().start_math().append(r).assign().end_math() \
+                              .space("the sum of:").eol()
+    expression_vector = RustMacro("expression_vector", sym_i)
+    rcomputes_rust = rust_builder_define_vec(r, expression_vector)
+    linear_combination = RustMacro("power_linear_combination", beta)
+    r_items = Itemize()
+    for i, inner in enumerate(voexec.inner_products):
+      difference = inner.dump_hadamard_difference()
+      linear_combination.append(inner.dumpr_at_index(sym_i))
+      beta_power = beta ** i
+      if not inner.one_sided or difference.startswith("-"):
+        difference = "\\left(%s\\right)" % difference
+
+      if i > 0:
+        difference = "%s\\cdot %s" % (latex(beta_power), difference)
+
+      difference = "$%s$" % difference
+      r_items.append(difference)
+
+      alpha_power = alpha ** len(voexec.hadamards)
+      extended_hadamard.append((alpha_power * beta_power) * inner.left_side)
+      if not inner.one_sided:
+        extended_hadamard.append((- alpha_power * beta_power) * inner.right_side)
+      shifts += inner.shifts()
+    rcomputes.append(r_items)
+
+    expression_vector.append([linear_combination, rust_n])
+    piopexec.prover_computes(rcomputes, rcomputes_rust.end())
+
+    randomizer = self._generate_new_randomizer(samples, 1)
+    rtilde = get_named_vector("r", modifier="tilde")
+    fr = rtilde.to_named_vector_poly()
+    piopexec.prover_computes(Math(randomizer).sample(self.Ftoq)
+      .comma(rtilde).assign(AccumulationVector(r.slice("j"), n))
+      .double_bar(randomizer),
+      rust_line_define_concat_vector(
+        rtilde,
+        rust_accumulate_vector_plus(r),
+        randomizer
+      ))
+    piopexec.prover_rust_define_poly_from_vec(fr, rtilde)
+
+    piopexec.prover_send_polynomial(fr, n + self.q, rust_n + self.q)
+    voexec.vec_to_poly_dict[rtilde.key()] = fr
+
+    extended_hadamard.append((- alpha_power) *
+                             VOQuerySide(rtilde - rtilde.shift(1),
+                                         PowerVector(1, n, rust_n)))
+
+    extended_hadamard.append((alpha_power * alpha) *
+                             VOQuerySide(rtilde, UnitVector(n, rust_n)))
+
+    # This last hadamard check involves only a named vector times
+    # a unit vector, it does not contribuets to t
+    ignore_in_t.add(len(extended_hadamard) - 1)
+
   def _process_extended_hadamards(self, piopexec, samples):
     alpha = Symbol(get_name('alpha'))
     """
@@ -799,6 +863,7 @@ class PIOPFromVOProtocol(object):
         vector will be all zero outside the n-window
         """
         ignore_in_t.add(len(extended_hadamard) - 1)
+
       shifts += had.shifts()
 
       if self.debug_mode:
@@ -809,65 +874,7 @@ class PIOPFromVOProtocol(object):
 
     self.debug("Process inner products")
     if len(voexec.inner_products) > 0:
-      beta = Symbol(get_name("beta"))
-      piopexec.verifier_send_randomness(beta)
-      r = get_named_vector("r")
-
-      rcomputes = LaTeXBuilder().start_math().append(r).assign().end_math() \
-                                .space("the sum of:").eol()
-      expression_vector = RustMacro("expression_vector", sym_i)
-      rcomputes_rust = rust_builder_define_vec(r, expression_vector)
-      linear_combination = RustMacro("power_linear_combination", beta)
-      r_items = Itemize()
-      for i, inner in enumerate(voexec.inner_products):
-        difference = inner.dump_hadamard_difference()
-        linear_combination.append(inner.dumpr_at_index(sym_i))
-        beta_power = beta ** i
-        if not inner.one_sided or difference.startswith("-"):
-          difference = "\\left(%s\\right)" % difference
-
-        if i > 0:
-          difference = "%s\\cdot %s" % (latex(beta_power), difference)
-
-        difference = "$%s$" % difference
-        r_items.append(difference)
-
-        alpha_power = alpha ** len(voexec.hadamards)
-        extended_hadamard.append((alpha_power * beta_power) * inner.left_side)
-        if not inner.one_sided:
-          extended_hadamard.append((- alpha_power * beta_power) * inner.right_side)
-        shifts += inner.shifts()
-      rcomputes.append(r_items)
-
-      expression_vector.append([linear_combination, rust_n])
-      piopexec.prover_computes(rcomputes, rcomputes_rust.end())
-
-      randomizer = self._generate_new_randomizer(samples, 1)
-      rtilde = get_named_vector("r", modifier="tilde")
-      fr = rtilde.to_named_vector_poly()
-      piopexec.prover_computes(Math(randomizer).sample(self.Ftoq)
-        .comma(rtilde).assign(AccumulationVector(r.slice("j"), n))
-        .double_bar(randomizer),
-        rust_line_define_concat_vector(
-          rtilde,
-          rust_accumulate_vector_plus(r),
-          randomizer
-        ))
-      piopexec.prover_rust_define_poly_from_vec(fr, rtilde)
-
-      piopexec.prover_send_polynomial(fr, n + self.q, rust_n + self.q)
-      voexec.vec_to_poly_dict[rtilde.key()] = fr
-
-      extended_hadamard.append((- alpha_power) *
-                               VOQuerySide(rtilde - rtilde.shift(1),
-                                           PowerVector(1, n, rust_n)))
-
-      extended_hadamard.append((alpha_power * alpha) *
-                               VOQuerySide(rtilde, UnitVector(n, rust_n)))
-
-      # This last hadamard check involves only a named vector times
-      # a unit vector, it does not contribuets to t
-      ignore_in_t.add(len(extended_hadamard) - 1)
+      self._process_inner_product(piopexec, extended_hadamard, shifts, samples, ignore_in_t)
 
     max_shift = voexec.simplify_max(Max(*shifts))
     rust_max_shift = piopexec.prover_redefine_symbol_rust(max_shift, "maxshift")
