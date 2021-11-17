@@ -827,6 +827,40 @@ class PIOPFromVOProtocol(object):
     # a unit vector, it does not contributes to t
     ignore_in_t.add(len(extended_hadamard) - 1)
 
+  def _process_vector_t(self, piopexec, samples, extended_hadamard, ignore_in_t):
+    voexec = piopexec.reference_to_voexec
+    rust_n = voexec.rust_vector_size
+    n = voexec.vector_size
+    max_shift = piopexec.max_shift
+    rust_max_shift = piopexec.rust_max_shift
+
+    t = get_named_vector("t")
+    randomizer = self._generate_new_randomizer(samples, 1)
+
+    piopexec.prover_computes_latex(LaTeXBuilder().start_math().append(randomizer)
+      .sample(self.Ftoq).comma(t).assign(randomizer).double_bar().end_math()
+      .space("the sum of:").eol().append(Itemize().append([
+        "$%s$" % side._dumps("circ")
+        for i, side in enumerate(extended_hadamard)
+        if not i in ignore_in_t])))
+
+    piopexec.prover_rust_define_vec(t, rust_vector_concat(randomizer,
+      rust_expression_vector_i(rust_linear_combination_base_zero(*[
+        operand.dumpr_at_index(simplify(sym_i + rust_n))
+        for i, side in enumerate(extended_hadamard)
+        for operand in [side.a, side.b]
+        if not i in ignore_in_t
+      ]), 2 * self.q + rust_max_shift)))
+
+    tx = t.to_named_vector_poly()
+    voexec.vec_to_poly_dict[t.key()] = tx
+    piopexec.prover_send_polynomial(tx, 2 * self.q + max_shift, 2 * self.q + rust_max_shift)
+
+    extended_hadamard.append(VOQuerySide(
+      -PowerVector(1, max_shift + self.q, rust_max_shift + self.q).shift(n, rust_n),
+      t.shift(n - self.q, rust_n - self.q)
+    ))
+
   def _process_extended_hadamards(self, piopexec, samples):
     alpha = Symbol(get_name('alpha'))
     """
@@ -896,35 +930,11 @@ class PIOPFromVOProtocol(object):
     max_shift = voexec.simplify_max(Max(*shifts))
     rust_max_shift = piopexec.prover_redefine_symbol_rust(max_shift, "maxshift")
     piopexec.verifier_send_randomness(alpha)
+    piopexec.max_shift = max_shift
+    piopexec.rust_max_shift = rust_max_shift
 
     self.debug("Process vector t")
-    t = get_named_vector("t")
-    randomizer = self._generate_new_randomizer(samples, 1)
-
-    piopexec.prover_computes_latex(
-        LaTeXBuilder().start_math().append(randomizer)
-                      .sample(self.Ftoq).comma(t).assign(randomizer)
-                      .double_bar().end_math()
-                      .space("the sum of:").eol().append(Itemize().append([
-                        "$%s$" % side._dumps("circ")
-                        for i, side in enumerate(extended_hadamard)
-                        if not i in ignore_in_t
-                      ])))
-
-    piopexec.prover_rust_define_vec(t, rust_vector_concat(randomizer,
-      rust_expression_vector_i(rust_linear_combination_base_zero(*[
-        operand.dumpr_at_index(simplify(sym_i + rust_n))
-        for i, side in enumerate(extended_hadamard)
-        for operand in [side.a, side.b]
-        if not i in ignore_in_t
-      ]), 2 * self.q + rust_max_shift)))
-
-    tx = t.to_named_vector_poly()
-    voexec.vec_to_poly_dict[t.key()] = tx
-    piopexec.prover_send_polynomial(tx, 2 * self.q + max_shift, 2 * self.q + rust_max_shift)
-    extended_hadamard.append(VOQuerySide(-PowerVector(
-      1, max_shift + self.q, rust_max_shift + self.q
-    ).shift(n, rust_n), t.shift(n - self.q, rust_n - self.q)))
+    self._process_vector_t(piopexec, samples, extended_hadamard, ignore_in_t)
 
     return extended_hadamard, max_shift, rust_max_shift
 
