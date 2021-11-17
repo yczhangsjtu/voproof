@@ -899,32 +899,25 @@ class PIOPFromVOProtocol(object):
 
     self.debug("Process vector t")
     t = get_named_vector("t")
+    randomizer = self._generate_new_randomizer(samples, 1)
 
     piopexec.prover_computes_latex(
-        LaTeXBuilder().start_math().append(t).assign().end_math()
+        LaTeXBuilder().start_math().append(randomizer)
+                      .sample(self.Ftoq).comma(t).assign(randomizer)
+                      .double_bar().end_math()
                       .space("the sum of:").eol().append(Itemize().append([
                         "$%s$" % side._dumps("circ")
                         for i, side in enumerate(extended_hadamard)
                         if not i in ignore_in_t
                       ])))
 
-    piopexec.prover_rust_define_expression_vector_i(t,
-      rust_linear_combination_base_zero(*[
+    piopexec.prover_rust_define_vec(t, rust_vector_concat(randomizer,
+      rust_expression_vector_i(rust_linear_combination_base_zero(*[
         operand.dumpr_at_index(simplify(sym_i + rust_n))
         for i, side in enumerate(extended_hadamard)
         for operand in [side.a, side.b]
         if not i in ignore_in_t
-      ]), 2 * self.q + rust_max_shift)
-
-    randomizer = self._generate_new_randomizer(samples, 1)
-    original_t = t
-    t = get_named_vector("t")
-    piopexec.prover_computes(
-        Math(randomizer).sample(self.Ftoq)
-                        .comma(t)
-                        .assign(original_t)
-                        .double_bar(randomizer),
-        rust_line_define_vec(t, rust_vector_concat(randomizer, original_t)))
+      ]), 2 * self.q + rust_max_shift)))
 
     tx = t.to_named_vector_poly()
     voexec.vec_to_poly_dict[t.key()] = tx

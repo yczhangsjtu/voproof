@@ -30,7 +30,7 @@ pub struct R1CSProof<E: PairingEngine> {
     pub cm_s_vec: Commitment<E>,
     pub cm_h_vec: Commitment<E>,
     pub cm_r_vec_tilde: Commitment<E>,
-    pub cm_t_vec_1: Commitment<E>,
+    pub cm_t_vec: Commitment<E>,
     pub cm_h_vec_2: Commitment<E>,
     pub cm_h_vec_3: Commitment<E>,
     pub y: E::Fr,
@@ -258,83 +258,87 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_h_vec,
             cm_r_vec_tilde
         );
-        define_expression_vector!(
+        define_vec!(
             t_vec,
-            i,
-            linear_combination_base_zero!(
-                linear_combination_base_zero!(
-                    mu,
-                    range_index!(1, 3 * cap_h, minus_i64!(i + n, 1)),
-                    -scalar_to_field!(1),
-                    power_vector_index!(gamma, 3 * cap_h, minus_i64!(i + n, 1))
-                ),
-                vector_index!(s_vec, i + n),
-                neg!(range_index!(1, 3 * cap_h, minus_i64!(i + n, 1))),
-                range_index!(1, 3 * cap_h, i + n),
-                linear_combination_base_zero!(
-                    alpha * nu,
-                    range_index!(1, cap_k, minus_i64!(i + n, 1)),
-                    -alpha,
-                    power_vector_index!(gamma, cap_k, minus_i64!(i + n, 1))
-                ),
-                vector_index!(h_vec, i + n),
-                mul!(-alpha, range_index!(1, cap_k, minus_i64!(i + n, 1))),
-                range_index!(1, cap_k, i + n),
-                mul!(power(alpha, 2), vector_index!(h_vec, minus_i64!(i + n, 1))),
-                linear_combination!(
-                    mul!(
-                        mu * nu,
-                        range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1))
+            vector_concat!(
+                delta_vec_4,
+                expression_vector!(
+                    i,
+                    linear_combination_base_zero!(
+                        linear_combination_base_zero!(
+                            mu,
+                            range_index!(1, 3 * cap_h, minus_i64!(i + n, 1)),
+                            -scalar_to_field!(1),
+                            power_vector_index!(gamma, 3 * cap_h, minus_i64!(i + n, 1))
+                        ),
+                        vector_index!(s_vec, i + n),
+                        neg!(range_index!(1, 3 * cap_h, minus_i64!(i + n, 1))),
+                        range_index!(1, 3 * cap_h, i + n),
+                        linear_combination_base_zero!(
+                            alpha * nu,
+                            range_index!(1, cap_k, minus_i64!(i + n, 1)),
+                            -alpha,
+                            power_vector_index!(gamma, cap_k, minus_i64!(i + n, 1))
+                        ),
+                        vector_index!(h_vec, i + n),
+                        mul!(-alpha, range_index!(1, cap_k, minus_i64!(i + n, 1))),
+                        range_index!(1, cap_k, i + n),
+                        mul!(power(alpha, 2), vector_index!(h_vec, minus_i64!(i + n, 1))),
+                        linear_combination!(
+                            mul!(
+                                mu * nu,
+                                range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1))
+                            ),
+                            -mu,
+                            vector_index!(pk.w_vec, minus_i64!(i + n, cap_k + 1)),
+                            -nu,
+                            vector_index!(pk.u_vec, minus_i64!(i + n, cap_k + 1)),
+                            zero!(),
+                            vector_index!(pk.y_vec, minus_i64!(i + n, cap_k + 1))
+                        ),
+                        mul!(
+                            -power(alpha, 2),
+                            range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1))
+                        ),
+                        range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1)),
+                        mul!(
+                            power(alpha, 3),
+                            vector_index!(u_vec_1, minus_i64!(i + n, -cap_h + n + 1))
+                        ),
+                        vector_index!(u_vec_1, minus_i64!(i + n, -2 * cap_h + n + 1)),
+                        mul!(
+                            -power(alpha, 3),
+                            range_index!(1, cap_h, minus_i64!(i + n, -cap_h + n + 1))
+                        ),
+                        vector_index!(u_vec_1, minus_i64!(i + n, -3 * cap_h + n + 1)),
+                        mul!(
+                            power(alpha, 5),
+                            vector_index!(u_vec_1, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1))
+                        ),
+                        vector_index!(s_vec, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1)),
+                        mul!(
+                            -power(alpha, 5) * beta,
+                            vector_index!(h_vec, minus_i64!(i + n, -cap_k + n + 1))
+                        ),
+                        vector_index!(s_vec, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1)),
+                        mul!(
+                            -power(alpha, 5) * beta,
+                            vector_index!(h_vec, minus_i64!(i + n, -cap_k - ell_1 + n + 1))
+                        ),
+                        vector_index!(pk.v_vec, minus_i64!(i + n, -ell_1 + n + 1)),
+                        linear_combination_base_zero!(
+                            -power(alpha, 5),
+                            vector_index!(r_vec_tilde, minus_i64!(i + n, 1)),
+                            power(alpha, 5),
+                            vector_index!(r_vec_tilde, minus_i64!(i + n, 2))
+                        ),
+                        range_index!(1, n, i + n)
                     ),
-                    -mu,
-                    vector_index!(pk.w_vec, minus_i64!(i + n, cap_k + 1)),
-                    -nu,
-                    vector_index!(pk.u_vec, minus_i64!(i + n, cap_k + 1)),
-                    zero!(),
-                    vector_index!(pk.y_vec, minus_i64!(i + n, cap_k + 1))
-                ),
-                mul!(
-                    -power(alpha, 2),
-                    range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1))
-                ),
-                range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1)),
-                mul!(
-                    power(alpha, 3),
-                    vector_index!(u_vec_1, minus_i64!(i + n, -cap_h + n + 1))
-                ),
-                vector_index!(u_vec_1, minus_i64!(i + n, -2 * cap_h + n + 1)),
-                mul!(
-                    -power(alpha, 3),
-                    range_index!(1, cap_h, minus_i64!(i + n, -cap_h + n + 1))
-                ),
-                vector_index!(u_vec_1, minus_i64!(i + n, -3 * cap_h + n + 1)),
-                mul!(
-                    power(alpha, 5),
-                    vector_index!(u_vec_1, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1))
-                ),
-                vector_index!(s_vec, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1)),
-                mul!(
-                    -power(alpha, 5) * beta,
-                    vector_index!(h_vec, minus_i64!(i + n, -cap_k + n + 1))
-                ),
-                vector_index!(s_vec, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1)),
-                mul!(
-                    -power(alpha, 5) * beta,
-                    vector_index!(h_vec, minus_i64!(i + n, -cap_k - ell_1 + n + 1))
-                ),
-                vector_index!(pk.v_vec, minus_i64!(i + n, -ell_1 + n + 1)),
-                linear_combination_base_zero!(
-                    -power(alpha, 5),
-                    vector_index!(r_vec_tilde, minus_i64!(i + n, 1)),
-                    power(alpha, 5),
-                    vector_index!(r_vec_tilde, minus_i64!(i + n, 2))
-                ),
-                range_index!(1, n, i + n)
-            ),
-            maxshift + 2
+                    maxshift + 2
+                )
+            )
         );
-        define_vec!(t_vec_1, vector_concat!(delta_vec_4, t_vec));
-        commit_vector!(cm_t_vec_1, t_vec_1, pk.powers, maxshift + 2);
+        commit_vector!(cm_t_vec, t_vec, pk.powers, maxshift + 2);
         get_randomness_from_hash!(
             omega,
             x_vec,
@@ -346,7 +350,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_s_vec,
             cm_h_vec,
             cm_r_vec_tilde,
-            cm_t_vec_1
+            cm_t_vec
         );
         define_vector_poly_mul_shift!(v_vec_1, h_vec, pk.w_vec, omega, shiftlength);
         define_vector_reverse_omega_shift!(v_vec_2, h_vec, omega, shiftlength_1);
@@ -373,7 +377,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         define_vector_power_mul!(
             v_vec_19,
-            t_vec_1,
+            t_vec,
             omega.inverse().unwrap(),
             cap_s_a + cap_s_b + cap_s_c + 1
         );
@@ -553,7 +557,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_s_vec,
             cm_h_vec,
             cm_r_vec_tilde,
-            cm_t_vec_1,
+            cm_t_vec,
             cm_h_vec_2,
             cm_h_vec_3
         );
@@ -674,7 +678,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     c_7,
                     vector_index!(pk.v_vec, i),
                     c_8,
-                    vector_index!(t_vec_1, i),
+                    vector_index!(t_vec, i),
                     c_9,
                     vector_index!(h_vec_2, -cap_d + i + maxshift + n),
                     c_10,
@@ -703,7 +707,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             c_6,
             vk.cm_v_vec,
             c_7,
-            cm_t_vec_1,
+            cm_t_vec,
             c_8,
             cm_h_vec_2,
             c_9,
@@ -725,7 +729,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_s_vec,
             cm_h_vec,
             cm_r_vec_tilde,
-            cm_t_vec_1,
+            cm_t_vec,
             cm_h_vec_2,
             cm_h_vec_3,
             cm_g,
@@ -747,7 +751,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_s_vec,
             cm_h_vec,
             cm_r_vec_tilde,
-            cm_t_vec_1,
+            cm_t_vec,
             cm_h_vec_2,
             cm_h_vec_3,
             cm_g,
@@ -767,7 +771,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_s_vec: cm_s_vec,
             cm_h_vec: cm_h_vec,
             cm_r_vec_tilde: cm_r_vec_tilde,
-            cm_t_vec_1: cm_t_vec_1,
+            cm_t_vec: cm_t_vec,
             cm_h_vec_2: cm_h_vec_2,
             cm_h_vec_3: cm_h_vec_3,
             y: y,
@@ -785,7 +789,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let cm_s_vec = proof.cm_s_vec;
         let cm_h_vec = proof.cm_h_vec;
         let cm_r_vec_tilde = proof.cm_r_vec_tilde;
-        let cm_t_vec_1 = proof.cm_t_vec_1;
+        let cm_t_vec = proof.cm_t_vec;
         let cm_h_vec_2 = proof.cm_h_vec_2;
         let cm_h_vec_3 = proof.cm_h_vec_3;
         let y = proof.y;
@@ -856,7 +860,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_s_vec,
             cm_h_vec,
             cm_r_vec_tilde,
-            cm_t_vec_1
+            cm_t_vec
         );
         get_randomness_from_hash!(
             z,
@@ -869,7 +873,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_s_vec,
             cm_h_vec,
             cm_r_vec_tilde,
-            cm_t_vec_1,
+            cm_t_vec,
             cm_h_vec_2,
             cm_h_vec_3
         );
@@ -985,7 +989,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             c_6,
             vk.cm_v_vec,
             c_7,
-            cm_t_vec_1,
+            cm_t_vec,
             c_8,
             cm_h_vec_2,
             c_9,
@@ -1006,7 +1010,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_s_vec,
             cm_h_vec,
             cm_r_vec_tilde,
-            cm_t_vec_1,
+            cm_t_vec,
             cm_h_vec_2,
             cm_h_vec_3,
             cm_g,
@@ -1028,7 +1032,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_s_vec,
             cm_h_vec,
             cm_r_vec_tilde,
-            cm_t_vec_1,
+            cm_t_vec,
             cm_h_vec_2,
             cm_h_vec_3,
             cm_g,
