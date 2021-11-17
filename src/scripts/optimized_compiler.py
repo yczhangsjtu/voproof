@@ -1573,12 +1573,12 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     array = "\\begin{array}{l}\n%s\\\\\n%s\n\\left\\{%s\\right\\},[x]_2\\end{array}" \
             % (lists, points, proof_str)
     verify_computation = Math("\\mathsf{vrfy}").paren(array).equals(1)
-    verify_computation_rust = RustBuilder()
 
-    verify_computation_rust.let("f_commitments").assign(rust_vec(fcomms)).end()
-    verify_computation_rust.let("g_commitments").assign(rust_vec(gcomms)).end()
-    verify_computation_rust.let("f_values").assign(rust_vec(fvals)).end()
-    verify_computation_rust.let("g_values").assign(rust_vec(gvals)).end()
+    verify_computation_rust = RustBuilder()
+    verify_computation_rust.append(rust_define("f_commitments", rust_vec(fcomms))).end()
+    verify_computation_rust.append(rust_define("g_commitments", rust_vec(gcomms))).end()
+    verify_computation_rust.append(rust_define("f_values", rust_vec(fvals))).end()
+    verify_computation_rust.append(rust_define("g_values", rust_vec(gvals))).end()
 
     self.prover_computes(open_computation, open_computation_rust)
     self.prover_computes_rust(compute_rand_xi)

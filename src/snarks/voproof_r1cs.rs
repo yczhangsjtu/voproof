@@ -1079,10 +1079,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             y_2,
             z
         );
-        let f_commitments = vec![cm_h_vec, cm_u_vec_1, cm_r_vec_tilde];
-        let g_commitments = vec![cm_g];
-        let f_values = vec![y, y_1, y_2];
-        let g_values = vec![E::Fr::zero()];
+        define!(f_commitments, vec!(cm_h_vec, cm_u_vec_1, cm_r_vec_tilde));
+        define!(g_commitments, vec!(cm_g));
+        define!(f_values, vec!(y, y_1, y_2));
+        define!(g_values, vec!(E::Fr::zero()));
 
         if KZG10::<E, DensePoly<E::Fr>>::batch_check(
             &vk.kzg_vk,
