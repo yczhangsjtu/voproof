@@ -558,10 +558,8 @@ def _dumpr_at_index_for_sparse_coefficient(v, index):
     vec, value = vec_value
     for key2, uv_coeff in value.items():
       unit_vector, coeff = uv_coeff
-      ret.append([
-        to_field(coeff),
-        vec.dumpr_at_index(rust_minus_i64(index, unit_vector.position))
-      ])
+      ret.append(to_field(coeff))
+      ret.append(vec.dumpr_at_index(rust_minus_i64(index, unit_vector.position)))
 
   if len(ret) == 2 and not has_one:
     if ret[0] == to_field(1):

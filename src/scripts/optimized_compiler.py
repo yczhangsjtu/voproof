@@ -849,11 +849,12 @@ class PIOPFromVOProtocol(object):
                               .space("the sum of:").eol()
     expression_vector = RustMacro("expression_vector", sym_i)
     tcomputes_rust = rust_builder_define_vec(t, expression_vector)
-    compute_sum = rust_sum()
+    compute_sum = rust_linear_combination_base_zero()
     t_items = Itemize()
     for i, side in enumerate(extended_hadamard):
       if not i in ignore_in_t:
-        compute_sum.append(side.dumpr_at_index(simplify(sym_i + rust_n)))
+        compute_sum.append(side.a.dumpr_at_index(simplify(sym_i + rust_n)))
+        compute_sum.append(side.b.dumpr_at_index(simplify(sym_i + rust_n)))
         t_items.append("$%s$" % side._dumps("circ"))
     expression_vector.append([compute_sum, 2 * q + max_shift])
     tcomputes.append(t_items)
