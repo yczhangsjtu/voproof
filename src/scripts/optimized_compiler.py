@@ -1091,17 +1091,16 @@ class PIOPFromVOProtocol(object):
         piopexec.eval_query(y, omega/z, vec_to_poly_dict[key])
         piopexec.prover_computes(
           LaTeXBuilder(),
-          RustBuilder().let(y).assign(rust_eval_vector_expression_i(
+          rust_builder_define_eval_vector_expression_i(y,
               omega/z,
               vec.dumpr_at_index(sym_i),
               rust_n + q
-            )
           ).end()
         )
       else:
         piopexec.verifier_computes(
             Math(y).assign(vec_to_poly_dict[key].dumps_var(omega/z)),
-            RustBuilder.let(y).assign(vec.hint_computation(omega/z))
+            rust_builder_define(y, vec.hint_computation(omega/z)).end()
         )
       query_results[key] = y
 

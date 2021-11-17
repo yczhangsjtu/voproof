@@ -598,9 +598,9 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_h_vec_2,
             cm_h_vec_3
         );
-        let y = eval_vector_expression!(omega / z, i, vector_index!(h_vec, i), n + 1);
-        let y_1 = eval_vector_expression!(omega / z, i, vector_index!(u_vec_1, i), n + 1);
-        let y_2 = eval_vector_expression!(omega / z, i, vector_index!(r_vec_tilde, i), n + 1);
+        define_eval_vector_expression!(y, omega / z, i, vector_index!(h_vec, i), n + 1);
+        define_eval_vector_expression!(y_1, omega / z, i, vector_index!(u_vec_1, i), n + 1);
+        define_eval_vector_expression!(y_2, omega / z, i, vector_index!(r_vec_tilde, i), n + 1);
         define_sum!(
             c,
             z * (mu

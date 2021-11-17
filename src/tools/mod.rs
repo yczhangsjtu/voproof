@@ -889,6 +889,15 @@ macro_rules! eval_vector_expression {
 }
 
 #[macro_export]
+macro_rules! define_eval_vector_expression {
+    // Compute f(z), where f has coefficient vector
+    // expressed by an expression
+    ($name:ident, $z:expr, $i:ident, $expr:expr, $n: expr) => {
+        let $name = eval_vector_expression!($z, $i, $expr, $n);
+    };
+}
+
+#[macro_export]
 macro_rules! eval_vector_as_poly {
     ($v:expr, $z:expr) => {
         eval_vector_expression!($z, i, vector_index!($v, i), $v.len())
