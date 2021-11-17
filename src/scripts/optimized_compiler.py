@@ -283,6 +283,12 @@ class VOQuerySide(object):
       self.a.dumpr_at_index(index),
       self.b.dumpr_at_index(index)))
 
+  def at_least_one_operand_is_structured(self):
+    return (not isinstance(self.a, NamedVector) and \
+           not isinstance(self.a, VectorCombination)) or \
+           (not isinstance(self.b, NamedVector) and \
+           not isinstance(self.b, VectorCombination)) 
+
 
 class VOQuery(object):
   def __init__(self, a, b, c=None, d=None):
@@ -721,10 +727,45 @@ class PIOPFromVOProtocol(object):
       rust_fmt_ff_vector(v),
     )
 
+  """
+  Check that the hadamard product of a query is indeed zero
+  """
+  def _check_hadamard_sides(self, side1, side2=None):
+    if side2 is None:
+      side = side1
+      check_individual_hadmard.append(rust_check_vector_eq(
+          rust_expression_vector_i(
+            rust_mul(
+              (side.a * (1/alpha_power)).dumpr_at_index(sym_i),
+              side.b.dumpr_at_index(sym_i)),
+            rust_n),
+          rust_vec_size(rust_zero(), rust_n),
+          "The %d\'th hadamard check is not satisfied" % (i+1)
+          )).end()
+    else:
+      check_individual_hadmard.append(rust_check_expression_vector_eq(
+        rust_mul(
+          (side1.a * (1/alpha_power)).dumpr_at_index(sym_i),
+          side1.b.dumpr_at_index(sym_i)),
+        rust_neg(rust_mul(
+          (side2.a * (1/alpha_power)).dumpr_at_index(sym_i),
+          side2.b.dumpr_at_index(sym_i))),
+        rust_n,
+        "The %d\'th hadamard check is not satisfied" % (i+1)
+      )).end()
+
   def _process_extended_hadamards(self, piopexec, samples):
     alpha = Symbol(get_name('alpha'))
+    """
+    A list of VO query sides, each is of the form vec{a} circ vec{b}
+    together they should sum to zero
+    """
     extended_hadamard = []
-    shifts = []
+    """
+    Used to records all the shifts appeared in the vectors,
+    and finally compute the maximal shift
+    """
+    shifts = [] 
 
     voexec = piopexec.reference_to_voexec
     rust_n = voexec.rust_vector_size
@@ -732,53 +773,39 @@ class PIOPFromVOProtocol(object):
 
     if self.debug_mode:
       check_individual_hadmard = RustBuilder()
-    # Some hadamard checks are guaranteed to be zero
-    # if the prover is honest. In that case, there is no
-    # need for the honest prover to include those terms
-    # in t
+
+    """
+    Some hadamard checks are guaranteed to be zero
+    if the prover is honest. In that case, there is no
+    need for the honest prover to include those terms
+    in t. The hadamard queries that are ignored is stored
+    in this set
+    """
     ignore_in_t = set()
     for i, had in enumerate(voexec.hadamards):
       alpha_power = alpha ** i
+
+      """
+      vec{a} circ vec{b} - vec{c} circ vec{d}
+      the right side might be zero (one sided)
+      """
       extended_hadamard.append(alpha_power * had.left_side)
       if not had.one_sided:
         extended_hadamard.append((-alpha_power) * had.right_side)
+      elif had.left_side.at_least_one_operand_is_structured(): 
+        """
+        One sided, and one of the operand is only a structured vector,
+        then no need to include this vector in t, because the structured
+        vector will be all zero outside the n-window
+        """
+        ignore_in_t.add(len(extended_hadamard) - 1)
+      shifts += had.shifts()
 
       if self.debug_mode:
         if had.one_sided:
-          side = extended_hadamard[-1]
-          check_individual_hadmard.append(rust_check_vector_eq(
-              rust_expression_vector_i(
-                "(%s) * (%s)" % (
-                  (side.a * (1/alpha_power)).dumpr_at_index(sym_i),
-                  side.b.dumpr_at_index(sym_i)),
-                rust(rust_n)),
-              rust_vec_size(rust_zero(), rust_n),
-              "The %d\'th hadamard check is not satisfied" % (i+1)
-              )).end()
+          self._check_hadamard_sides(extended_hadamard[-1])
         else:
-          side1 = extended_hadamard[-1]
-          side2 = extended_hadamard[-2]
-          check_individual_hadmard.append(rust_check_vector_eq(
-              rust_expression_vector_i(
-                "(%s) * (%s)" % (
-                  (side1.a * (1/alpha_power)).dumpr_at_index(sym_i),
-                  side1.b.dumpr_at_index(sym_i)),
-                rust(rust_n)),
-              rust_expression_vector_i(
-                "-(%s) * (%s)" % (
-                  (side2.a * (1/alpha_power)).dumpr_at_index(sym_i),
-                  side2.b.dumpr_at_index(sym_i)),
-                rust(rust_n)),
-              "The %d\'th hadamard check is not satisfied" % (i+1)
-              )).end()
-
-      else: # One sided, and one of the operand is only a structured vector
-        if (not isinstance(had.left_side.a, NamedVector) and \
-           not isinstance(had.left_side.a, VectorCombination)) or \
-           (not isinstance(had.left_side.b, NamedVector) and \
-           not isinstance(had.left_side.b, VectorCombination)):
-          ignore_in_t.add(len(extended_hadamard) - 1)
-      shifts += had.shifts()
+          self._check_hadamard_sides(extended_hadamard[-1], extended_hadamard[-2])
 
     self.debug("Process inner products")
     if len(voexec.inner_products) > 0:

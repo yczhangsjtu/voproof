@@ -1026,6 +1026,13 @@ macro_rules! check_vector_eq {
   }
 }
 
+#[macro_export]
+macro_rules! check_expression_vector_eq {
+  ($u:expr, $v:expr, $len:expr, $info:literal) => {
+    check_vector_eq!(expressio_vector!(i, $u, $len), expressio_vector!(i, $v, $len));
+  }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
