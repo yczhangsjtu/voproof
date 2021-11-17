@@ -601,7 +601,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         let y = eval_vector_expression!(omega / z, i, vector_index!(h_vec, i), n + 1);
         let y_1 = eval_vector_expression!(omega / z, i, vector_index!(u_vec_1, i), n + 1);
         let y_2 = eval_vector_expression!(omega / z, i, vector_index!(r_vec_tilde, i), n + 1);
-        let c = sum!(
+        define_sum!(
+            c,
             z * (mu
                 * (E::Fr::one() - power(omega / z, 3 * cap_h))
                 * (E::Fr::one() * z - gamma * omega)
@@ -618,7 +619,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 * power(z, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c)
                 * power(omega / z, cap_s_a + cap_s_b + cap_s_c)
         );
-        let c_1 = sum!(
+        define_sum!(
+            c_1,
             -z * (E::Fr::one() - power(z, 3 * cap_h))
                 * (E::Fr::one() - power(omega / z, 3 * cap_h))
                 / ((E::Fr::one() - z) * (E::Fr::one() * z - omega)),
@@ -658,15 +660,22 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 / (z * (E::Fr::one() - z)),
             power(alpha, 6) * y_2 * power(z, cap_k + cap_s_a + cap_s_b + cap_s_c - 1)
         );
-        let c_2 = alpha
-            * z
-            * (nu * (E::Fr::one() - power(omega / z, cap_k)) * (E::Fr::one() * z - gamma * omega)
-                - (E::Fr::one() - power(gamma * omega / z, cap_k)) * (E::Fr::one() * z - omega))
-            / ((E::Fr::one() * z - omega) * (E::Fr::one() * z - gamma * omega));
-        let c_3 = -power(alpha, 2) * mu * y * power(z, cap_k);
-        let c_4 = -power(alpha, 2) * nu * y * power(z, cap_k);
-        let c_5 = power(alpha, 2) * y * power(z, cap_k);
-        let c_6 = sum!(
+        define!(
+            c_2,
+            alpha
+                * z
+                * (nu
+                    * (E::Fr::one() - power(omega / z, cap_k))
+                    * (E::Fr::one() * z - gamma * omega)
+                    - (E::Fr::one() - power(gamma * omega / z, cap_k))
+                        * (E::Fr::one() * z - omega))
+                / ((E::Fr::one() * z - omega) * (E::Fr::one() * z - gamma * omega))
+        );
+        define!(c_3, -power(alpha, 2) * mu * y * power(z, cap_k));
+        define!(c_4, -power(alpha, 2) * nu * y * power(z, cap_k));
+        define!(c_5, power(alpha, 2) * y * power(z, cap_k));
+        define_sum!(
+            c_6,
             power(alpha, 3)
                 * y_1
                 * power(z, -2 * cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
@@ -682,13 +691,16 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 * (E::Fr::one() - power(omega / z, ell + 1))
                 / (E::Fr::one() * z - omega)
         );
-        let c_7 = -power(alpha, 5) * beta * y * power(z, cap_k);
-        let c_8 = power(z, cap_k + cap_s_a + cap_s_b + cap_s_c)
-            * power(omega / z, cap_k + cap_s_a + cap_s_b + cap_s_c)
-            * (-E::Fr::one() + power(omega / z, cap_s_a + cap_s_b + cap_s_c + 1))
-            / (E::Fr::one() * z - omega);
-        let c_9 = -power(z, -cap_d);
-        let c_10 = -z;
+        define!(c_7, -power(alpha, 5) * beta * y * power(z, cap_k));
+        define!(
+            c_8,
+            power(z, cap_k + cap_s_a + cap_s_b + cap_s_c)
+                * power(omega / z, cap_k + cap_s_a + cap_s_b + cap_s_c)
+                * (-E::Fr::one() + power(omega / z, cap_s_a + cap_s_b + cap_s_c + 1))
+                / (E::Fr::one() * z - omega)
+        );
+        define!(c_9, -power(z, -cap_d));
+        define!(c_10, -z);
         define_vec_mut!(
             g_vec,
             expression_vector!(
@@ -910,7 +922,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_h_vec_2,
             cm_h_vec_3
         );
-        let c = sum!(
+        define_sum!(
+            c,
             z * (mu
                 * (E::Fr::one() - power(omega / z, 3 * cap_h))
                 * (E::Fr::one() * z - gamma * omega)
@@ -927,7 +940,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 * power(z, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c)
                 * power(omega / z, cap_s_a + cap_s_b + cap_s_c)
         );
-        let c_1 = sum!(
+        define_sum!(
+            c_1,
             -z * (E::Fr::one() - power(z, 3 * cap_h))
                 * (E::Fr::one() - power(omega / z, 3 * cap_h))
                 / ((E::Fr::one() - z) * (E::Fr::one() * z - omega)),
@@ -967,15 +981,22 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 / (z * (E::Fr::one() - z)),
             power(alpha, 6) * y_2 * power(z, cap_k + cap_s_a + cap_s_b + cap_s_c - 1)
         );
-        let c_2 = alpha
-            * z
-            * (nu * (E::Fr::one() - power(omega / z, cap_k)) * (E::Fr::one() * z - gamma * omega)
-                - (E::Fr::one() - power(gamma * omega / z, cap_k)) * (E::Fr::one() * z - omega))
-            / ((E::Fr::one() * z - omega) * (E::Fr::one() * z - gamma * omega));
-        let c_3 = -power(alpha, 2) * mu * y * power(z, cap_k);
-        let c_4 = -power(alpha, 2) * nu * y * power(z, cap_k);
-        let c_5 = power(alpha, 2) * y * power(z, cap_k);
-        let c_6 = sum!(
+        define!(
+            c_2,
+            alpha
+                * z
+                * (nu
+                    * (E::Fr::one() - power(omega / z, cap_k))
+                    * (E::Fr::one() * z - gamma * omega)
+                    - (E::Fr::one() - power(gamma * omega / z, cap_k))
+                        * (E::Fr::one() * z - omega))
+                / ((E::Fr::one() * z - omega) * (E::Fr::one() * z - gamma * omega))
+        );
+        define!(c_3, -power(alpha, 2) * mu * y * power(z, cap_k));
+        define!(c_4, -power(alpha, 2) * nu * y * power(z, cap_k));
+        define!(c_5, power(alpha, 2) * y * power(z, cap_k));
+        define_sum!(
+            c_6,
             power(alpha, 3)
                 * y_1
                 * power(z, -2 * cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
@@ -991,13 +1012,16 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 * (E::Fr::one() - power(omega / z, ell + 1))
                 / (E::Fr::one() * z - omega)
         );
-        let c_7 = -power(alpha, 5) * beta * y * power(z, cap_k);
-        let c_8 = power(z, cap_k + cap_s_a + cap_s_b + cap_s_c)
-            * power(omega / z, cap_k + cap_s_a + cap_s_b + cap_s_c)
-            * (-E::Fr::one() + power(omega / z, cap_s_a + cap_s_b + cap_s_c + 1))
-            / (E::Fr::one() * z - omega);
-        let c_9 = -power(z, -cap_d);
-        let c_10 = -z;
+        define!(c_7, -power(alpha, 5) * beta * y * power(z, cap_k));
+        define!(
+            c_8,
+            power(z, cap_k + cap_s_a + cap_s_b + cap_s_c)
+                * power(omega / z, cap_k + cap_s_a + cap_s_b + cap_s_c)
+                * (-E::Fr::one() + power(omega / z, cap_s_a + cap_s_b + cap_s_c + 1))
+                / (E::Fr::one() * z - omega)
+        );
+        define!(c_9, -power(z, -cap_d));
+        define!(c_10, -z);
         define_commitment_linear_combination!(
             cm_g,
             vk,

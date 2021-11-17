@@ -1247,17 +1247,24 @@ class PIOPFromVOProtocol(object):
       if len(coeff_builder.latex_builder) > 1:
         latex_builder = LaTeXBuilder().start_math().append(coeff_builder.coeff).assign() \
                                       .end_math().space("the sum of:")
-        sum_macro = rust_sum()
-        rust_builder = RustBuilder().let(coeff_builder.coeff).assign(sum_macro).end()
         items = Itemize()
         for item in coeff_builder.latex_builder:
           items.append("$%s$" % item)
-        for item in coeff_builder.rust_builder:
-          sum_macro.append(item)
         latex_builder.append(items)
       else:
         latex_builder = Math(coeff_builder.coeff).assign(coeff_builder.latex_builder[0])
-        rust_builder = RustBuilder().let(coeff_builder.coeff).assign(coeff_builder.rust_builder[0]).end()
+
+      if len(coeff_builder.rust_builder) > 1:
+        rust_builder = rust_builder_define_sum(coeff_builder.coeff)
+        for item in coeff_builder.rust_builder:
+          rust_builder.append_to_last(item)
+        rust_builder.end()
+      else:
+        rust_builder = rust_builder_define(
+          coeff_builder.coeff,
+          coeff_builder.rust_builder[0]
+        ).end()
+
       coeff_builder.latex_builder = latex_builder
       coeff_builder.rust_builder = rust_builder
 

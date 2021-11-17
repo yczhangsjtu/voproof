@@ -617,6 +617,13 @@ macro_rules! sum {
 }
 
 #[macro_export]
+macro_rules! define_sum {
+    ($name:ident, $($v: expr),+) => {
+        define!($name, sum!($($v),+));
+    };
+}
+
+#[macro_export]
 macro_rules! poly_from_vec {
     ($v: expr) => {
         DensePoly::from_coefficients_vec($v.clone())
