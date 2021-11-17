@@ -713,7 +713,7 @@ class PIOPFromVOProtocol(object):
           piopexec.prover_computes(
               Math(randomizer).sample(Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
               rust_builder_redefine_zero_pad_concat_vector(v, rust_n, randomizer).end())
-          piopexec.prover_send_polynomial(poly, self.vector_size + q)
+          piopexec.prover_send_polynomial(poly, self.vector_size + q, rust_n + q)
           piopexec.prover_computes_rust(rust_builder_define_poly_from_vec(poly, v).end())
           vec_to_poly_dict[v.key()] = poly
 
@@ -827,7 +827,7 @@ class PIOPFromVOProtocol(object):
         ).end())
       piopexec.prover_computes_rust(rust_builder_define_poly_from_vec(fr, rtilde).end())
 
-      piopexec.prover_send_polynomial(fr, n + q)
+      piopexec.prover_send_polynomial(fr, n + q, rust_n + q)
       vec_to_poly_dict[rtilde.key()] = fr
 
       extended_hadamard.append((- alpha_power) *
@@ -844,6 +844,7 @@ class PIOPFromVOProtocol(object):
     self.debug("Process vector t")
     t = get_named_vector("t")
     max_shift = voexec.simplify_max(Max(*shifts))
+    rust_max_shift = piopexec.prover_redefine_symbol_rust(max_shift, "maxshift")
     piopexec.verifier_send_randomness(alpha)
     
     if self.debug_mode:
@@ -860,7 +861,7 @@ class PIOPFromVOProtocol(object):
         compute_sum.append(side.a.dumpr_at_index(simplify(sym_i + rust_n)))
         compute_sum.append(side.b.dumpr_at_index(simplify(sym_i + rust_n)))
         t_items.append("$%s$" % side._dumps("circ"))
-    expression_vector.append([compute_sum, 2 * q + max_shift])
+    expression_vector.append([compute_sum, 2 * q + rust_max_shift])
     tcomputes.append(t_items)
     piopexec.prover_computes(tcomputes, tcomputes_rust.end())
 
@@ -879,9 +880,10 @@ class PIOPFromVOProtocol(object):
 
     tx = t.to_named_vector_poly()
     vec_to_poly_dict[t.key()] = tx
-    piopexec.prover_send_polynomial(tx, 2 * q + max_shift)
-    extended_hadamard.append(VOQuerySide(-PowerVector(1, max_shift + q).shift(n),
-                                         t.shift(n - q)))
+    piopexec.prover_send_polynomial(tx, 2 * q + max_shift, 2 * q + rust_max_shift)
+    extended_hadamard.append(VOQuerySide(-PowerVector(
+      1, max_shift + q, rust_max_shift + q
+    ).shift(n), t.shift(n - q)))
 
     self.debug("Process polynomial h")
     omega = Symbol(get_name('omega'))

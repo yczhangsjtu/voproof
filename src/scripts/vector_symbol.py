@@ -662,10 +662,11 @@ class VectorCombination(CoeffMap):
     return _dumpr_at_index_for_sparse_coefficient(self, index)
 
 class PowerVector(object):
-  def __init__(self, alpha, size):
+  def __init__(self, alpha, size, rust_size=None):
     # alpha and size can be Symbol or Integer
     self.alpha = simplify(sympify(alpha))
     self.size = simplify(sympify(size))
+    self.rust_size = self.size if rust_size is None else simplify(sympify(rust_size))
 
   def key(self):
     return "power_vector:%s:%s" % (latex(self.alpha), latex(self.size))
@@ -716,9 +717,9 @@ class PowerVector(object):
   def dumpr_at_index(self, index):
     if self.alpha != 1:
       return rust(RustMacro("power_vector_index").append([
-          rust(self.alpha, to_field=True), self.size, index]))
+          rust(self.alpha, to_field=True), self.rust_size, index]))
     else:
-      return rust(RustMacro("range_index").append([1, self.size, index]))
+      return rust(RustMacro("range_index").append([1, self.rust_size, index]))
 
   def reverse_omega(self, omega):
     return StructuredVector._from(self).reverse_omega(omega)

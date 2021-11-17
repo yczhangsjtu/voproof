@@ -283,6 +283,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             pk.powers,
             cap_k + cap_s_a + cap_s_b + cap_s_c + 1
         );
+        define!(maxshift, cap_s_a + cap_s_b + cap_s_c);
         get_randomness_from_hash!(
             alpha,
             x_vec,
@@ -391,7 +392,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     ),
                     range_index!(1, cap_k + cap_s_a + cap_s_b + cap_s_c, i + n)
                 ),
-                cap_s_a + cap_s_b + cap_s_c + 2
+                maxshift + 2
             )
         );
         define_vec!(t_vec_1, vector_concat!(delta_vec_4, t_vec));
