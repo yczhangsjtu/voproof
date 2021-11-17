@@ -156,7 +156,8 @@ class NamedVector(_NamedBasic):
     return VectorCombination._from(self).__div__(other)
 
   def shift(self, length, rust_length=None):
-    return self.__mul__(UnitVector(length + 1, rust_length))
+    return self.__mul__(UnitVector(length + 1,
+      rust_length + 1 if rust_length is not None else None))
 
   def dumpr_at_index(self, index):
     return rust(RustMacro("vector_index").append([rust_pk(self), rust(index)]))
@@ -492,7 +493,7 @@ class SparseVector(CoeffMap):
     ret = RustMacro("multi_delta").append(rust(index))
     for key, uv_coeff in self.items():
       unit_vector, coeff = uv_coeff
-      ret.append([to_field(coeff), unit_vector.position])
+      ret.append([to_field(coeff), unit_vector.rust_position])
     return rust(ret)
 
   def reverse_omega(self, omega):
@@ -500,7 +501,10 @@ class SparseVector(CoeffMap):
     v = SparseVector()
     for key, uv_coeff in self.items():
       unit_vector, coeff = uv_coeff
-      v.set(2 - unit_vector.position, coeff * (omega ** (unit_vector.position - 1)))
+      v.set(
+          2 - unit_vector.position,
+          coeff * (omega ** (unit_vector.position - 1)),
+          2 - unit_vector.rust_position)
     return v
 
 
@@ -564,7 +568,7 @@ def _dumpr_at_index_for_sparse_coefficient(v, index):
     for key2, uv_coeff in value.items():
       unit_vector, coeff = uv_coeff
       ret.append(to_field(coeff))
-      ret.append(vec.dumpr_at_index(rust_minus_i64(index, unit_vector.position)))
+      ret.append(vec.dumpr_at_index(rust_minus_i64(index, unit_vector.rust_position)))
 
   if len(ret) == 2 and not has_one:
     if ret[0] == to_field(1):

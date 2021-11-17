@@ -248,29 +248,17 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 power_linear_combination!(
                     beta,
                     mul!(
-                        vector_index!(
-                            u_vec_1,
-                            minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
-                        ),
-                        vector_index!(
-                            s_vec,
-                            minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
-                        )
+                        vector_index!(u_vec_1, minus_i64!(i, -3 * cap_h - cap_k + n + 1)),
+                        vector_index!(s_vec, minus_i64!(i, -3 * cap_h - cap_k + n + 1))
                     ),
                     minus!(
                         mul!(
-                            neg!(vector_index!(
-                                h_vec,
-                                minus_i64!(i, cap_s_a + cap_s_b + cap_s_c + 1)
-                            )),
-                            vector_index!(
-                                s_vec,
-                                minus_i64!(i, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
-                            )
+                            neg!(vector_index!(h_vec, minus_i64!(i, -cap_k + n + 1))),
+                            vector_index!(s_vec, minus_i64!(i, -3 * cap_h - cap_k + n + 1))
                         ),
                         mul!(
-                            vector_index!(h_vec, minus_i64!(i, 1)),
-                            vector_index!(pk.v_vec, minus_i64!(i, cap_k + 1))
+                            vector_index!(h_vec, minus_i64!(i, -cap_k - ell_1 + n + 1)),
+                            vector_index!(pk.v_vec, minus_i64!(i, -ell_1 + n + 1))
                         )
                     )
                 ),
@@ -369,28 +357,19 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     ),
                     mul!(
                         power(alpha, 5),
-                        vector_index!(
-                            u_vec_1,
-                            minus_i64!(i + n_1, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
-                        )
+                        vector_index!(u_vec_1, minus_i64!(i + n_1, -3 * cap_h - cap_k + n + 1))
                     ),
-                    vector_index!(
-                        s_vec,
-                        minus_i64!(i + n_1, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
-                    ),
+                    vector_index!(s_vec, minus_i64!(i + n_1, -3 * cap_h - cap_k + n + 1)),
                     mul!(
                         -power(alpha, 5) * beta,
-                        vector_index!(h_vec, minus_i64!(i + n_1, cap_s_a + cap_s_b + cap_s_c + 1))
+                        vector_index!(h_vec, minus_i64!(i + n_1, -cap_k + n + 1))
                     ),
-                    vector_index!(
-                        s_vec,
-                        minus_i64!(i + n_1, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c + 1)
-                    ),
+                    vector_index!(s_vec, minus_i64!(i + n_1, -3 * cap_h - cap_k + n + 1)),
                     mul!(
                         -power(alpha, 5) * beta,
-                        vector_index!(h_vec, minus_i64!(i + n_1, 1))
+                        vector_index!(h_vec, minus_i64!(i + n_1, -cap_k - ell_1 + n + 1))
                     ),
-                    vector_index!(pk.v_vec, minus_i64!(i + n_1, cap_k + 1)),
+                    vector_index!(pk.v_vec, minus_i64!(i + n_1, -ell_1 + n + 1)),
                     linear_combination_base_zero!(
                         -power(alpha, 5),
                         vector_index!(r_vec_tilde, minus_i64!(i + n_1, 1)),
@@ -547,7 +526,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     v_vec_9,
                     minus_i64!(
                         -cap_k - 2 * cap_s_a - 2 * cap_s_b - 2 * cap_s_c + i,
-                        cap_k + cap_s_a + cap_s_b + cap_s_c - shiftlength_8
+                        n_1 - shiftlength_8
                     )
                 ),
                 mu * power(omega, 3 * cap_h - 1),
@@ -691,10 +670,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 -power(alpha, 5) * beta,
                 vector_index!(v_vec_8, minus_i64!(i + 1, cap_k - shiftlength_7 + 1)),
                 power(alpha, 6),
-                vector_index!(
-                    v_vec_9,
-                    minus_i64!(i + 1, cap_k + cap_s_a + cap_s_b + cap_s_c - shiftlength_8)
-                ),
+                vector_index!(v_vec_9, minus_i64!(i + 1, n_1 - shiftlength_8)),
                 mu * power(omega, 3 * cap_h - 1),
                 vector_index!(v_vec_10, minus_i64!(i + 1, 2 - 3 * cap_h)),
                 -power(gamma * omega, 3 * cap_h - 1),
