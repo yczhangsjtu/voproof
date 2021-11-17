@@ -835,7 +835,7 @@ class PIOPFromVOProtocol(object):
                                            PowerVector(1, n)))
 
       extended_hadamard.append((alpha_power * alpha) *
-                               VOQuerySide(rtilde, UnitVector(n)))
+                               VOQuerySide(rtilde, UnitVector(n, rust_n)))
 
       # This last hadamard check involves only a named vector times
       # a unit vector, it does not contribuets to t
