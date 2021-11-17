@@ -522,11 +522,11 @@ class RustCodePrinter(CodePrinter):
 class RustCodePrinterToField(RustCodePrinter):
     def _print_Integer(self, expr, _type=False):
         if expr == 0:
-            return "E::Fr::zero()"
+            return "zero!()"
         if expr == 1:
-            return "E::Fr::one()"
+            return "one!()"
         ret = super()._print_Integer(expr, _type)
-        return "to_field::<E::Fr>(%s)" % ret
+        return "scalar_to_field!(%s)" % ret
 
 def rust_code(expr, assign_to=None, **settings):
     """Converts an expr to a string of Rust code

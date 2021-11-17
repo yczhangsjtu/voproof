@@ -751,7 +751,7 @@ class PIOPFromVOProtocol(object):
                   (side.a * (1/alpha_power)).dumpr_at_index(sym_i),
                   side.b.dumpr_at_index(sym_i)),
                 rust(rust_n)),
-              rust_vec_size(rust_zero, rust_n),
+              rust_vec_size(rust_zero(), rust_n),
               "The %d\'th hadamard check is not satisfied" % (i+1)
               )).end()
         else:
@@ -893,7 +893,7 @@ class PIOPFromVOProtocol(object):
     if self.debug_mode:
       h_omega_sum_check = RustBuilder()
       h_omega_sum = Symbol(get_name('h_osum'))
-      h_omega_sum_check.letmut(h_omega_sum).assign(rust_zero).end()
+      h_omega_sum_check.letmut(h_omega_sum).assign(rust_zero()).end()
 
     hx = get_named_polynomial("h")
     hxcomputes = LaTeXBuilder().start_math().append(hx).assign().end_math() \
@@ -906,11 +906,11 @@ class PIOPFromVOProtocol(object):
     if self.debug_mode:
       vecsum = get_named_vector("sum")
       piopexec.prover_computes_rust(
-          RustBuilder().letmut(vecsum).assign(rust_vec_size(rust_zero, rust_n + max_shift + q)).end())
+          RustBuilder().letmut(vecsum).assign(rust_vec_size(rust_zero(), rust_n + max_shift + q)).end())
       hcheck_vec = get_named_vector("hcheck")
       piopexec.prover_computes_rust(
           RustBuilder().letmut(hcheck_vec).assign(
-            rust_vec_size(rust_zero, (rust_n + max_shift + q) * 2 - 1)
+            rust_vec_size(rust_zero(), (rust_n + max_shift + q) * 2 - 1)
           ).end())
 
     for i, side in enumerate(extended_hadamard):
@@ -1004,12 +1004,12 @@ class PIOPFromVOProtocol(object):
         )
 
     if self.debug_mode:
-      h_omega_sum_check.append(rust_assert_eq(h_omega_sum, rust_zero)).end()
+      h_omega_sum_check.append(rust_assert_eq(h_omega_sum, rust_zero())).end()
       piopexec.prover_computes_rust(h_omega_sum_check)
       piopexec.prover_computes_rust(
           rust_builder_check_vector_eq(
             vecsum,
-            rust_vec_size(rust_zero, rust_n + max_shift + q),
+            rust_vec_size(rust_zero(), rust_n + max_shift + q),
             "sum of hadamards not zero"
             ).end())
 
@@ -1055,11 +1055,11 @@ class PIOPFromVOProtocol(object):
               "h is not expected")).end()
           .append(rust_check_vector_eq(
               h,
-              rust_vector_concat(h1, rust_vec(rust_zero), h2),
+              rust_vector_concat(h1, rust_vec(rust_zero()), h2),
               "h != h1 || 0 || h2")).end())
 
       piopexec.prover_computes_rust(
-        rust_builder_assert_eq(h_vec_combination.dumpr_at_index(1), rust_zero).end()
+        rust_builder_assert_eq(h_vec_combination.dumpr_at_index(1), rust_zero()).end()
       )
 
     # For the rust code, use the vector instead
@@ -1111,7 +1111,7 @@ class PIOPFromVOProtocol(object):
     if self.debug_mode:
       naive_g = get_named_vector("naive_g")
       piopexec.prover_computes_rust(rust_builder_define_vec_mut(naive_g,
-        rust_vec_size(rust_zero, rust_n + rust_max_shift + q)
+        rust_vec_size(rust_zero(), rust_n + rust_max_shift + q)
       ).end())
 
     # 1. The part contributed by the extended hadamard query
@@ -1228,7 +1228,7 @@ class PIOPFromVOProtocol(object):
       piopexec.naive_g = naive_g
 
       # Check that h(z) = sum_i f_i(omega/z) g_i(z) z^{n+maxshift+q}
-      lc = rust_linear_combination(rust_zero)
+      lc = rust_linear_combination(rust_zero())
       for had in extended_hadamard:
         a = VectorCombination._from(had.a)
         b = VectorCombination._from(had.b)
@@ -1494,7 +1494,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       self.prover_computes_rust(rust_builder_check_poly_eval(
                                  naive_g.to_named_vector_poly(),
                                  z,
-                                 rust_zero,
+                                 rust_zero(),
                                  "naive g does not evaluate to 0 at z").end())
 
     points_poly_dict = {}
@@ -1521,13 +1521,13 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           self.prover_computes_rust(rust_builder_check_poly_eval(
                                     query.poly,
                                     queries[0].point,
-                                    rust_zero if query.name == 0
-                                              else query.name,
+                                    rust_zero() if query.name == 0
+                                                else query.name,
                                     "g does not evaluate to 0 at z").end())
 
       ffs.append([rust(query.poly) for query in queries])
       fcomms.append([rust_vk(query.poly.to_comm()) for query in queries])
-      fvals.append([rust_zero if query.name == 0 else query.name
+      fvals.append([rust_zero() if query.name == 0 else query.name
                     for query in queries])
 
     fs, gs = ffs

@@ -4,8 +4,6 @@ from rust import rust_code, rust_code_to_field, force_lowercase
 
 
 sym_i = Symbol("i")
-rust_zero = "E::Fr::zero()"
-rust_one = "E::Fr::one()"
 
 def keep_alpha_number(s):
   return "".join([c for c in s if c.isalnum()])
@@ -24,9 +22,9 @@ def rust(expr, to_field=False):
 def to_field(expr):
   if isinstance(expr, Integer) or isinstance(expr, int):
     if expr == 0:
-      return "E::Fr::zero()"
+      return rust(rust_one())
     if expr == 1:
-      return "E::Fr::one()"
+      return rust(rust_zero())
     if expr > 0:
       return rust(rust_to_field(expr))
     return "-%s" % rust(rust_to_field(-expr))
@@ -271,6 +269,8 @@ class _ArgProcess(object):
 
 
 rust_macro_list = [
+    ("one", None, (), ()),
+    ("zero", None, (), ()),
     ("commit_scalar", None, ("c"), ("vk", _ArgName("c"))),
     ("expression_vector_to_vector", "expression_vector_to_vector_i", ("v", "expr"),
       (_ArgName("v"), sym_i, _ArgName("expr"))),

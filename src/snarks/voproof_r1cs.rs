@@ -161,11 +161,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             u_vec_1,
             sparse_mvp_vector!(
                 pk.cap_m_mat,
-                vector_concat!(vec!(E::Fr::one()), x_vec, w_vec),
+                vector_concat!(vec!(one!()), x_vec, w_vec),
                 3 * cap_h,
                 cap_k
             ),
-            vec!(E::Fr::one()),
+            vec!(one!()),
             x_vec,
             w_vec
         );
@@ -314,7 +314,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         vector_index!(pk.w_vec, minus_i64!(i + n, cap_k + 1)),
                         -nu,
                         vector_index!(pk.u_vec, minus_i64!(i + n, cap_k + 1)),
-                        E::Fr::one(),
+                        zero!(),
                         vector_index!(pk.y_vec, minus_i64!(i + n, cap_k + 1))
                     ),
                     mul!(
@@ -388,17 +388,17 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define_vector_poly_mul_shift!(v_vec_8, h_vec, pk.v_vec, omega, shiftlength_7);
         define_vector_reverse_omega_shift!(v_vec_9, r_vec_tilde, omega, shiftlength_8);
         define_vector_power_mul!(v_vec_10, s_vec, omega.inverse().unwrap(), 3 * cap_h);
-        define_vector_power_mul!(v_vec_11, s_vec, E::Fr::one() / (gamma * omega), 3 * cap_h);
+        define_vector_power_mul!(v_vec_11, s_vec, one!() / (gamma * omega), 3 * cap_h);
         define_vector_power_mul!(v_vec_12, h_vec, omega.inverse().unwrap(), cap_k);
-        define_vector_power_mul!(v_vec_13, h_vec, E::Fr::one() / (gamma * omega), cap_k);
-        define_vector_power_mul!(v_vec_14, v_vec_2, E::Fr::one(), cap_s_a + cap_s_b + cap_s_c);
+        define_vector_power_mul!(v_vec_13, h_vec, one!() / (gamma * omega), cap_k);
+        define_vector_power_mul!(v_vec_14, v_vec_2, one!(), cap_s_a + cap_s_b + cap_s_c);
         define_vector_power_mul!(v_vec_15, u_vec_1, omega.inverse().unwrap(), cap_h);
         define_vector_power_mul!(v_vec_16, u_vec_1, omega.inverse().unwrap(), ell + 1);
         define_vector_power_mul!(v_vec_17, x_vec, omega.inverse().unwrap(), ell + 1);
         define_vector_power_mul!(
             v_vec_18,
             v_vec_9,
-            E::Fr::one(),
+            one!(),
             cap_k + cap_s_a + cap_s_b + cap_s_c
         );
         define_vector_power_mul!(
@@ -411,21 +411,15 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             v_vec_20,
             omega.inverse().unwrap(),
             3 * cap_h,
-            E::Fr::one(),
+            one!(),
             3 * cap_h
         );
-        define_power_power_mul!(
-            v_vec_21,
-            omega.inverse().unwrap(),
-            cap_k,
-            E::Fr::one(),
-            cap_k
-        );
+        define_power_power_mul!(v_vec_21, omega.inverse().unwrap(), cap_k, one!(), cap_k);
         define_power_power_mul!(
             v_vec_22,
             omega.inverse().unwrap(),
             cap_s_a + cap_s_b + cap_s_c,
-            E::Fr::one(),
+            one!(),
             cap_s_a + cap_s_b + cap_s_c
         );
         define_expression_vector!(
@@ -751,12 +745,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_h_vec_3,
             c_10
         );
-        check_poly_eval!(g_poly, z, E::Fr::zero(), "g does not evaluate to 0 at z");
+        check_poly_eval!(g_poly, z, zero!(), "g does not evaluate to 0 at z");
         define!(fs, vec!(h_vec_poly, u_vec_1_poly, r_vec_tilde_poly));
         define!(gs, vec!(g_poly));
         get_randomness_from_hash!(
             rand_xi,
-            E::Fr::one(),
+            zero!(),
             x_vec,
             vk.cm_u_vec,
             vk.cm_w_vec,
@@ -1037,7 +1031,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define!(z2, z);
         get_randomness_from_hash!(
             rand_xi,
-            E::Fr::one(),
+            zero!(),
             x_vec,
             vk.cm_u_vec,
             vk.cm_w_vec,
@@ -1082,7 +1076,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define!(f_commitments, vec!(cm_h_vec, cm_u_vec_1, cm_r_vec_tilde));
         define!(g_commitments, vec!(cm_g));
         define!(f_values, vec!(y, y_1, y_2));
-        define!(g_values, vec!(E::Fr::zero()));
+        define!(g_values, vec!(zero!()));
 
         if KZG10::<E, DensePoly<E::Fr>>::batch_check(
             &vk.kzg_vk,

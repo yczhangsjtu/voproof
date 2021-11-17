@@ -256,6 +256,20 @@ macro_rules! scalar_to_field {
 }
 
 #[macro_export]
+macro_rules! one {
+    () => {
+        E::Fr::one()
+    }
+}
+
+#[macro_export]
+macro_rules! zero {
+    () => {
+        E::Fr::zero()
+    }
+}
+
+#[macro_export]
 macro_rules! minus {
     ($u:expr, $v:expr) => {
         $u - $v

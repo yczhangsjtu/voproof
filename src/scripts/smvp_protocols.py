@@ -304,11 +304,11 @@ class R1CS(VOProtocol):
         rust_sparse_mvp_vector(
           rust_pk(M),
           rust_vector_concat(
-            rust_vec(rust_one), x, w
+            rust_vec(rust_one()), x, w
           ),
           H * 3, K
         ),
-        rust_vec(rust_one), x, w
+        rust_vec(rust_one()), x, w
       ).end())
 
     voexec.prover_submit_vector(u, 3 * H + K)
