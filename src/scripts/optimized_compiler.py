@@ -375,6 +375,16 @@ class VOProtocolExecution(PublicCoinProtocolExecution):
   def run_subprotocol_indexer(self, protocol, *args):
     protocol.preprocess(self, *args)
 
+  def try_prover_redefine_vector_size_rust(self, name, value, piopexec=None):
+    if self.rust_vector_size is None:
+      executor = self if piopexec is None else piopexec
+      self.rust_vector_size = executor.prover_redefine_symbol_rust(value, name)
+
+  def try_verifier_redefine_vector_size_rust(self, name, value, piopexec=None):
+    if self.rust_vector_size is None:
+      executor = self if piopexec is None else piopexec
+      self.rust_vector_size = executor.verifier_redefine_symbol_rust(value, name)
+
   def _update_vector_size_bound(self, size):
     self.vector_size_bound = self.simplify_max(Max(self.vector_size_bound, size))
     self.vector_size_sum += size
@@ -717,8 +727,7 @@ class PIOPFromVOProtocol(object):
         # Must be postponed to here because now it is guaranteed that all the
         # necessary variables that n depends on are defined
         if rust_n is None:
-          if voexec.rust_vector_size is None:
-            voexec.rust_vector_size = piopexec.prover_redefine_symbol_rust(n, "n")
+          voexec.try_verifier_redefine_vector_size_rust("n", n, piopexec)
           rust_n = voexec.rust_vector_size
 
         for v, size, rust_size in interaction.vectors:

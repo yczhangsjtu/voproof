@@ -288,8 +288,7 @@ class R1CS(VOProtocol):
     voexec.verifier_rust_init_size(sb, "bdensity")
     voexec.verifier_rust_init_size(sc, "cdensity")
     voexec.verifier_rust_init_size(ell, "input_size")
-    if voexec.rust_vector_size is None:
-      voexec.rust_vector_size = voexec.verifier_redefine_symbol_rust(n, "n")
+    voexec.try_verifier_redefine_vector_size_rust("n", n)
     rust_n = voexec.rust_vector_size
     voexec.rust_vector_size = rust_n
 
