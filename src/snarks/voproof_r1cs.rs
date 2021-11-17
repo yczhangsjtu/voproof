@@ -390,7 +390,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         power(alpha, 5),
                         vector_index!(r_vec_tilde, minus_i64!(i + n, 2))
                     ),
-                    range_index!(1, cap_k + cap_s_a + cap_s_b + cap_s_c, i + n)
+                    range_index!(1, n, i + n)
                 ),
                 maxshift + 2
             )

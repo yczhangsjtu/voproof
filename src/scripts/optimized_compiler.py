@@ -832,7 +832,7 @@ class PIOPFromVOProtocol(object):
 
       extended_hadamard.append((- alpha_power) *
                                VOQuerySide(rtilde - rtilde.shift(1),
-                                           PowerVector(1, n)))
+                                           PowerVector(1, n, rust_n)))
 
       extended_hadamard.append((alpha_power * alpha) *
                                VOQuerySide(rtilde, UnitVector(n, rust_n)))
