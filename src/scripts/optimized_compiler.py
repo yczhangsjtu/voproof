@@ -491,10 +491,8 @@ class CombinePolynomial(object):
               coeff_builder.poly.to_comm()
             )
           )
-          commit_sum_rust_items.append("(%s.0).mul(%s.into_repr())" % (
-            rust_vk(coeff_builder.poly.to_comm()),
-            rust(coeff_builder.coeff)
-          ))
+          commit_sum_rust_items.append(rust_vk(coeff_builder.poly.to_comm()))
+          commit_sum_rust_items.append(rust(coeff_builder.coeff))
         if has_poly:
           poly_sum_items.append("%s\\cdot %s" % (
             latex(coeff_builder.coeff),
@@ -512,7 +510,6 @@ class CombinePolynomial(object):
         poly_sum_items.append("%s" % one)
       if has_commit:
         commit_sum_items.append("%s\\cdot \\mathsf{com}(1)" % one)
-        commit_sum_rust_items.append(rust_commit_scalar(rust_const))
 
     if has_oracle:
       latex_items.append(Math("[%s]" % self.poly.dumps()).assign("+".join(oracle_sum_items)))
@@ -537,13 +534,12 @@ class CombinePolynomial(object):
 
     if has_commit:
       latex_items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
-      rust_items.append(RustBuilder().let(self.poly.to_comm())
-                       .assign_func("Commitment::<E>")
-                       .append_to_last(
-                         RustBuilder(rust_sum(commit_sum_rust_items))
-                         .invoke_method("into_affine")
-                       ).end())
-
+      if rust_const is not None:
+        rust_items.append(rust_builder_define_commitment_linear_combination(
+          self.poly.to_comm(), "vk", rust_const, *commit_sum_rust_items).end())
+      else:
+        rust_items.append(rust_builder_define_commitment_linear_combination_no_one(
+          self.poly.to_comm(), "vk", *commit_sum_rust_items).end())
     return latex_items, rust_items
 
 

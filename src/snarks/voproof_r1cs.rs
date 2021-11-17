@@ -714,21 +714,30 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         g_vec[0] += c_1;
         define_poly_from_vec!(g_poly, g_vec);
-        let cm_g = Commitment::<E>(
-            sum!(
-                (cm_s_vec.0).mul(c.into_repr()),
-                (cm_h_vec.0).mul(c_2.into_repr()),
-                (vk.cm_w_vec.0).mul(c_3.into_repr()),
-                (vk.cm_u_vec.0).mul(c_4.into_repr()),
-                (vk.cm_y_vec.0).mul(c_5.into_repr()),
-                (cm_u_vec_1.0).mul(c_6.into_repr()),
-                (vk.cm_v_vec.0).mul(c_7.into_repr()),
-                (cm_t_vec_1.0).mul(c_8.into_repr()),
-                (cm_h_vec_2.0).mul(c_9.into_repr()),
-                (cm_h_vec_3.0).mul(c_10.into_repr()),
-                commit_scalar!(vk, c_1)
-            )
-            .into_affine(),
+        define_commitment_linear_combination!(
+            cm_g,
+            vk,
+            c_1,
+            cm_s_vec,
+            c,
+            cm_h_vec,
+            c_2,
+            vk.cm_w_vec,
+            c_3,
+            vk.cm_u_vec,
+            c_4,
+            vk.cm_y_vec,
+            c_5,
+            cm_u_vec_1,
+            c_6,
+            vk.cm_v_vec,
+            c_7,
+            cm_t_vec_1,
+            c_8,
+            cm_h_vec_2,
+            c_9,
+            cm_h_vec_3,
+            c_10
         );
         check_poly_eval!(g_poly, z, E::Fr::zero(), "g does not evaluate to 0 at z");
         let fs = vec![h_vec_poly, u_vec_1_poly, r_vec_tilde_poly];
@@ -983,21 +992,30 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             / (E::Fr::one() * z - omega);
         let c_9 = -power(z, -cap_d);
         let c_10 = -z;
-        let cm_g = Commitment::<E>(
-            sum!(
-                (cm_s_vec.0).mul(c.into_repr()),
-                (cm_h_vec.0).mul(c_2.into_repr()),
-                (vk.cm_w_vec.0).mul(c_3.into_repr()),
-                (vk.cm_u_vec.0).mul(c_4.into_repr()),
-                (vk.cm_y_vec.0).mul(c_5.into_repr()),
-                (cm_u_vec_1.0).mul(c_6.into_repr()),
-                (vk.cm_v_vec.0).mul(c_7.into_repr()),
-                (cm_t_vec_1.0).mul(c_8.into_repr()),
-                (cm_h_vec_2.0).mul(c_9.into_repr()),
-                (cm_h_vec_3.0).mul(c_10.into_repr()),
-                commit_scalar!(vk, c_1)
-            )
-            .into_affine(),
+        define_commitment_linear_combination!(
+            cm_g,
+            vk,
+            c_1,
+            cm_s_vec,
+            c,
+            cm_h_vec,
+            c_2,
+            vk.cm_w_vec,
+            c_3,
+            vk.cm_u_vec,
+            c_4,
+            vk.cm_y_vec,
+            c_5,
+            cm_u_vec_1,
+            c_6,
+            vk.cm_v_vec,
+            c_7,
+            cm_t_vec_1,
+            c_8,
+            cm_h_vec_2,
+            c_9,
+            cm_h_vec_3,
+            c_10
         );
         let rand_xi = hash_to_field::<E::Fr>(
             to_bytes!(

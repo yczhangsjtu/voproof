@@ -343,6 +343,8 @@ rust_macro_list = [
     ("define_vector_reverse_omega_shift", None, ("name", "v", "omega", "shiftname"), ()),
     ("define_vector_power_mul", None, ("name", "v", "alpha", "n"), ()),
     ("define_power_power_mul", None, ("name", "alpha", "n", "beta", "m"), ()),
+    ("define_commitment_linear_combination", None, None, ()),
+    ("define_commitment_linear_combination_no_one", None, None, ()),
 ]
 
 

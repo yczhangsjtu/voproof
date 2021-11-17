@@ -405,6 +405,49 @@ macro_rules! linear_combination {
 }
 
 #[macro_export]
+macro_rules! commitment_linear_combination {
+    ( $one: expr, $vk: expr, $( $cm:expr, $c:expr ),* ) => {
+        {
+            Commitment::<E>(
+                sum!(
+                    $( ( $cm.0 ).mul($c.into_repr()) ),*,
+                    commit_scalar!($vk, $one)
+                )
+                .into_affine(),
+            )
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! commitment_linear_combination_no_one {
+    ( $( $cm:expr, $c:expr ),+ ) => {
+        {
+            Commitment::<E>(
+                sum!(
+                    $( ( $cm.0 ).mul($c.into_repr()) ),+
+                )
+                .into_affine(),
+            )
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! define_commitment_linear_combination {
+    ( $name: ident, $vk: expr, $one: expr, $( $cm:expr, $c:expr ),* ) => {
+        let $name = commitment_linear_combination!($one, $vk, $( $cm, $c ),* );
+    };
+}
+
+#[macro_export]
+macro_rules! define_commitment_linear_combination_no_one {
+    ( $name: ident, $( $cm:expr, $c:expr ),+ ) => {
+        let $name = commitment_linear_combination_no_one!( $( $cm, $c ),+ );
+    };
+}
+
+#[macro_export]
 macro_rules! linear_combination_base_zero {
     ( $( $c:expr, $j:expr ),+ ) => {
         linear_combination!(E::Fr::zero(), $( $c, $j ),+ )
