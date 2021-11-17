@@ -159,6 +159,19 @@ class IndexerSendPolynomials(SendPolynomials):
     super(IndexerSendPolynomials, self).__init__("indexer", polynomial, degree, rust_degree)
 
 
+def _register_rust_functions(self):
+  for attr in dir(rust_builder):
+    if attr.startswith("rust_line_"):
+      f = getattr(rust_builder, attr)
+      name = attr[len("rust_line_"):]
+      setattr(self, "prover_rust_" + name,
+          (lambda f: lambda *args: self.prover_computes_rust(f(*args)))(f))
+      setattr(self, "verifier_rust_" + name,
+          (lambda f: lambda *args: self.verifier_computes_rust(f(*args)))(f))
+      setattr(self, "pp_rust_" + name,
+          (lambda f: lambda *args: self.preprocess_rust(f(*args)))(f))
+
+
 class PublicCoinProtocolExecution(object):
   def __init__(self):
     self.prover_inputs = []
@@ -169,17 +182,7 @@ class PublicCoinProtocolExecution(object):
     self.prover_preparations = []
     self.verifier_preparations = []
     self.interactions = []
-
-    for attr in dir(rust_builder):
-      if attr.startswith("rust_line_"):
-        f = getattr(rust_builder, attr)
-        name = attr[len("rust_line_"):]
-        setattr(self, "prover_rust_" + name,
-            (lambda f: lambda *args: self.prover_computes_rust(f(*args)))(f))
-        setattr(self, "verifier_rust_" + name,
-            (lambda f: lambda *args: self.verifier_computes_rust(f(*args)))(f))
-        setattr(self, "pp_rust_" + name,
-            (lambda f: lambda *args: self.preprocess_rust(f(*args)))(f))
+    _register_rust_functions(self)
 
   def input_instance(self, arg):
     self.verifier_inputs.append(arg)
@@ -214,7 +217,7 @@ class PublicCoinProtocolExecution(object):
 
   def prover_redefine_symbol_rust(self, s, name):
     new_s = Symbol(get_name(name))
-    self.prover_computes_rust(rust_line_define(new_s, s))
+    self.prover_rust_define(new_s, s)
     return new_s
 
   def prover_prepare(self, latex_builder, rust_builder):
@@ -838,7 +841,7 @@ class PIOPFromVOProtocol(object):
           rust_accumulate_vector_plus(r),
           randomizer
         ))
-      piopexec.prover_computes_rust(rust_line_define_poly_from_vec(fr, rtilde))
+      piopexec.prover_rust_define_poly_from_vec(fr, rtilde)
 
       piopexec.prover_send_polynomial(fr, n + q, rust_n + q)
       vec_to_poly_dict[rtilde.key()] = fr
@@ -915,11 +918,11 @@ class PIOPFromVOProtocol(object):
 
     if self.debug_mode:
       vecsum = get_named_vector("sum")
-      piopexec.prover_computes_rust(rust_line_define_mut(vecsum,
-            rust_vec_size(rust_zero(), rust_n + max_shift + q)))
+      piopexec.prover_rust_define_mut(vecsum,
+            rust_vec_size(rust_zero(), rust_n + max_shift + q))
       hcheck_vec = get_named_vector("hcheck")
-      piopexec.prover_computes_rust(rust_line_define_mut(hcheck_vec,
-            rust_vec_size(rust_zero(), (rust_n + max_shift + q) * 2 - 1)))
+      piopexec.prover_rust_define_mut(hcheck_vec,
+            rust_vec_size(rust_zero(), (rust_n + max_shift + q) * 2 - 1))
 
     for i, side in enumerate(extended_hadamard):
       self.debug("  Extended Hadamard %d" % (i + 1))
@@ -1117,9 +1120,9 @@ class PIOPFromVOProtocol(object):
 
     if self.debug_mode:
       naive_g = get_named_vector("naive_g")
-      piopexec.prover_computes_rust(rust_line_define_vec_mut(naive_g,
+      piopexec.prover_rust_define_vec_mut(naive_g,
         rust_vec_size(rust_zero(), rust_n + rust_max_shift + q)
-      ))
+      )
 
     # 1. The part contributed by the extended hadamard query
     for i, side in enumerate(extended_hadamard):
@@ -1223,12 +1226,12 @@ class PIOPFromVOProtocol(object):
     coeff_builders[h2x.key()] = CombinationCoeffBuilder(h2x, c, [- z], [- z], 0)
 
     if self.debug_mode:
-      piopexec.prover_computes_rust(rust_line_add_expression_vector_to_vector_i(
+      piopexec.prover_rust_add_expression_vector_to_vector_i(
         naive_g, "(%s) * (%s)" % (h1.dumpr_at_index(sym_i), rust(-z**(-(h_inverse_degree-1))))
-      ))
-      piopexec.prover_computes_rust(rust_line_add_expression_vector_to_vector_i(
+      )
+      piopexec.prover_rust_add_expression_vector_to_vector_i(
         naive_g, "(%s) * (%s)" % (h2.dumpr_at_index(sym_i), rust(-z))
-      ))
+      )
       # Pass this variable to the zkSNARK, because g has not been computed, cannot
       # make the comparison here.
       piopexec.naive_g = naive_g
@@ -1244,12 +1247,12 @@ class PIOPFromVOProtocol(object):
           )
         )
         lc.append(rust_eval_vector_expression_i(z, b.dumpr_at_index(sym_i), rust_n + rust_max_shift + q))
-      piopexec.prover_computes_rust(rust_line_assert_eq(
+      piopexec.prover_rust_assert_eq(
         rust_mul(
           rust_eval_vector_as_poly(h, z),
           z**(-(rust_h_inverse_degree-1))),
         lc
-      ))
+      )
 
     # Transform the lists into latex and rust builders
     for key, coeff_builder in coeff_builders.items():
@@ -1285,6 +1288,7 @@ class ZKSNARK(object):
     self.pk = []
     self.proof = []
     self.debug_mode = False
+    _register_rust_functions(self)
 
   def preprocess(self, latex_builder, rust_builder):
     self.indexer_computations.append(
@@ -1470,14 +1474,14 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       transcript.append(poly_combine.poly.to_comm())
 
       if piopexec.debug_mode:
-        self.prover_computes_rust(rust_line_assert_eq(
+        self.prover_rust_assert_eq(
           poly_combine.poly.to_comm(),
           RustBuilder().func("vector_to_commitment::<E>")
           .append_to_last("&pk.powers")
           .append_to_last("&%s" % rust(poly_combine.poly.to_vec()))
           .append_to_last("(%s) as u64" % rust(poly_combine.length))
           .invoke_method("unwrap")
-        ))
+        )
 
     queries = piopexec.eval_queries + piopexec.eval_checks
 
@@ -1488,11 +1492,11 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         rust_line_define_poly_from_vec(
           naive_g.to_named_vector_poly(), naive_g
         ))
-      self.prover_computes_rust(rust_line_check_poly_eval(
+      self.prover_rust_check_poly_eval(
                                  naive_g.to_named_vector_poly(),
                                  z,
                                  rust_zero(),
-                                 "naive g does not evaluate to 0 at z"))
+                                 "naive g does not evaluate to 0 at z")
 
     points_poly_dict = {}
     for query in queries:
@@ -1515,12 +1519,12 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           transcript.append(query.name)
         else:
           # Only make this check when the query result is an expected constant
-          self.prover_computes_rust(rust_line_check_poly_eval(
+          self.prover_rust_check_poly_eval(
                                     query.poly,
                                     queries[0].point,
                                     rust_zero() if query.name == 0
                                                 else query.name,
-                                    "g does not evaluate to 0 at z"))
+                                    "g does not evaluate to 0 at z")
 
       ffs.append([rust(query.poly) for query in queries])
       fcomms.append([rust_vk(query.poly.to_comm()) for query in queries])
