@@ -219,6 +219,9 @@ class UnitVector(object):
   
   def to_poly_expr(self, var):
     return var ** (self.position - 1)
+  
+  def to_poly_expr_rust(self, var):
+    return var ** (self.rust_position - 1)
 
   def __add__(self, other):
     return SparseVector._from(self).__add__(other)
@@ -489,6 +492,13 @@ class SparseVector(CoeffMap):
       items.append(unit_vector.to_poly_expr(var) * coeff)
     return sum(items)
 
+  def to_poly_expr_rust(self, var):
+    items = []
+    for key, uv_coeff in self.items():
+      unit_vector, coeff = uv_coeff
+      items.append(unit_vector.to_poly_expr_rust(var) * coeff)
+    return sum(items)
+
   def dumpr_at_index(self, index):
     ret = RustMacro("multi_delta").append(rust(index))
     for key, uv_coeff in self.items():
@@ -724,6 +734,9 @@ class PowerVector(object):
 
   def to_poly_expr(self, var):
     return ((self.alpha * var) ** self.size - Symbol("E::Fr::one()")) / (self.alpha * var - Symbol("E::Fr::one()"))
+
+  def to_poly_expr_rust(self, var):
+    return ((self.alpha * var) ** self.rust_size - Symbol("E::Fr::one()")) / (self.alpha * var - Symbol("E::Fr::one()"))
   
   def dumpr_at_index(self, index):
     if self.alpha != 1:
@@ -822,6 +835,16 @@ class StructuredVector(CoeffMap):
         items.append(value.to_poly_expr(var))
       else:
         items.append(vector.to_poly_expr(var) * value.to_poly_expr(var))
+    return sum(items)
+
+  def to_poly_expr_rust(self, var):
+    items = []
+    for key, power_value in self.items():
+      vector, value = power_value
+      if key == "one":
+        items.append(value.to_poly_expr_rust(var))
+      else:
+        items.append(vector.to_poly_expr_rust(var) * value.to_poly_expr_rust(var))
     return sum(items)
 
   def dumpr_at_index(self, index):

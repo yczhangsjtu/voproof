@@ -611,12 +611,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 / ((E::Fr::one() * z - omega) * (E::Fr::one() * z - gamma * omega)),
             power(alpha, 5)
                 * y_1
-                * power(z, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c)
+                * power(z, -3 * cap_h - cap_k + n)
                 * power(omega / z, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c),
             -power(alpha, 5)
                 * beta
                 * y
-                * power(z, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c)
+                * power(z, -3 * cap_h - cap_k + n)
                 * power(omega / z, cap_s_a + cap_s_b + cap_s_c)
         );
         define_sum!(
@@ -629,17 +629,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 * (E::Fr::one() - power(z, cap_k))
                 * (E::Fr::one() - power(omega / z, cap_k))
                 / ((E::Fr::one() - z) * (E::Fr::one() * z - omega)),
-            power(alpha, 2)
-                * mu
-                * nu
-                * y
-                * power(z, cap_k)
-                * (E::Fr::one() - power(z, cap_s_a + cap_s_b + cap_s_c))
+            power(alpha, 2) * mu * nu * y * power(z, cap_k) * (E::Fr::one() - power(z, ell_1))
                 / (E::Fr::one() - z),
             -power(alpha, 2)
                 * power(z, cap_k + 1)
                 * power(omega / z, cap_k)
-                * (E::Fr::one() - power(z, cap_s_a + cap_s_b + cap_s_c))
+                * (E::Fr::one() - power(z, ell_1))
                 * (E::Fr::one() - power(omega / z, cap_s_a + cap_s_b + cap_s_c))
                 / ((E::Fr::one() - z) * (E::Fr::one() * z - omega)),
             mul!(
@@ -655,12 +650,9 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 * power(omega / z, 3 * cap_h)
                 * (-E::Fr::one() + power(omega / z, ell + 1))
                 / (E::Fr::one() * z - omega),
-            power(alpha, 5)
-                * y_2
-                * (E::Fr::one() - power(z, cap_k + cap_s_a + cap_s_b + cap_s_c))
-                * (omega - z)
+            power(alpha, 5) * y_2 * (E::Fr::one() - power(z, n)) * (omega - z)
                 / (z * (E::Fr::one() - z)),
-            power(alpha, 6) * y_2 * power(z, cap_k + cap_s_a + cap_s_b + cap_s_c - 1)
+            power(alpha, 6) * y_2 * power(z, n - 1)
         );
         define!(
             c_2,
@@ -680,10 +672,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             c_6,
             power(alpha, 3)
                 * y_1
-                * power(z, -2 * cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
+                * power(z, -2 * cap_h + n)
                 * power(omega / z, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c),
             power(alpha, 3)
-                * power(z, -3 * cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1)
+                * power(z, -3 * cap_h + n + 1)
                 * power(omega / z, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
                 * (-E::Fr::one() + power(omega / z, cap_h))
                 / (E::Fr::one() * z - omega),
@@ -693,10 +685,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 * (E::Fr::one() - power(omega / z, ell + 1))
                 / (E::Fr::one() * z - omega)
         );
-        define!(c_7, -power(alpha, 5) * beta * y * power(z, cap_k));
+        define!(c_7, -power(alpha, 5) * beta * y * power(z, -ell_1 + n));
         define!(
             c_8,
-            power(z, cap_k + cap_s_a + cap_s_b + cap_s_c)
+            power(z, n)
                 * power(omega / z, cap_k + cap_s_a + cap_s_b + cap_s_c)
                 * (-E::Fr::one() + power(omega / z, cap_s_a + cap_s_b + cap_s_c + 1))
                 / (E::Fr::one() * z - omega)
@@ -934,12 +926,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 / ((E::Fr::one() * z - omega) * (E::Fr::one() * z - gamma * omega)),
             power(alpha, 5)
                 * y_1
-                * power(z, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c)
+                * power(z, -3 * cap_h - cap_k + n)
                 * power(omega / z, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c),
             -power(alpha, 5)
                 * beta
                 * y
-                * power(z, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c)
+                * power(z, -3 * cap_h - cap_k + n)
                 * power(omega / z, cap_s_a + cap_s_b + cap_s_c)
         );
         define_sum!(
@@ -952,17 +944,12 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 * (E::Fr::one() - power(z, cap_k))
                 * (E::Fr::one() - power(omega / z, cap_k))
                 / ((E::Fr::one() - z) * (E::Fr::one() * z - omega)),
-            power(alpha, 2)
-                * mu
-                * nu
-                * y
-                * power(z, cap_k)
-                * (E::Fr::one() - power(z, cap_s_a + cap_s_b + cap_s_c))
+            power(alpha, 2) * mu * nu * y * power(z, cap_k) * (E::Fr::one() - power(z, ell_1))
                 / (E::Fr::one() - z),
             -power(alpha, 2)
                 * power(z, cap_k + 1)
                 * power(omega / z, cap_k)
-                * (E::Fr::one() - power(z, cap_s_a + cap_s_b + cap_s_c))
+                * (E::Fr::one() - power(z, ell_1))
                 * (E::Fr::one() - power(omega / z, cap_s_a + cap_s_b + cap_s_c))
                 / ((E::Fr::one() - z) * (E::Fr::one() * z - omega)),
             mul!(
@@ -978,12 +965,9 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 * power(omega / z, 3 * cap_h)
                 * (-E::Fr::one() + power(omega / z, ell + 1))
                 / (E::Fr::one() * z - omega),
-            power(alpha, 5)
-                * y_2
-                * (E::Fr::one() - power(z, cap_k + cap_s_a + cap_s_b + cap_s_c))
-                * (omega - z)
+            power(alpha, 5) * y_2 * (E::Fr::one() - power(z, n)) * (omega - z)
                 / (z * (E::Fr::one() - z)),
-            power(alpha, 6) * y_2 * power(z, cap_k + cap_s_a + cap_s_b + cap_s_c - 1)
+            power(alpha, 6) * y_2 * power(z, n - 1)
         );
         define!(
             c_2,
@@ -1003,10 +987,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             c_6,
             power(alpha, 3)
                 * y_1
-                * power(z, -2 * cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
+                * power(z, -2 * cap_h + n)
                 * power(omega / z, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c),
             power(alpha, 3)
-                * power(z, -3 * cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c + 1)
+                * power(z, -3 * cap_h + n + 1)
                 * power(omega / z, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
                 * (-E::Fr::one() + power(omega / z, cap_h))
                 / (E::Fr::one() * z - omega),
@@ -1016,10 +1000,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 * (E::Fr::one() - power(omega / z, ell + 1))
                 / (E::Fr::one() * z - omega)
         );
-        define!(c_7, -power(alpha, 5) * beta * y * power(z, cap_k));
+        define!(c_7, -power(alpha, 5) * beta * y * power(z, -ell_1 + n));
         define!(
             c_8,
-            power(z, cap_k + cap_s_a + cap_s_b + cap_s_c)
+            power(z, n)
                 * power(omega / z, cap_k + cap_s_a + cap_s_b + cap_s_c)
                 * (-E::Fr::one() + power(omega / z, cap_s_a + cap_s_b + cap_s_c + 1))
                 / (E::Fr::one() * z - omega)

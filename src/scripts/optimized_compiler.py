@@ -1168,8 +1168,9 @@ class PIOPFromVOProtocol(object):
       # then evaluate the coefficient at z
       for key, vec_value in b.items():
         vec, value = vec_value
+        rust_value = simplify(value.to_poly_expr_rust(z))
         value = simplify(value.to_poly_expr(z))
-        if value == 0:
+        if value == 0 or rust_value == 0:
           raise Exception("value should not be zero")
 
         # This term is normal: i.e., either the constant term that is a structured
@@ -1177,16 +1178,16 @@ class PIOPFromVOProtocol(object):
         if (isinstance(vec, NamedVector) and not vec.local_evaluate) or key == "one":
           _key = key
           poly = "one" if key == "one" else vec_to_poly_dict[vec.key()]
-          rust_value = rust(value)
           value = latex(value)
+          rust_value = rust(rust_value)
         else: # In case it is locally evaluatable polynomial, this term should be
           # regarded as part of the constant, instead of a polynomial. Let the verifier
           # locally evaluate this polynomial at z
           _key = "one"
           poly = "one"
-          rust_value = rust_mul(rust(value), rust(vec.hint_computation(z)))
           value = "%s\\cdot %s" \
                   % (latex(value), vec_to_poly_dict[vec.key()].dumps_var(z))
+          rust_value = rust_mul(rust(rust_value), rust(vec.hint_computation(z)))
 
         # if this polynomial (or constant) has not been handled before, just set the
         # value as the coefficient for this named polynomial
