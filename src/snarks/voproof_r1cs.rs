@@ -352,45 +352,808 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_r_vec_tilde,
             cm_t_vec
         );
-        define_vector_poly_mul_shift!(v_vec_1, h_vec, pk.w_vec, omega, shiftlength);
-        define_vector_reverse_omega_shift!(v_vec_2, h_vec, omega, shiftlength_1);
-        define_vector_poly_mul_shift!(v_vec_3, h_vec, pk.u_vec, omega, shiftlength_2);
-        define_vector_poly_mul_shift!(v_vec_4, h_vec, pk.y_vec, omega, shiftlength_3);
-        define_vector_poly_mul_shift!(v_vec_5, u_vec_1, u_vec_1, omega, shiftlength_4);
-        define_vector_poly_mul_shift!(v_vec_6, u_vec_1, s_vec, omega, shiftlength_5);
-        define_vector_poly_mul_shift!(v_vec_7, h_vec, s_vec, omega, shiftlength_6);
-        define_vector_poly_mul_shift!(v_vec_8, h_vec, pk.v_vec, omega, shiftlength_7);
-        define_vector_reverse_omega_shift!(v_vec_9, r_vec_tilde, omega, shiftlength_8);
-        define_vector_power_mul!(v_vec_10, s_vec, omega.inverse().unwrap(), 3 * cap_h);
-        define_vector_power_mul!(v_vec_11, s_vec, one!() / (gamma * omega), 3 * cap_h);
-        define_vector_power_mul!(v_vec_12, h_vec, omega.inverse().unwrap(), cap_k);
-        define_vector_power_mul!(v_vec_13, h_vec, one!() / (gamma * omega), cap_k);
-        define_vector_power_mul!(v_vec_14, v_vec_2, one!(), cap_s_a + cap_s_b + cap_s_c);
-        define_vector_power_mul!(v_vec_15, u_vec_1, omega.inverse().unwrap(), cap_h);
-        define_vector_power_mul!(v_vec_16, u_vec_1, omega.inverse().unwrap(), ell + 1);
-        define_vector_power_mul!(v_vec_17, x_vec, omega.inverse().unwrap(), ell + 1);
-        define_vector_power_mul!(
-            v_vec_18,
-            v_vec_9,
-            one!(),
-            cap_k + cap_s_a + cap_s_b + cap_s_c
+        define_mut!(sum_vec, vec!(zero!(); (maxshift + n + 1) as usize));
+        define_mut!(
+            hcheck_vec,
+            vec!(zero!(); (2 * maxshift + 2 * n + 1) as usize)
         );
-        define_vector_power_mul!(
-            v_vec_19,
-            t_vec,
-            omega.inverse().unwrap(),
-            cap_s_a + cap_s_b + cap_s_c + 1
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                linear_combination!(linear_combination_base_zero!(
+                    mu,
+                    range_index!(1, 3 * cap_h, minus_i64!(i, 1)),
+                    -scalar_to_field!(1),
+                    power_vector_index!(gamma, 3 * cap_h, minus_i64!(i, 1))
+                )),
+                vector_index!(s_vec, minus_i64!(i, 1))
+            )
         );
+        define_vector_poly_mul!(
+            abnaive_vec,
+            expression_vector!(
+                i,
+                linear_combination!(linear_combination_base_zero!(
+                    mu,
+                    range_index!(1, 3 * cap_h, minus_i64!(i, 1)),
+                    -scalar_to_field!(1),
+                    power_vector_index!(gamma, 3 * cap_h, minus_i64!(i, 1))
+                )),
+                maxshift + n + 1
+            ),
+            expression_vector!(i, vector_index!(s_vec, minus_i64!(i, 1)), maxshift + n + 1),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec);
+        define_vector_power_mul!(v_vec_1, s_vec, omega.inverse().unwrap(), 3 * cap_h);
+        define_vector_power_mul!(v_vec_2, s_vec, one!() / (gamma * omega), 3 * cap_h);
+        // The vector pair here is \mu\cdot \vec{1}^{3 H}-\vec{\gamma}^{3 H} and \vec{s}
+        define_expression_vector!(
+            atimesb_vec,
+            i,
+            linear_combination_base_zero!(
+                mu * power(omega, 3 * cap_h - 1),
+                vector_index!(v_vec_1, minus_i64!(i - maxshift - n, 2 - 3 * cap_h)),
+                -power(gamma * omega, 3 * cap_h - 1),
+                vector_index!(v_vec_2, minus_i64!(i - maxshift - n, 2 - 3 * cap_h))
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec,
+            zero_pad!(abnaive_vec, 2 * maxshift + 2 * n + 1),
+            "The 1'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                linear_combination!(neg!(range_index!(1, 3 * cap_h, minus_i64!(i, 1)))),
+                linear_combination!(range_index!(1, 3 * cap_h, minus_i64!(i, 1)))
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_1,
+            expression_vector!(
+                i,
+                linear_combination!(neg!(range_index!(1, 3 * cap_h, minus_i64!(i, 1)))),
+                maxshift + n + 1
+            ),
+            expression_vector!(
+                i,
+                linear_combination!(range_index!(1, 3 * cap_h, minus_i64!(i, 1))),
+                maxshift + n + 1
+            ),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_1);
         define_power_power_mul!(
-            v_vec_20,
+            v_vec_3,
             omega.inverse().unwrap(),
             3 * cap_h,
             one!(),
             3 * cap_h
         );
-        define_power_power_mul!(v_vec_21, omega.inverse().unwrap(), cap_k, one!(), cap_k);
+        // The vector pair here is -\vec{1}^{3 H} and \vec{1}^{3 H}
+        define_expression_vector!(
+            atimesb_vec_1,
+            i,
+            mul!(
+                -power(omega, 3 * cap_h - 1),
+                vector_index!(v_vec_3, minus_i64!(i - maxshift - n, 2 - 3 * cap_h))
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_1,
+            zero_pad!(abnaive_vec_1, 2 * maxshift + 2 * n + 1),
+            "The 2'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                linear_combination!(linear_combination_base_zero!(
+                    alpha * nu,
+                    range_index!(1, cap_k, minus_i64!(i, 1)),
+                    -alpha,
+                    power_vector_index!(gamma, cap_k, minus_i64!(i, 1))
+                )),
+                vector_index!(h_vec, minus_i64!(i, 1))
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_2,
+            expression_vector!(
+                i,
+                linear_combination!(linear_combination_base_zero!(
+                    alpha * nu,
+                    range_index!(1, cap_k, minus_i64!(i, 1)),
+                    -alpha,
+                    power_vector_index!(gamma, cap_k, minus_i64!(i, 1))
+                )),
+                maxshift + n + 1
+            ),
+            expression_vector!(i, vector_index!(h_vec, minus_i64!(i, 1)), maxshift + n + 1),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_2);
+        define_vector_power_mul!(v_vec_4, h_vec, omega.inverse().unwrap(), cap_k);
+        define_vector_power_mul!(v_vec_5, h_vec, one!() / (gamma * omega), cap_k);
+        // The vector pair here is \alpha \nu\cdot \vec{1}^{K}- \alpha\cdot \vec{\gamma}^{K} and \vec{h}
+        define_expression_vector!(
+            atimesb_vec_2,
+            i,
+            linear_combination_base_zero!(
+                alpha * nu * power(omega, cap_k - 1),
+                vector_index!(v_vec_4, minus_i64!(i - maxshift - n, 2 - cap_k)),
+                -alpha * power(gamma * omega, cap_k - 1),
+                vector_index!(v_vec_5, minus_i64!(i - maxshift - n, 2 - cap_k))
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_2,
+            zero_pad!(abnaive_vec_2, 2 * maxshift + 2 * n + 1),
+            "The 3'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                linear_combination!(mul!(-alpha, range_index!(1, cap_k, minus_i64!(i, 1)))),
+                linear_combination!(range_index!(1, cap_k, minus_i64!(i, 1)))
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_3,
+            expression_vector!(
+                i,
+                linear_combination!(mul!(-alpha, range_index!(1, cap_k, minus_i64!(i, 1)))),
+                maxshift + n + 1
+            ),
+            expression_vector!(
+                i,
+                linear_combination!(range_index!(1, cap_k, minus_i64!(i, 1))),
+                maxshift + n + 1
+            ),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_3);
+        define_power_power_mul!(v_vec_6, omega.inverse().unwrap(), cap_k, one!(), cap_k);
+        // The vector pair here is - \alpha\cdot \vec{1}^{K} and \vec{1}^{K}
+        define_expression_vector!(
+            atimesb_vec_3,
+            i,
+            mul!(
+                -alpha * power(omega, cap_k - 1),
+                vector_index!(v_vec_6, minus_i64!(i - maxshift - n, 2 - cap_k))
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_3,
+            zero_pad!(abnaive_vec_3, 2 * maxshift + 2 * n + 1),
+            "The 4'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                mul!(power(alpha, 2), vector_index!(h_vec, minus_i64!(i, 1))),
+                linear_combination!(
+                    mul!(mu * nu, range_index!(1, ell_1, minus_i64!(i, cap_k + 1))),
+                    -mu,
+                    vector_index!(pk.w_vec, minus_i64!(i, cap_k + 1)),
+                    -nu,
+                    vector_index!(pk.u_vec, minus_i64!(i, cap_k + 1)),
+                    zero!(),
+                    vector_index!(pk.y_vec, minus_i64!(i, cap_k + 1))
+                )
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_4,
+            expression_vector!(
+                i,
+                mul!(power(alpha, 2), vector_index!(h_vec, minus_i64!(i, 1))),
+                maxshift + n + 1
+            ),
+            expression_vector!(
+                i,
+                linear_combination!(
+                    mul!(mu * nu, range_index!(1, ell_1, minus_i64!(i, cap_k + 1))),
+                    -mu,
+                    vector_index!(pk.w_vec, minus_i64!(i, cap_k + 1)),
+                    -nu,
+                    vector_index!(pk.u_vec, minus_i64!(i, cap_k + 1)),
+                    zero!(),
+                    vector_index!(pk.y_vec, minus_i64!(i, cap_k + 1))
+                ),
+                maxshift + n + 1
+            ),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_4);
+        define_vector_poly_mul_shift!(v_vec_7, h_vec, pk.w_vec, omega, shiftlength);
+        define_vector_reverse_omega_shift!(v_vec_8, h_vec, omega, shiftlength_1);
+        define_vector_poly_mul_shift!(v_vec_9, h_vec, pk.u_vec, omega, shiftlength_2);
+        define_vector_poly_mul_shift!(v_vec_10, h_vec, pk.y_vec, omega, shiftlength_3);
+        define_vector_power_mul!(v_vec_11, v_vec_8, one!(), cap_s_a + cap_s_b + cap_s_c);
+        // The vector pair here is \alpha^{2}\cdot \vec{h} and - \mu\cdot {\vec{w}}^{\to K}- \nu\cdot {\vec{u}}^{\to K}+{\vec{y}}^{\to K}+\mu \nu\cdot {\vec{1}^{S_{a} + S_{b} + S_{c}}}^{\to K}
+        define_expression_vector!(
+            atimesb_vec_4,
+            i,
+            linear_combination_base_zero!(
+                -power(alpha, 2) * mu,
+                vector_index!(
+                    v_vec_7,
+                    minus_i64!(i - maxshift - n, cap_k - shiftlength + 1)
+                ),
+                -power(alpha, 2) * nu,
+                vector_index!(
+                    v_vec_9,
+                    minus_i64!(i - maxshift - n, cap_k - shiftlength_2 + 1)
+                ),
+                power(alpha, 2),
+                vector_index!(
+                    v_vec_10,
+                    minus_i64!(i - maxshift - n, cap_k - shiftlength_3 + 1)
+                ),
+                power(alpha, 2) * mu * nu,
+                vector_index!(
+                    v_vec_11,
+                    minus_i64!(i - maxshift - n, cap_k - shiftlength_1 + 1)
+                )
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_4,
+            zero_pad!(abnaive_vec_4, 2 * maxshift + 2 * n + 1),
+            "The 5'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                linear_combination!(mul!(
+                    -power(alpha, 2),
+                    range_index!(1, ell_1, minus_i64!(i, cap_k + 1))
+                )),
+                linear_combination!(range_index!(1, ell_1, minus_i64!(i, cap_k + 1)))
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_5,
+            expression_vector!(
+                i,
+                linear_combination!(mul!(
+                    -power(alpha, 2),
+                    range_index!(1, ell_1, minus_i64!(i, cap_k + 1))
+                )),
+                maxshift + n + 1
+            ),
+            expression_vector!(
+                i,
+                linear_combination!(range_index!(1, ell_1, minus_i64!(i, cap_k + 1))),
+                maxshift + n + 1
+            ),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_5);
         define_power_power_mul!(
-            v_vec_22,
+            v_vec_12,
+            omega.inverse().unwrap(),
+            cap_s_a + cap_s_b + cap_s_c,
+            one!(),
+            cap_s_a + cap_s_b + cap_s_c
+        );
+        // The vector pair here is - \alpha^{2}\cdot {\vec{1}^{S_{a} + S_{b} + S_{c}}}^{\to K} and {\vec{1}^{S_{a} + S_{b} + S_{c}}}^{\to K}
+        define_expression_vector!(
+            atimesb_vec_5,
+            i,
+            mul!(
+                -power(alpha, 2) * power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1),
+                vector_index!(
+                    v_vec_12,
+                    minus_i64!(i - maxshift - n, -cap_s_a - cap_s_b - cap_s_c + 2)
+                )
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_5,
+            zero_pad!(abnaive_vec_5, 2 * maxshift + 2 * n + 1),
+            "The 6'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                mul!(
+                    power(alpha, 3),
+                    vector_index!(u_vec_1, minus_i64!(i, -cap_h + n + 1))
+                ),
+                vector_index!(u_vec_1, minus_i64!(i, -2 * cap_h + n + 1))
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_6,
+            expression_vector!(
+                i,
+                mul!(
+                    power(alpha, 3),
+                    vector_index!(u_vec_1, minus_i64!(i, -cap_h + n + 1))
+                ),
+                maxshift + n + 1
+            ),
+            expression_vector!(
+                i,
+                vector_index!(u_vec_1, minus_i64!(i, -2 * cap_h + n + 1)),
+                maxshift + n + 1
+            ),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_6);
+        define_vector_poly_mul_shift!(v_vec_13, u_vec_1, u_vec_1, omega, shiftlength_4);
+        // The vector pair here is \alpha^{3}\cdot {{\vec{u}}_{\mathtt{\text{1}}}}^{\to - H + K + S_{a} + S_{b} + S_{c}} and {{\vec{u}}_{\mathtt{\text{1}}}}^{\to - 2 H + K + S_{a} + S_{b} + S_{c}}
+        define_expression_vector!(
+            atimesb_vec_6,
+            i,
+            mul!(
+                power(alpha, 3) * power(omega, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c),
+                vector_index!(
+                    v_vec_13,
+                    minus_i64!(i - maxshift - n, -cap_h - shiftlength_4 + 1)
+                )
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_6,
+            zero_pad!(abnaive_vec_6, 2 * maxshift + 2 * n + 1),
+            "The 7'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                linear_combination!(mul!(
+                    -power(alpha, 3),
+                    range_index!(1, cap_h, minus_i64!(i, -cap_h + n + 1))
+                )),
+                vector_index!(u_vec_1, minus_i64!(i, -3 * cap_h + n + 1))
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_7,
+            expression_vector!(
+                i,
+                linear_combination!(mul!(
+                    -power(alpha, 3),
+                    range_index!(1, cap_h, minus_i64!(i, -cap_h + n + 1))
+                )),
+                maxshift + n + 1
+            ),
+            expression_vector!(
+                i,
+                vector_index!(u_vec_1, minus_i64!(i, -3 * cap_h + n + 1)),
+                maxshift + n + 1
+            ),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_7);
+        define_vector_power_mul!(v_vec_14, u_vec_1, omega.inverse().unwrap(), cap_h);
+        // The vector pair here is - \alpha^{3}\cdot {\vec{1}^{H}}^{\to - H + K + S_{a} + S_{b} + S_{c}} and {{\vec{u}}_{\mathtt{\text{1}}}}^{\to - 3 H + K + S_{a} + S_{b} + S_{c}}
+        define_expression_vector!(
+            atimesb_vec_7,
+            i,
+            mul!(
+                -power(alpha, 3) * power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1),
+                vector_index!(v_vec_14, minus_i64!(i - maxshift - n, 2 - 3 * cap_h))
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_7,
+            zero_pad!(abnaive_vec_7, 2 * maxshift + 2 * n + 1),
+            "The 8'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                linear_combination!(mul!(
+                    power(alpha, 4),
+                    range_index!(1, ell + 1, minus_i64!(i, 3 * cap_h + 1))
+                )),
+                linear_combination!(
+                    linear_combination!(multi_delta!(i, -scalar_to_field!(1), 3 * cap_h + 1)),
+                    zero!(),
+                    vector_index!(u_vec_1, minus_i64!(i, 1)),
+                    -scalar_to_field!(1),
+                    vector_index!(x_vec, minus_i64!(i, 3 * cap_h + 2))
+                )
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_8,
+            expression_vector!(
+                i,
+                linear_combination!(mul!(
+                    power(alpha, 4),
+                    range_index!(1, ell + 1, minus_i64!(i, 3 * cap_h + 1))
+                )),
+                maxshift + n + 1
+            ),
+            expression_vector!(
+                i,
+                linear_combination!(
+                    linear_combination!(multi_delta!(i, -scalar_to_field!(1), 3 * cap_h + 1)),
+                    zero!(),
+                    vector_index!(u_vec_1, minus_i64!(i, 1)),
+                    -scalar_to_field!(1),
+                    vector_index!(x_vec, minus_i64!(i, 3 * cap_h + 2))
+                ),
+                maxshift + n + 1
+            ),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_8);
+        define_vector_power_mul!(v_vec_15, u_vec_1, omega.inverse().unwrap(), ell + 1);
+        define_vector_power_mul!(v_vec_16, x_vec, omega.inverse().unwrap(), ell + 1);
+        // The vector pair here is \alpha^{4}\cdot {\vec{1}^{\ell + 1}}^{\to 3 H} and {\vec{u}}_{\mathtt{\text{1}}}-{\vec{x}}^{\to 3 H + 1}-\vec{e}_{3 H + 1}
+        define_expression_vector!(
+            atimesb_vec_8,
+            i,
+            linear_combination!(
+                mul!(
+                    -power(alpha, 4) * power(omega, 3 * cap_h + ell),
+                    power_vector_index!(
+                        omega.inverse().unwrap(),
+                        ell + 1,
+                        minus_i64!(i - maxshift - n, 1 - ell)
+                    )
+                ),
+                power(alpha, 4) * power(omega, 3 * cap_h + ell),
+                vector_index!(v_vec_15, minus_i64!(i - maxshift - n, -3 * cap_h - ell + 1)),
+                -power(alpha, 4) * power(omega, 3 * cap_h + ell),
+                vector_index!(v_vec_16, minus_i64!(i - maxshift - n, 2 - ell))
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_8,
+            zero_pad!(abnaive_vec_8, 2 * maxshift + 2 * n + 1),
+            "The 9'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                mul!(
+                    power(alpha, 5),
+                    vector_index!(u_vec_1, minus_i64!(i, -3 * cap_h - cap_k + n + 1))
+                ),
+                vector_index!(s_vec, minus_i64!(i, -3 * cap_h - cap_k + n + 1))
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_9,
+            expression_vector!(
+                i,
+                mul!(
+                    power(alpha, 5),
+                    vector_index!(u_vec_1, minus_i64!(i, -3 * cap_h - cap_k + n + 1))
+                ),
+                maxshift + n + 1
+            ),
+            expression_vector!(
+                i,
+                vector_index!(s_vec, minus_i64!(i, -3 * cap_h - cap_k + n + 1)),
+                maxshift + n + 1
+            ),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_9);
+        define_vector_poly_mul_shift!(v_vec_17, u_vec_1, s_vec, omega, shiftlength_5);
+        // The vector pair here is \alpha^{5}\cdot {{\vec{u}}_{\mathtt{\text{1}}}}^{\to - 3 H + S_{a} + S_{b} + S_{c}} and {\vec{s}}^{\to - 3 H + S_{a} + S_{b} + S_{c}}
+        define_expression_vector!(
+            atimesb_vec_9,
+            i,
+            mul!(
+                power(alpha, 5) * power(omega, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c),
+                vector_index!(v_vec_17, minus_i64!(i - maxshift - n, 1 - shiftlength_5))
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_9,
+            zero_pad!(abnaive_vec_9, 2 * maxshift + 2 * n + 1),
+            "The 10'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                mul!(
+                    -power(alpha, 5) * beta,
+                    vector_index!(h_vec, minus_i64!(i, -cap_k + n + 1))
+                ),
+                vector_index!(s_vec, minus_i64!(i, -3 * cap_h - cap_k + n + 1))
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_10,
+            expression_vector!(
+                i,
+                mul!(
+                    -power(alpha, 5) * beta,
+                    vector_index!(h_vec, minus_i64!(i, -cap_k + n + 1))
+                ),
+                maxshift + n + 1
+            ),
+            expression_vector!(
+                i,
+                vector_index!(s_vec, minus_i64!(i, -3 * cap_h - cap_k + n + 1)),
+                maxshift + n + 1
+            ),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_10);
+        define_vector_poly_mul_shift!(v_vec_18, h_vec, s_vec, omega, shiftlength_6);
+        // The vector pair here is - \alpha^{5} \beta\cdot {\vec{h}}^{\to S_{a} + S_{b} + S_{c}} and {\vec{s}}^{\to - 3 H + S_{a} + S_{b} + S_{c}}
+        define_expression_vector!(
+            atimesb_vec_10,
+            i,
+            mul!(
+                -power(alpha, 5) * beta * power(omega, cap_s_a + cap_s_b + cap_s_c),
+                vector_index!(
+                    v_vec_18,
+                    minus_i64!(i - maxshift - n, -3 * cap_h - shiftlength_6 + 1)
+                )
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_10,
+            zero_pad!(abnaive_vec_10, 2 * maxshift + 2 * n + 1),
+            "The 11'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                mul!(
+                    -power(alpha, 5) * beta,
+                    vector_index!(h_vec, minus_i64!(i, -cap_k - ell_1 + n + 1))
+                ),
+                vector_index!(pk.v_vec, minus_i64!(i, -ell_1 + n + 1))
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_11,
+            expression_vector!(
+                i,
+                mul!(
+                    -power(alpha, 5) * beta,
+                    vector_index!(h_vec, minus_i64!(i, -cap_k - ell_1 + n + 1))
+                ),
+                maxshift + n + 1
+            ),
+            expression_vector!(
+                i,
+                vector_index!(pk.v_vec, minus_i64!(i, -ell_1 + n + 1)),
+                maxshift + n + 1
+            ),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_11);
+        define_vector_poly_mul_shift!(v_vec_19, h_vec, pk.v_vec, omega, shiftlength_7);
+        // The vector pair here is - \alpha^{5} \beta\cdot \vec{h} and {\vec{v}}^{\to K}
+        define_expression_vector!(
+            atimesb_vec_11,
+            i,
+            mul!(
+                -power(alpha, 5) * beta,
+                vector_index!(
+                    v_vec_19,
+                    minus_i64!(i - maxshift - n, cap_k - shiftlength_7 + 1)
+                )
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_11,
+            zero_pad!(abnaive_vec_11, 2 * maxshift + 2 * n + 1),
+            "The 12'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                linear_combination_base_zero!(
+                    -power(alpha, 5),
+                    vector_index!(r_vec_tilde, minus_i64!(i, 1)),
+                    power(alpha, 5),
+                    vector_index!(r_vec_tilde, minus_i64!(i, 2))
+                ),
+                linear_combination!(range_index!(1, n, minus_i64!(i, 1)))
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_12,
+            expression_vector!(
+                i,
+                linear_combination_base_zero!(
+                    -power(alpha, 5),
+                    vector_index!(r_vec_tilde, minus_i64!(i, 1)),
+                    power(alpha, 5),
+                    vector_index!(r_vec_tilde, minus_i64!(i, 2))
+                ),
+                maxshift + n + 1
+            ),
+            expression_vector!(
+                i,
+                linear_combination!(range_index!(1, n, minus_i64!(i, 1))),
+                maxshift + n + 1
+            ),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_12);
+        define_vector_reverse_omega_shift!(v_vec_20, r_vec_tilde, omega, shiftlength_8);
+        define_vector_power_mul!(
+            v_vec_21,
+            v_vec_20,
+            one!(),
+            cap_k + cap_s_a + cap_s_b + cap_s_c
+        );
+        // The vector pair here is - \alpha^{5}\cdot \tilde{\vec{r}}+\alpha^{5}\cdot {\tilde{\vec{r}}}^{\to 1} and \vec{1}^{K + S_{a} + S_{b} + S_{c}}
+        define_expression_vector!(
+            atimesb_vec_12,
+            i,
+            linear_combination_base_zero!(
+                -power(alpha, 5),
+                vector_index!(v_vec_21, minus_i64!(i - maxshift - n, 1 - shiftlength_8)),
+                power(alpha, 5) * omega,
+                vector_index!(v_vec_21, minus_i64!(i - maxshift - n, -shiftlength_8))
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_12,
+            zero_pad!(abnaive_vec_12, 2 * maxshift + 2 * n + 1),
+            "The 13'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                mul!(
+                    power(alpha, 6),
+                    vector_index!(r_vec_tilde, minus_i64!(i, 1))
+                ),
+                linear_combination!(linear_combination!(multi_delta!(i, zero!(), n)))
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_13,
+            expression_vector!(
+                i,
+                mul!(
+                    power(alpha, 6),
+                    vector_index!(r_vec_tilde, minus_i64!(i, 1))
+                ),
+                maxshift + n + 1
+            ),
+            expression_vector!(
+                i,
+                linear_combination!(linear_combination!(multi_delta!(i, zero!(), n))),
+                maxshift + n + 1
+            ),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_13);
+        define_vector_reverse_omega_shift!(v_vec_22, r_vec_tilde, omega, shiftlength_9);
+        // The vector pair here is \alpha^{6}\cdot \tilde{\vec{r}} and \vec{e}_{K + S_{a} + S_{b} + S_{c}}
+        define_expression_vector!(
+            atimesb_vec_13,
+            i,
+            mul!(
+                power(alpha, 6),
+                vector_index!(v_vec_22, minus_i64!(i - maxshift - n, n - shiftlength_9))
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_13,
+            zero_pad!(abnaive_vec_13, 2 * maxshift + 2 * n + 1),
+            "The 14'th convolution is incorrect"
+        );
+        add_expression_vector_to_vector!(
+            sum_vec,
+            i,
+            mul!(
+                linear_combination!(neg!(range_index!(1, maxshift + 1, minus_i64!(i, n + 1)))),
+                vector_index!(t_vec, minus_i64!(i, n))
+            )
+        );
+        define_vector_poly_mul!(
+            abnaive_vec_14,
+            expression_vector!(
+                i,
+                linear_combination!(neg!(range_index!(1, maxshift + 1, minus_i64!(i, n + 1)))),
+                maxshift + n + 1
+            ),
+            expression_vector!(i, vector_index!(t_vec, minus_i64!(i, n)), maxshift + n + 1),
+            omega
+        );
+        add_vector_to_vector!(hcheck_vec, abnaive_vec_14);
+        define_vector_power_mul!(
+            v_vec_23,
+            t_vec,
+            omega.inverse().unwrap(),
+            cap_s_a + cap_s_b + cap_s_c + 1
+        );
+        // The vector pair here is -{\vec{1}^{S_{a} + S_{b} + S_{c} + 1}}^{\to K + S_{a} + S_{b} + S_{c}} and {\vec{t}}^{\to K + S_{a} + S_{b} + S_{c} - 1}
+        define_expression_vector!(
+            atimesb_vec_14,
+            i,
+            mul!(
+                -power(omega, cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c),
+                vector_index!(
+                    v_vec_23,
+                    minus_i64!(i - maxshift - n, -cap_s_a - cap_s_b - cap_s_c)
+                )
+            ),
+            2 * maxshift + 2 * n + 1
+        );
+        check_vector_eq!(
+            atimesb_vec_14,
+            zero_pad!(abnaive_vec_14, 2 * maxshift + 2 * n + 1),
+            "The 15'th convolution is incorrect"
+        );
+        define_vector_poly_mul_shift!(v_vec_24, h_vec, pk.w_vec, omega, shiftlength_10);
+        define_vector_reverse_omega_shift!(v_vec_25, h_vec, omega, shiftlength_11);
+        define_vector_poly_mul_shift!(v_vec_26, h_vec, pk.u_vec, omega, shiftlength_12);
+        define_vector_poly_mul_shift!(v_vec_27, h_vec, pk.y_vec, omega, shiftlength_13);
+        define_vector_poly_mul_shift!(v_vec_28, u_vec_1, u_vec_1, omega, shiftlength_14);
+        define_vector_poly_mul_shift!(v_vec_29, u_vec_1, s_vec, omega, shiftlength_15);
+        define_vector_poly_mul_shift!(v_vec_30, h_vec, s_vec, omega, shiftlength_16);
+        define_vector_poly_mul_shift!(v_vec_31, h_vec, pk.v_vec, omega, shiftlength_17);
+        define_vector_reverse_omega_shift!(v_vec_32, r_vec_tilde, omega, shiftlength_18);
+        define_vector_power_mul!(v_vec_33, s_vec, omega.inverse().unwrap(), 3 * cap_h);
+        define_vector_power_mul!(v_vec_34, s_vec, one!() / (gamma * omega), 3 * cap_h);
+        define_vector_power_mul!(v_vec_35, h_vec, omega.inverse().unwrap(), cap_k);
+        define_vector_power_mul!(v_vec_36, h_vec, one!() / (gamma * omega), cap_k);
+        define_vector_power_mul!(v_vec_37, v_vec_25, one!(), cap_s_a + cap_s_b + cap_s_c);
+        define_vector_power_mul!(v_vec_38, u_vec_1, omega.inverse().unwrap(), cap_h);
+        define_vector_power_mul!(v_vec_39, u_vec_1, omega.inverse().unwrap(), ell + 1);
+        define_vector_power_mul!(v_vec_40, x_vec, omega.inverse().unwrap(), ell + 1);
+        define_vector_power_mul!(
+            v_vec_41,
+            v_vec_32,
+            one!(),
+            cap_k + cap_s_a + cap_s_b + cap_s_c
+        );
+        define_vector_power_mul!(
+            v_vec_42,
+            t_vec,
+            omega.inverse().unwrap(),
+            cap_s_a + cap_s_b + cap_s_c + 1
+        );
+        define_power_power_mul!(
+            v_vec_43,
+            omega.inverse().unwrap(),
+            3 * cap_h,
+            one!(),
+            3 * cap_h
+        );
+        define_power_power_mul!(v_vec_44, omega.inverse().unwrap(), cap_k, one!(), cap_k);
+        define_power_power_mul!(
+            v_vec_45,
             omega.inverse().unwrap(),
             cap_s_a + cap_s_b + cap_s_c,
             one!(),
@@ -410,73 +1173,73 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 ),
                 -power(alpha, 2) * mu,
                 vector_index!(
-                    v_vec_1,
-                    minus_i64!(i - maxshift - n, cap_k - shiftlength + 1)
+                    v_vec_24,
+                    minus_i64!(i - maxshift - n, cap_k - shiftlength_10 + 1)
                 ),
                 -power(alpha, 2) * nu,
                 vector_index!(
-                    v_vec_3,
-                    minus_i64!(i - maxshift - n, cap_k - shiftlength_2 + 1)
+                    v_vec_26,
+                    minus_i64!(i - maxshift - n, cap_k - shiftlength_12 + 1)
                 ),
                 power(alpha, 2),
                 vector_index!(
-                    v_vec_4,
-                    minus_i64!(i - maxshift - n, cap_k - shiftlength_3 + 1)
+                    v_vec_27,
+                    minus_i64!(i - maxshift - n, cap_k - shiftlength_13 + 1)
                 ),
                 power(alpha, 3) * power(omega, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c),
                 vector_index!(
-                    v_vec_5,
-                    minus_i64!(i - maxshift - n, -cap_h - shiftlength_4 + 1)
+                    v_vec_28,
+                    minus_i64!(i - maxshift - n, -cap_h - shiftlength_14 + 1)
                 ),
                 power(alpha, 5) * power(omega, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c),
-                vector_index!(v_vec_6, minus_i64!(i - maxshift - n, 1 - shiftlength_5)),
+                vector_index!(v_vec_29, minus_i64!(i - maxshift - n, 1 - shiftlength_15)),
                 -power(alpha, 5) * beta * power(omega, cap_s_a + cap_s_b + cap_s_c),
                 vector_index!(
-                    v_vec_7,
-                    minus_i64!(i - maxshift - n, -3 * cap_h - shiftlength_6 + 1)
+                    v_vec_30,
+                    minus_i64!(i - maxshift - n, -3 * cap_h - shiftlength_16 + 1)
                 ),
                 -power(alpha, 5) * beta,
                 vector_index!(
-                    v_vec_8,
-                    minus_i64!(i - maxshift - n, cap_k - shiftlength_7 + 1)
+                    v_vec_31,
+                    minus_i64!(i - maxshift - n, cap_k - shiftlength_17 + 1)
                 ),
                 power(alpha, 6),
-                vector_index!(v_vec_9, minus_i64!(i - maxshift - n, n - shiftlength_8)),
+                vector_index!(v_vec_32, minus_i64!(i - maxshift - n, n - shiftlength_18)),
                 mu * power(omega, 3 * cap_h - 1),
-                vector_index!(v_vec_10, minus_i64!(i - maxshift - n, 2 - 3 * cap_h)),
+                vector_index!(v_vec_33, minus_i64!(i - maxshift - n, 2 - 3 * cap_h)),
                 -power(gamma * omega, 3 * cap_h - 1),
-                vector_index!(v_vec_11, minus_i64!(i - maxshift - n, 2 - 3 * cap_h)),
+                vector_index!(v_vec_34, minus_i64!(i - maxshift - n, 2 - 3 * cap_h)),
                 alpha * nu * power(omega, cap_k - 1),
-                vector_index!(v_vec_12, minus_i64!(i - maxshift - n, 2 - cap_k)),
+                vector_index!(v_vec_35, minus_i64!(i - maxshift - n, 2 - cap_k)),
                 -alpha * power(gamma * omega, cap_k - 1),
-                vector_index!(v_vec_13, minus_i64!(i - maxshift - n, 2 - cap_k)),
+                vector_index!(v_vec_36, minus_i64!(i - maxshift - n, 2 - cap_k)),
                 power(alpha, 2) * mu * nu,
                 vector_index!(
-                    v_vec_14,
-                    minus_i64!(i - maxshift - n, cap_k - shiftlength_1 + 1)
+                    v_vec_37,
+                    minus_i64!(i - maxshift - n, cap_k - shiftlength_11 + 1)
                 ),
                 -power(alpha, 3) * power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1),
-                vector_index!(v_vec_15, minus_i64!(i - maxshift - n, 2 - 3 * cap_h)),
+                vector_index!(v_vec_38, minus_i64!(i - maxshift - n, 2 - 3 * cap_h)),
                 power(alpha, 4) * power(omega, 3 * cap_h + ell),
-                vector_index!(v_vec_16, minus_i64!(i - maxshift - n, -3 * cap_h - ell + 1)),
+                vector_index!(v_vec_39, minus_i64!(i - maxshift - n, -3 * cap_h - ell + 1)),
                 -power(alpha, 4) * power(omega, 3 * cap_h + ell),
-                vector_index!(v_vec_17, minus_i64!(i - maxshift - n, 2 - ell)),
+                vector_index!(v_vec_40, minus_i64!(i - maxshift - n, 2 - ell)),
                 -power(alpha, 5),
-                vector_index!(v_vec_18, minus_i64!(i - maxshift - n, 1 - shiftlength_8)),
+                vector_index!(v_vec_41, minus_i64!(i - maxshift - n, 1 - shiftlength_18)),
                 power(alpha, 5) * omega,
-                vector_index!(v_vec_18, minus_i64!(i - maxshift - n, -shiftlength_8)),
+                vector_index!(v_vec_41, minus_i64!(i - maxshift - n, -shiftlength_18)),
                 -power(omega, cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c),
                 vector_index!(
-                    v_vec_19,
+                    v_vec_42,
                     minus_i64!(i - maxshift - n, -cap_s_a - cap_s_b - cap_s_c)
                 ),
                 -power(omega, 3 * cap_h - 1),
-                vector_index!(v_vec_20, minus_i64!(i - maxshift - n, 2 - 3 * cap_h)),
+                vector_index!(v_vec_43, minus_i64!(i - maxshift - n, 2 - 3 * cap_h)),
                 -alpha * power(omega, cap_k - 1),
-                vector_index!(v_vec_21, minus_i64!(i - maxshift - n, 2 - cap_k)),
+                vector_index!(v_vec_44, minus_i64!(i - maxshift - n, 2 - cap_k)),
                 -power(alpha, 2) * power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1),
                 vector_index!(
-                    v_vec_22,
+                    v_vec_45,
                     minus_i64!(i - maxshift - n, -cap_s_a - cap_s_b - cap_s_c + 2)
                 )
             ),
@@ -495,50 +1258,50 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                     )
                 ),
                 -power(alpha, 2) * mu,
-                vector_index!(v_vec_1, minus_i64!(i + 1, cap_k - shiftlength + 1)),
+                vector_index!(v_vec_24, minus_i64!(i + 1, cap_k - shiftlength_10 + 1)),
                 -power(alpha, 2) * nu,
-                vector_index!(v_vec_3, minus_i64!(i + 1, cap_k - shiftlength_2 + 1)),
+                vector_index!(v_vec_26, minus_i64!(i + 1, cap_k - shiftlength_12 + 1)),
                 power(alpha, 2),
-                vector_index!(v_vec_4, minus_i64!(i + 1, cap_k - shiftlength_3 + 1)),
+                vector_index!(v_vec_27, minus_i64!(i + 1, cap_k - shiftlength_13 + 1)),
                 power(alpha, 3) * power(omega, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c),
-                vector_index!(v_vec_5, minus_i64!(i + 1, -cap_h - shiftlength_4 + 1)),
+                vector_index!(v_vec_28, minus_i64!(i + 1, -cap_h - shiftlength_14 + 1)),
                 power(alpha, 5) * power(omega, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c),
-                vector_index!(v_vec_6, minus_i64!(i + 1, 1 - shiftlength_5)),
+                vector_index!(v_vec_29, minus_i64!(i + 1, 1 - shiftlength_15)),
                 -power(alpha, 5) * beta * power(omega, cap_s_a + cap_s_b + cap_s_c),
-                vector_index!(v_vec_7, minus_i64!(i + 1, -3 * cap_h - shiftlength_6 + 1)),
+                vector_index!(v_vec_30, minus_i64!(i + 1, -3 * cap_h - shiftlength_16 + 1)),
                 -power(alpha, 5) * beta,
-                vector_index!(v_vec_8, minus_i64!(i + 1, cap_k - shiftlength_7 + 1)),
+                vector_index!(v_vec_31, minus_i64!(i + 1, cap_k - shiftlength_17 + 1)),
                 power(alpha, 6),
-                vector_index!(v_vec_9, minus_i64!(i + 1, n - shiftlength_8)),
+                vector_index!(v_vec_32, minus_i64!(i + 1, n - shiftlength_18)),
                 mu * power(omega, 3 * cap_h - 1),
-                vector_index!(v_vec_10, minus_i64!(i + 1, 2 - 3 * cap_h)),
+                vector_index!(v_vec_33, minus_i64!(i + 1, 2 - 3 * cap_h)),
                 -power(gamma * omega, 3 * cap_h - 1),
-                vector_index!(v_vec_11, minus_i64!(i + 1, 2 - 3 * cap_h)),
+                vector_index!(v_vec_34, minus_i64!(i + 1, 2 - 3 * cap_h)),
                 alpha * nu * power(omega, cap_k - 1),
-                vector_index!(v_vec_12, minus_i64!(i + 1, 2 - cap_k)),
+                vector_index!(v_vec_35, minus_i64!(i + 1, 2 - cap_k)),
                 -alpha * power(gamma * omega, cap_k - 1),
-                vector_index!(v_vec_13, minus_i64!(i + 1, 2 - cap_k)),
+                vector_index!(v_vec_36, minus_i64!(i + 1, 2 - cap_k)),
                 power(alpha, 2) * mu * nu,
-                vector_index!(v_vec_14, minus_i64!(i + 1, cap_k - shiftlength_1 + 1)),
+                vector_index!(v_vec_37, minus_i64!(i + 1, cap_k - shiftlength_11 + 1)),
                 -power(alpha, 3) * power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1),
-                vector_index!(v_vec_15, minus_i64!(i + 1, 2 - 3 * cap_h)),
+                vector_index!(v_vec_38, minus_i64!(i + 1, 2 - 3 * cap_h)),
                 power(alpha, 4) * power(omega, 3 * cap_h + ell),
-                vector_index!(v_vec_16, minus_i64!(i + 1, -3 * cap_h - ell + 1)),
+                vector_index!(v_vec_39, minus_i64!(i + 1, -3 * cap_h - ell + 1)),
                 -power(alpha, 4) * power(omega, 3 * cap_h + ell),
-                vector_index!(v_vec_17, minus_i64!(i + 1, 2 - ell)),
+                vector_index!(v_vec_40, minus_i64!(i + 1, 2 - ell)),
                 -power(alpha, 5),
-                vector_index!(v_vec_18, minus_i64!(i + 1, 1 - shiftlength_8)),
+                vector_index!(v_vec_41, minus_i64!(i + 1, 1 - shiftlength_18)),
                 power(alpha, 5) * omega,
-                vector_index!(v_vec_18, minus_i64!(i + 1, -shiftlength_8)),
+                vector_index!(v_vec_41, minus_i64!(i + 1, -shiftlength_18)),
                 -power(omega, cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c),
-                vector_index!(v_vec_19, minus_i64!(i + 1, -cap_s_a - cap_s_b - cap_s_c)),
+                vector_index!(v_vec_42, minus_i64!(i + 1, -cap_s_a - cap_s_b - cap_s_c)),
                 -power(omega, 3 * cap_h - 1),
-                vector_index!(v_vec_20, minus_i64!(i + 1, 2 - 3 * cap_h)),
+                vector_index!(v_vec_43, minus_i64!(i + 1, 2 - 3 * cap_h)),
                 -alpha * power(omega, cap_k - 1),
-                vector_index!(v_vec_21, minus_i64!(i + 1, 2 - cap_k)),
+                vector_index!(v_vec_44, minus_i64!(i + 1, 2 - cap_k)),
                 -power(alpha, 2) * power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1),
                 vector_index!(
-                    v_vec_22,
+                    v_vec_45,
                     minus_i64!(i + 1, -cap_s_a - cap_s_b - cap_s_c + 2)
                 )
             ),
