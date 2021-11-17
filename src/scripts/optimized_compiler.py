@@ -1552,8 +1552,10 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     open_computation_rust = RustBuilder()
     open_computation_rust.append(rust_define("fs", rust_vec(fs))).end()
     open_computation_rust.append(rust_define("gs", rust_vec(gs))).end()
-    open_computation_rust.append(rust_define("z1", open_points[0])).end()
-    open_computation_rust.append(rust_define("z2", open_points[1])).end()
+
+    compute_zs = RustBuilder()
+    compute_zs.append(rust_define("z1", open_points[0])).end()
+    compute_zs.append(rust_define("z2", open_points[1])).end()
 
     compute_rand_xi = RustBuilder()
     compute_rand_xi.append(rust_builder_get_randomness_from_hash(
@@ -1573,8 +1575,6 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     verify_computation = Math("\\mathsf{vrfy}").paren(array).equals(1)
     verify_computation_rust = RustBuilder()
 
-    verify_computation_rust.let("z1").assign(open_points[0]).end()
-    verify_computation_rust.let("z2").assign(open_points[1]).end()
     verify_computation_rust.let("f_commitments").assign(rust_vec(fcomms)).end()
     verify_computation_rust.let("g_commitments").assign(rust_vec(gcomms)).end()
     verify_computation_rust.let("f_values").assign(rust_vec(fvals)).end()
@@ -1582,6 +1582,8 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
 
     self.prover_computes(open_computation, open_computation_rust)
     self.prover_computes_rust(compute_rand_xi)
+    self.prover_computes_rust(compute_zs)
+    self.verifier_computes_rust(compute_zs)
     self.verifier_computes_rust(compute_rand_xi)
     self.verifier_computes(verify_computation, verify_computation_rust)
 

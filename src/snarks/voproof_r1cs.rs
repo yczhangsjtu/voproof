@@ -754,8 +754,6 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         check_poly_eval!(g_poly, z, E::Fr::zero(), "g does not evaluate to 0 at z");
         define!(fs, vec!(h_vec_poly, u_vec_1_poly, r_vec_tilde_poly));
         define!(gs, vec!(g_poly));
-        define!(z1, omega / z);
-        define!(z2, z);
         get_randomness_from_hash!(
             rand_xi,
             E::Fr::one(),
@@ -800,6 +798,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             y_2,
             z
         );
+        define!(z1, omega / z);
+        define!(z2, z);
 
         let (cap_w, cap_w_1) =
             KZG10::batch_open(&pk.powers, &fs, &gs, &z1, &z2, &rand_xi, &rand_xi_2)?;
@@ -1033,6 +1033,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_h_vec_3,
             c_10
         );
+        define!(z1, omega / z);
+        define!(z2, z);
         get_randomness_from_hash!(
             rand_xi,
             E::Fr::one(),
@@ -1077,8 +1079,6 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             y_2,
             z
         );
-        let z1 = omega / z;
-        let z2 = z;
         let f_commitments = vec![cm_h_vec, cm_u_vec_1, cm_r_vec_tilde];
         let g_commitments = vec![cm_g];
         let f_values = vec![y, y_1, y_2];
