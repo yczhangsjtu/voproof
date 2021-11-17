@@ -1184,7 +1184,7 @@ class PIOPFromVOProtocol(object):
           # locally evaluate this polynomial at z
           _key = "one"
           poly = "one"
-          rust_value = "(%s) * (%s)" % (rust(value), rust(vec.hint_computation(z)))
+          rust_value = rust_mul(rust(value), rust(vec.hint_computation(z)))
           value = "%s\\cdot %s" \
                   % (latex(value), vec_to_poly_dict[vec.key()].dumps_var(z))
 

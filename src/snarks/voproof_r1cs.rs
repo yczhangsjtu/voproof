@@ -642,12 +642,14 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 * (E::Fr::one() - power(z, cap_s_a + cap_s_b + cap_s_c))
                 * (E::Fr::one() - power(omega / z, cap_s_a + cap_s_b + cap_s_c))
                 / ((E::Fr::one() - z) * (E::Fr::one() * z - omega)),
-            (power(alpha, 4)
-                * power(z, 3 * cap_h + 2)
-                * power(omega / z, 3 * cap_h)
-                * (-E::Fr::one() + power(omega / z, ell + 1))
-                / (E::Fr::one() * z - omega))
-                * (eval_vector_expression!(z, i, vector_index!(x_vec, i), ell)),
+            mul!(
+                power(alpha, 4)
+                    * power(z, 3 * cap_h + 2)
+                    * power(omega / z, 3 * cap_h)
+                    * (-E::Fr::one() + power(omega / z, ell + 1))
+                    / (E::Fr::one() * z - omega),
+                eval_vector_expression!(z, i, vector_index!(x_vec, i), ell)
+            ),
             power(alpha, 4)
                 * power(z, 3 * cap_h + 1)
                 * power(omega / z, 3 * cap_h)
@@ -963,12 +965,14 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 * (E::Fr::one() - power(z, cap_s_a + cap_s_b + cap_s_c))
                 * (E::Fr::one() - power(omega / z, cap_s_a + cap_s_b + cap_s_c))
                 / ((E::Fr::one() - z) * (E::Fr::one() * z - omega)),
-            (power(alpha, 4)
-                * power(z, 3 * cap_h + 2)
-                * power(omega / z, 3 * cap_h)
-                * (-E::Fr::one() + power(omega / z, ell + 1))
-                / (E::Fr::one() * z - omega))
-                * (eval_vector_expression!(z, i, vector_index!(x_vec, i), ell)),
+            mul!(
+                power(alpha, 4)
+                    * power(z, 3 * cap_h + 2)
+                    * power(omega / z, 3 * cap_h)
+                    * (-E::Fr::one() + power(omega / z, ell + 1))
+                    / (E::Fr::one() * z - omega),
+                eval_vector_expression!(z, i, vector_index!(x_vec, i), ell)
+            ),
             power(alpha, 4)
                 * power(z, 3 * cap_h + 1)
                 * power(omega / z, 3 * cap_h)
