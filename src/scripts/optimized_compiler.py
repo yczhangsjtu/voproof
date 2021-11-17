@@ -1235,7 +1235,10 @@ class PIOPFromVOProtocol(object):
         )
         lc.append(rust_eval_vector_expression_i(z, b.dumpr_at_index(sym_i), rust_n + rust_max_shift + q))
       piopexec.prover_computes_rust(rust_line_assert_eq(
-        rust_builder_eval_vector_as_poly(h, z).mul(z**(-(rust_h_inverse_degree-1))), lc
+        rust_mul(
+          rust_eval_vector_as_poly(h, z),
+          z**(-(rust_h_inverse_degree-1))),
+        lc
       ))
 
     # Transform the lists into latex and rust builders
@@ -1250,19 +1253,9 @@ class PIOPFromVOProtocol(object):
       else:
         latex_builder = Math(coeff_builder.coeff).assign(coeff_builder.latex_builder[0])
 
-      if len(coeff_builder.rust_builder) > 1:
-        rust_builder = rust_builder_define_sum(coeff_builder.coeff)
-        for item in coeff_builder.rust_builder:
-          rust_builder.append_to_last(item)
-        rust_builder.end()
-      else:
-        rust_builder = rust_builder_define(
-          coeff_builder.coeff,
-          coeff_builder.rust_builder[0]
-        ).end()
-
       coeff_builder.latex_builder = latex_builder
-      coeff_builder.rust_builder = rust_builder
+      coeff_builder.rust_builder = rust_line_define_sum(
+          coeff_builder.coeff, *coeff_builder.rust_builder)
 
     piopexec.combine_polynomial(gx, coeff_builders, self.degree_bound)
 
