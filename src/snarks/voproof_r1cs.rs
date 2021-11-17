@@ -220,29 +220,27 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_s_vec,
             cm_h_vec
         );
-        define_vec!(
+        define_expression_vector!(
             r_vec_1,
-            expression_vector!(
-                i,
-                power_linear_combination!(
-                    beta,
+            i,
+            power_linear_combination!(
+                beta,
+                mul!(
+                    vector_index!(u_vec_1, minus_i64!(i, -3 * cap_h - cap_k + n + 1)),
+                    vector_index!(s_vec, minus_i64!(i, -3 * cap_h - cap_k + n + 1))
+                ),
+                minus!(
                     mul!(
-                        vector_index!(u_vec_1, minus_i64!(i, -3 * cap_h - cap_k + n + 1)),
+                        neg!(vector_index!(h_vec, minus_i64!(i, -cap_k + n + 1))),
                         vector_index!(s_vec, minus_i64!(i, -3 * cap_h - cap_k + n + 1))
                     ),
-                    minus!(
-                        mul!(
-                            neg!(vector_index!(h_vec, minus_i64!(i, -cap_k + n + 1))),
-                            vector_index!(s_vec, minus_i64!(i, -3 * cap_h - cap_k + n + 1))
-                        ),
-                        mul!(
-                            vector_index!(h_vec, minus_i64!(i, -cap_k - ell_1 + n + 1)),
-                            vector_index!(pk.v_vec, minus_i64!(i, -ell_1 + n + 1))
-                        )
+                    mul!(
+                        vector_index!(h_vec, minus_i64!(i, -cap_k - ell_1 + n + 1)),
+                        vector_index!(pk.v_vec, minus_i64!(i, -ell_1 + n + 1))
                     )
-                ),
-                n
-            )
+                )
+            ),
+            n
         );
         define_concat_vector!(r_vec_tilde, accumulate_vector_plus!(r_vec_1), delta_vec_3);
         define_poly_from_vec!(r_vec_tilde_poly, r_vec_tilde);
@@ -260,82 +258,80 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_h_vec,
             cm_r_vec_tilde
         );
-        define_vec!(
+        define_expression_vector!(
             t_vec,
-            expression_vector!(
-                i,
+            i,
+            linear_combination_base_zero!(
                 linear_combination_base_zero!(
-                    linear_combination_base_zero!(
-                        mu,
-                        range_index!(1, 3 * cap_h, minus_i64!(i + n, 1)),
-                        -scalar_to_field!(1),
-                        power_vector_index!(gamma, 3 * cap_h, minus_i64!(i + n, 1))
-                    ),
-                    vector_index!(s_vec, i + n),
-                    neg!(range_index!(1, 3 * cap_h, minus_i64!(i + n, 1))),
-                    range_index!(1, 3 * cap_h, i + n),
-                    linear_combination_base_zero!(
-                        alpha * nu,
-                        range_index!(1, cap_k, minus_i64!(i + n, 1)),
-                        -alpha,
-                        power_vector_index!(gamma, cap_k, minus_i64!(i + n, 1))
-                    ),
-                    vector_index!(h_vec, i + n),
-                    mul!(-alpha, range_index!(1, cap_k, minus_i64!(i + n, 1))),
-                    range_index!(1, cap_k, i + n),
-                    mul!(power(alpha, 2), vector_index!(h_vec, minus_i64!(i + n, 1))),
-                    linear_combination!(
-                        mul!(
-                            mu * nu,
-                            range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1))
-                        ),
-                        -mu,
-                        vector_index!(pk.w_vec, minus_i64!(i + n, cap_k + 1)),
-                        -nu,
-                        vector_index!(pk.u_vec, minus_i64!(i + n, cap_k + 1)),
-                        zero!(),
-                        vector_index!(pk.y_vec, minus_i64!(i + n, cap_k + 1))
-                    ),
+                    mu,
+                    range_index!(1, 3 * cap_h, minus_i64!(i + n, 1)),
+                    -scalar_to_field!(1),
+                    power_vector_index!(gamma, 3 * cap_h, minus_i64!(i + n, 1))
+                ),
+                vector_index!(s_vec, i + n),
+                neg!(range_index!(1, 3 * cap_h, minus_i64!(i + n, 1))),
+                range_index!(1, 3 * cap_h, i + n),
+                linear_combination_base_zero!(
+                    alpha * nu,
+                    range_index!(1, cap_k, minus_i64!(i + n, 1)),
+                    -alpha,
+                    power_vector_index!(gamma, cap_k, minus_i64!(i + n, 1))
+                ),
+                vector_index!(h_vec, i + n),
+                mul!(-alpha, range_index!(1, cap_k, minus_i64!(i + n, 1))),
+                range_index!(1, cap_k, i + n),
+                mul!(power(alpha, 2), vector_index!(h_vec, minus_i64!(i + n, 1))),
+                linear_combination!(
                     mul!(
-                        -power(alpha, 2),
+                        mu * nu,
                         range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1))
                     ),
-                    range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1)),
-                    mul!(
-                        power(alpha, 3),
-                        vector_index!(u_vec_1, minus_i64!(i + n, -cap_h + n + 1))
-                    ),
-                    vector_index!(u_vec_1, minus_i64!(i + n, -2 * cap_h + n + 1)),
-                    mul!(
-                        -power(alpha, 3),
-                        range_index!(1, cap_h, minus_i64!(i + n, -cap_h + n + 1))
-                    ),
-                    vector_index!(u_vec_1, minus_i64!(i + n, -3 * cap_h + n + 1)),
-                    mul!(
-                        power(alpha, 5),
-                        vector_index!(u_vec_1, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1))
-                    ),
-                    vector_index!(s_vec, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1)),
-                    mul!(
-                        -power(alpha, 5) * beta,
-                        vector_index!(h_vec, minus_i64!(i + n, -cap_k + n + 1))
-                    ),
-                    vector_index!(s_vec, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1)),
-                    mul!(
-                        -power(alpha, 5) * beta,
-                        vector_index!(h_vec, minus_i64!(i + n, -cap_k - ell_1 + n + 1))
-                    ),
-                    vector_index!(pk.v_vec, minus_i64!(i + n, -ell_1 + n + 1)),
-                    linear_combination_base_zero!(
-                        -power(alpha, 5),
-                        vector_index!(r_vec_tilde, minus_i64!(i + n, 1)),
-                        power(alpha, 5),
-                        vector_index!(r_vec_tilde, minus_i64!(i + n, 2))
-                    ),
-                    range_index!(1, n, i + n)
+                    -mu,
+                    vector_index!(pk.w_vec, minus_i64!(i + n, cap_k + 1)),
+                    -nu,
+                    vector_index!(pk.u_vec, minus_i64!(i + n, cap_k + 1)),
+                    zero!(),
+                    vector_index!(pk.y_vec, minus_i64!(i + n, cap_k + 1))
                 ),
-                maxshift + 2
-            )
+                mul!(
+                    -power(alpha, 2),
+                    range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1))
+                ),
+                range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1)),
+                mul!(
+                    power(alpha, 3),
+                    vector_index!(u_vec_1, minus_i64!(i + n, -cap_h + n + 1))
+                ),
+                vector_index!(u_vec_1, minus_i64!(i + n, -2 * cap_h + n + 1)),
+                mul!(
+                    -power(alpha, 3),
+                    range_index!(1, cap_h, minus_i64!(i + n, -cap_h + n + 1))
+                ),
+                vector_index!(u_vec_1, minus_i64!(i + n, -3 * cap_h + n + 1)),
+                mul!(
+                    power(alpha, 5),
+                    vector_index!(u_vec_1, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1))
+                ),
+                vector_index!(s_vec, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1)),
+                mul!(
+                    -power(alpha, 5) * beta,
+                    vector_index!(h_vec, minus_i64!(i + n, -cap_k + n + 1))
+                ),
+                vector_index!(s_vec, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1)),
+                mul!(
+                    -power(alpha, 5) * beta,
+                    vector_index!(h_vec, minus_i64!(i + n, -cap_k - ell_1 + n + 1))
+                ),
+                vector_index!(pk.v_vec, minus_i64!(i + n, -ell_1 + n + 1)),
+                linear_combination_base_zero!(
+                    -power(alpha, 5),
+                    vector_index!(r_vec_tilde, minus_i64!(i + n, 1)),
+                    power(alpha, 5),
+                    vector_index!(r_vec_tilde, minus_i64!(i + n, 2))
+                ),
+                range_index!(1, n, i + n)
+            ),
+            maxshift + 2
         );
         define_vec!(t_vec_1, vector_concat!(delta_vec_4, t_vec));
         commit_vector!(cm_t_vec_1, t_vec_1, pk.powers, maxshift + 2);

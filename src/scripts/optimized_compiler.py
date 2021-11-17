@@ -764,8 +764,6 @@ class PIOPFromVOProtocol(object):
 
     rcomputes = LaTeXBuilder().start_math().append(r).assign().end_math() \
                               .space("the sum of:").eol()
-    expression_vector = RustMacro("expression_vector", sym_i)
-    rcomputes_rust = rust_builder_define_vec(r, expression_vector)
     linear_combination = RustMacro("power_linear_combination", beta)
     r_items = Itemize()
     for i, inner in enumerate(voexec.inner_products):
@@ -788,8 +786,8 @@ class PIOPFromVOProtocol(object):
       shifts += inner.shifts()
     rcomputes.append(r_items)
 
-    expression_vector.append([linear_combination, rust_n])
-    piopexec.prover_computes(rcomputes, rcomputes_rust.end())
+    piopexec.prover_computes_latex(rcomputes)
+    piopexec.prover_rust_define_expression_vector_i(r, linear_combination, rust_n)
 
     randomizer = self._generate_new_randomizer(samples, 1)
     rtilde = get_named_vector("r", modifier="tilde")
@@ -887,8 +885,6 @@ class PIOPFromVOProtocol(object):
     t = get_named_vector("t")
     tcomputes = LaTeXBuilder().start_math().append(t).assign().end_math() \
                               .space("the sum of:").eol()
-    expression_vector = RustMacro("expression_vector", sym_i)
-    tcomputes_rust = rust_builder_define_vec(t, expression_vector)
     compute_sum = rust_linear_combination_base_zero()
     t_items = Itemize()
     for i, side in enumerate(extended_hadamard):
@@ -896,9 +892,11 @@ class PIOPFromVOProtocol(object):
         compute_sum.append(side.a.dumpr_at_index(simplify(sym_i + rust_n)))
         compute_sum.append(side.b.dumpr_at_index(simplify(sym_i + rust_n)))
         t_items.append("$%s$" % side._dumps("circ"))
-    expression_vector.append([compute_sum, 2 * self.q + rust_max_shift])
     tcomputes.append(t_items)
-    piopexec.prover_computes(tcomputes, tcomputes_rust.end())
+    piopexec.prover_computes_latex(tcomputes)
+    piopexec.prover_rust_define_expression_vector_i(t,
+      compute_sum, 2 * self.q + rust_max_shift
+    )
 
     randomizer = self._generate_new_randomizer(samples, 1)
     original_t = t
