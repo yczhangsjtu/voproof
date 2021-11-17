@@ -299,6 +299,7 @@ rust_macro_list = [
         "e", "length"), )),
     ("linear_combination", None, None, ()),
     ("linear_combination_base_zero", None, None, ()),
+    ("power_linear_combination", None, None, ()),
     ("sum", None, None, ()),
     ("define_sum", None, None, ()),
     ("expression_vector", "expression_vector_i", ("expr", "length"),

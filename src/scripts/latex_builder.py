@@ -25,7 +25,10 @@ class LaTeXList(object):
             self._type)
 
   def append(self, item):
-    self.items.append(item)
+    if isinstance(item, list):
+      self.items += item
+    else:
+      self.items.append(item)
     return self
 
 

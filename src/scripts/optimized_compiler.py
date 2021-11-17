@@ -773,23 +773,28 @@ class PIOPFromVOProtocol(object):
     rust_n = voexec.rust_vector_size
     n = voexec.vector_size
 
-    rcomputes = LaTeXBuilder().start_math().append(r).assign().end_math() \
-                              .space("the sum of:").eol()
-    linear_combination = RustMacro("power_linear_combination", beta)
-    r_items = Itemize()
     for i, inner in enumerate(voexec.inner_products):
-      linear_combination.append(inner.dumpr_at_index(sym_i))
-      r_items.append(inner.dump_hadamard_difference_with_beta_power(beta, i))
-
-      alpha_beta_power = (beta ** i) * (alpha ** len(voexec.hadamards))
-      extended_hadamard.append((alpha_beta_power) * inner.left_side)
+      coeff = (beta ** i) * (alpha ** len(voexec.hadamards))
+      extended_hadamard.append(coeff * inner.left_side)
       if not inner.one_sided:
-        extended_hadamard.append((- alpha_beta_power) * inner.right_side)
+        extended_hadamard.append((- coeff) * inner.right_side)
       shifts += inner.shifts()
-    rcomputes.append(r_items)
 
-    piopexec.prover_computes_latex(rcomputes)
-    piopexec.prover_rust_define_expression_vector_i(r, linear_combination, rust_n)
+    piopexec.prover_computes_latex(
+        LaTeXBuilder().start_math().append(r).assign().end_math()
+                      .space("the sum of:").eol()
+                      .append(
+                        Itemize().append([
+                         inner.dump_hadamard_difference_with_beta_power(beta, i)
+                         for i, inner in enumerate(voexec.inner_products)
+                        ])
+                      ))
+
+    piopexec.prover_rust_define_expression_vector_i(r,
+        rust_power_linear_combination(beta).append([
+          inner.dumpr_at_index(sym_i)
+          for i, inner in enumerate(voexec.inner_products)
+        ]), rust_n)
 
     randomizer = self._generate_new_randomizer(samples, 1)
     rtilde = get_named_vector("r", modifier="tilde")
@@ -886,8 +891,6 @@ class PIOPFromVOProtocol(object):
 
     self.debug("Process vector t")
     t = get_named_vector("t")
-    tcomputes = LaTeXBuilder().start_math().append(t).assign().end_math() \
-                              .space("the sum of:").eol()
     compute_sum = rust_linear_combination_base_zero()
     t_items = Itemize()
     for i, side in enumerate(extended_hadamard):
@@ -895,8 +898,9 @@ class PIOPFromVOProtocol(object):
         compute_sum.append(side.a.dumpr_at_index(simplify(sym_i + rust_n)))
         compute_sum.append(side.b.dumpr_at_index(simplify(sym_i + rust_n)))
         t_items.append("$%s$" % side._dumps("circ"))
-    tcomputes.append(t_items)
-    piopexec.prover_computes_latex(tcomputes)
+    piopexec.prover_computes_latex(
+        LaTeXBuilder().start_math().append(t).assign().end_math()
+                      .space("the sum of:").eol().append(t_items))
     piopexec.prover_rust_define_expression_vector_i(t,
       compute_sum, 2 * self.q + rust_max_shift
     )
