@@ -903,13 +903,11 @@ class PIOPFromVOProtocol(object):
 
     if self.debug_mode:
       vecsum = get_named_vector("sum")
-      piopexec.prover_computes_rust(
-          RustBuilder().letmut(vecsum).assign(rust_vec_size(rust_zero(), rust_n + max_shift + q)).end())
+      piopexec.prover_computes_rust(rust_line_define_mut(vecsum,
+            rust_vec_size(rust_zero(), rust_n + max_shift + q)))
       hcheck_vec = get_named_vector("hcheck")
-      piopexec.prover_computes_rust(
-          RustBuilder().letmut(hcheck_vec).assign(
-            rust_vec_size(rust_zero(), (rust_n + max_shift + q) * 2 - 1)
-          ).end())
+      piopexec.prover_computes_rust(rust_line_define_mut(hcheck_vec,
+            rust_vec_size(rust_zero(), (rust_n + max_shift + q) * 2 - 1)))
 
     for i, side in enumerate(extended_hadamard):
       self.debug("  Extended Hadamard %d" % (i + 1))
@@ -1432,12 +1430,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
             "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
             % (poly.dumps())
             )
-          if isinstance(poly, NamedPolynomial):
-            commit_rust_computation = RustBuilder() \
-                .let(poly.to_comm()) \
-                .assign_func("KZG10::commit") \
-                .append_to_last(poly).end()
-          elif isinstance(poly, NamedVectorPolynomial):
+          if isinstance(poly, NamedVectorPolynomial):
             commit_rust_computation = rust_line_commit_vector_with_pk(
               poly.to_comm(), poly.vector, rust_degree
             )
