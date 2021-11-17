@@ -332,6 +332,17 @@ class VOQuery(object):
     self.oper = tmp
     return ret
 
+  def dump_hadamard_difference_with_beta_power(self, beta, i):
+    difference = self.dump_hadamard_difference()
+    beta_power = beta ** i
+    if not self.one_sided or difference.startswith("-"):
+      difference = "\\left(%s\\right)" % difference
+
+    if i > 0:
+      difference = "%s\\cdot %s" % (latex(beta_power), difference)
+
+    return "$%s$" % difference
+
   def dumps(self):
     return "\\verifier queries $\\cOV$ to check that $%s$" % self.dump_sides()
 
@@ -767,22 +778,13 @@ class PIOPFromVOProtocol(object):
     linear_combination = RustMacro("power_linear_combination", beta)
     r_items = Itemize()
     for i, inner in enumerate(voexec.inner_products):
-      difference = inner.dump_hadamard_difference()
       linear_combination.append(inner.dumpr_at_index(sym_i))
-      beta_power = beta ** i
-      if not inner.one_sided or difference.startswith("-"):
-        difference = "\\left(%s\\right)" % difference
+      r_items.append(inner.dump_hadamard_difference_with_beta_power(beta, i))
 
-      if i > 0:
-        difference = "%s\\cdot %s" % (latex(beta_power), difference)
-
-      difference = "$%s$" % difference
-      r_items.append(difference)
-
-      alpha_power = alpha ** len(voexec.hadamards)
-      extended_hadamard.append((alpha_power * beta_power) * inner.left_side)
+      alpha_beta_power = (beta ** i) * (alpha ** len(voexec.hadamards))
+      extended_hadamard.append((alpha_beta_power) * inner.left_side)
       if not inner.one_sided:
-        extended_hadamard.append((- alpha_power * beta_power) * inner.right_side)
+        extended_hadamard.append((- alpha_beta_power) * inner.right_side)
       shifts += inner.shifts()
     rcomputes.append(r_items)
 
@@ -805,6 +807,7 @@ class PIOPFromVOProtocol(object):
     piopexec.prover_send_polynomial(fr, n + self.q, rust_n + self.q)
     voexec.vec_to_poly_dict[rtilde.key()] = fr
 
+    alpha_power = alpha ** len(voexec.hadamards)
     extended_hadamard.append((- alpha_power) *
                              VOQuerySide(rtilde - rtilde.shift(1),
                                          PowerVector(1, n, rust_n)))
