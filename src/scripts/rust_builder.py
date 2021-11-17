@@ -403,4 +403,12 @@ for macro_name, funcname, argnames, outargs in rust_macro_list:
           _rust_builder_macro(macro_name, argnames, outargs, *args))(
         macro_name, argnames, outargs
       ))
+  setattr(
+      current_module,
+      "rust_line_%s" % funcname,
+      (lambda macro_name, argnames, outargs:
+        lambda *args:
+          _rust_builder_macro(macro_name, argnames, outargs, *args).end())(
+        macro_name, argnames, outargs
+      ))
 

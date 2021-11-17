@@ -202,7 +202,7 @@ class PublicCoinProtocolExecution(object):
 
   def prover_redefine_symbol_rust(self, s, name):
     new_s = Symbol(get_name(name))
-    self.prover_computes_rust(rust_builder_define(new_s, s).end())
+    self.prover_computes_rust(rust_line_define(new_s, s))
     return new_s
 
   def prover_prepare(self, latex_builder, rust_builder):
@@ -216,7 +216,7 @@ class PublicCoinProtocolExecution(object):
 
   def verifier_redefine_symbol_rust(self, s, name):
     new_s = Symbol(get_name(name))
-    self.verifier_computes_rust(rust_builder_define(new_s, s).end())
+    self.verifier_computes_rust(rust_line_define(new_s, s))
     return new_s
 
   def verifier_prepare(self, latex_builder, rust_builder):
@@ -713,9 +713,9 @@ class PIOPFromVOProtocol(object):
           poly = v.to_named_vector_poly()
           piopexec.prover_computes(
               Math(randomizer).sample(Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
-              rust_builder_redefine_zero_pad_concat_vector(v, rust_n, randomizer).end())
+              rust_line_redefine_zero_pad_concat_vector(v, rust_n, randomizer))
           piopexec.prover_send_polynomial(poly, self.vector_size + q, rust_n + q)
-          piopexec.prover_computes_rust(rust_builder_define_poly_from_vec(poly, v).end())
+          piopexec.prover_computes_rust(rust_line_define_poly_from_vec(poly, v))
           vec_to_poly_dict[v.key()] = poly
 
           piopexec.prover_debug(
@@ -826,7 +826,7 @@ class PIOPFromVOProtocol(object):
           rust_accumulate_vector_plus(r),
           randomizer
         ).end())
-      piopexec.prover_computes_rust(rust_builder_define_poly_from_vec(fr, rtilde).end())
+      piopexec.prover_computes_rust(rust_line_define_poly_from_vec(fr, rtilde))
 
       piopexec.prover_send_polynomial(fr, n + q, rust_n + q)
       vec_to_poly_dict[rtilde.key()] = fr
@@ -875,9 +875,7 @@ class PIOPFromVOProtocol(object):
                         .comma(t)
                         .assign(original_t)
                         .double_bar(randomizer),
-        rust_builder_define_vec(t,
-          rust_vector_concat(randomizer, original_t)
-        ).end())
+        rust_line_define_vec(t, rust_vector_concat(randomizer, original_t)))
 
     tx = t.to_named_vector_poly()
     vec_to_poly_dict[t.key()] = tx
@@ -961,9 +959,9 @@ class PIOPFromVOProtocol(object):
           )
         ).end()
         piopexec.prover_computes_rust(
-            rust_builder_add_expression_vector_to_vector_i(vecsum,
+            rust_line_add_expression_vector_to_vector_i(vecsum,
                "(%s) * (%s)" % (a.dumpr_at_index(sym_i),
-                                b.dumpr_at_index(sym_i))).end())
+                                b.dumpr_at_index(sym_i))))
 
         atimesb_vec_naive = get_named_vector("abnaive")
         piopexec.prover_computes_rust(
@@ -980,8 +978,7 @@ class PIOPFromVOProtocol(object):
                   omega
                 )).end())
         piopexec.prover_computes_rust(
-          rust_builder_add_vector_to_vector(hcheck_vec, atimesb_vec_naive)
-        .end())
+          rust_line_add_vector_to_vector(hcheck_vec, atimesb_vec_naive))
 
         atimesb_computes_rust, atimesb_vector_combination = \
             atimesb.generate_vector_combination(omega)
@@ -996,22 +993,22 @@ class PIOPFromVOProtocol(object):
             )).end()
         )
         piopexec.prover_computes_rust(
-          rust_builder_check_vector_eq(
+          rust_line_check_vector_eq(
             atimesb_vec,
             RustMacro("zero_pad", atimesb_vec_naive, 2 * (rust_n + max_shift + q) - 1),
             "The %d'th convolution is incorrect" % (i+1)
-          ).end()
+          )
         )
 
     if self.debug_mode:
       h_omega_sum_check.append(rust_assert_eq(h_omega_sum, rust_zero())).end()
       piopexec.prover_computes_rust(h_omega_sum_check)
       piopexec.prover_computes_rust(
-          rust_builder_check_vector_eq(
-            vecsum,
-            rust_vec_size(rust_zero(), rust_n + max_shift + q),
-            "sum of hadamards not zero"
-            ).end())
+        rust_line_check_vector_eq(
+          vecsum,
+          rust_vec_size(rust_zero(), rust_n + max_shift + q),
+          "sum of hadamards not zero"
+        ))
 
     hxcomputes.append(hx_items)
     h = get_named_vector("h")
@@ -1032,16 +1029,16 @@ class PIOPFromVOProtocol(object):
     piopexec.prover_computes(
         Math(h1x).assign(hx).dot(X ** self.degree_bound)
                             .append("\\bmod").append(X ** self.degree_bound),
-        rust_builder_define_expression_vector_i(h1,
+        rust_line_define_expression_vector_i(h1,
            h_vec_combination.dumpr_at_index(sym_i - rust_h_inverse_degree + 1),
-           rust_h_inverse_degree - 1).end())
+           rust_h_inverse_degree - 1))
     piopexec.prover_computes(
         Math(h2x).assign("\\frac{%s}{X}" % hx.dumps_var(X))
                  .minus("X^{%s}\\cdot %s" %
                         (latex(-self.degree_bound-1), h1x.dumps_var(X))),
-        rust_builder_define_expression_vector_i(h2,
+        rust_line_define_expression_vector_i(h2,
            h_vec_combination.dumpr_at_index(sym_i + 1),
-           rust_h_degree - 1).end())
+           rust_h_degree - 1))
 
     if self.debug_mode:
       piopexec.prover_computes_rust(
@@ -1059,7 +1056,7 @@ class PIOPFromVOProtocol(object):
               "h != h1 || 0 || h2")).end())
 
       piopexec.prover_computes_rust(
-        rust_builder_assert_eq(h_vec_combination.dumpr_at_index(1), rust_zero()).end()
+        rust_line_assert_eq(h_vec_combination.dumpr_at_index(1), rust_zero())
       )
 
     # For the rust code, use the vector instead
@@ -1091,16 +1088,16 @@ class PIOPFromVOProtocol(object):
         piopexec.eval_query(y, omega/z, vec_to_poly_dict[key])
         piopexec.prover_computes(
           LaTeXBuilder(),
-          rust_builder_define_eval_vector_expression_i(y,
+          rust_line_define_eval_vector_expression_i(y,
               omega/z,
               vec.dumpr_at_index(sym_i),
               rust_n + q
-          ).end()
+          )
         )
       else:
         piopexec.verifier_computes(
             Math(y).assign(vec_to_poly_dict[key].dumps_var(omega/z)),
-            rust_builder_define(y, vec.hint_computation(omega/z)).end()
+            rust_line_define(y, vec.hint_computation(omega/z))
         )
       query_results[key] = y
 
@@ -1110,9 +1107,9 @@ class PIOPFromVOProtocol(object):
 
     if self.debug_mode:
       naive_g = get_named_vector("naive_g")
-      piopexec.prover_computes_rust(rust_builder_define_vec_mut(naive_g,
+      piopexec.prover_computes_rust(rust_line_define_vec_mut(naive_g,
         rust_vec_size(rust_zero(), rust_n + rust_max_shift + q)
-      ).end())
+      ))
 
     # 1. The part contributed by the extended hadamard query
     for i, side in enumerate(extended_hadamard):
@@ -1143,12 +1140,12 @@ class PIOPFromVOProtocol(object):
       # check that multiplier = f_i(omega/z)
       if self.debug_mode:
         piopexec.prover_computes_rust(
-          rust_builder_assert_eq(
+          rust_line_assert_eq(
             multiplier,
             rust_eval_vector_expression_i(
               omega/z, a.dumpr_at_index(sym_i), rust_n + rust_max_shift + q
             )
-          ).end()
+          )
         )
 
       if multiplier == 0:
@@ -1159,8 +1156,7 @@ class PIOPFromVOProtocol(object):
       # coefficients on [1..n+max_shift+q], multiplied by the multiplier
       if self.debug_mode:
         piopexec.prover_computes_rust(
-          rust_builder_add_expression_vector_to_vector_i(naive_g, b.dumpr_at_index(sym_i))
-          .end())
+          rust_line_add_expression_vector_to_vector_i(naive_g, b.dumpr_at_index(sym_i)))
 
       # Now decompose g_i(X), i.e., the right side of this Extended Hadamard query
       # multiply every coefficient by the multiplier f_i(omega/z)
@@ -1217,12 +1213,12 @@ class PIOPFromVOProtocol(object):
     coeff_builders[h2x.key()] = CombinationCoeffBuilder(h2x, c, [- z], [- z], 0)
 
     if self.debug_mode:
-      piopexec.prover_computes_rust(rust_builder_add_expression_vector_to_vector_i(
+      piopexec.prover_computes_rust(rust_line_add_expression_vector_to_vector_i(
         naive_g, "(%s) * (%s)" % (h1.dumpr_at_index(sym_i), rust(-z**(-(h_inverse_degree-1))))
-      ).end())
-      piopexec.prover_computes_rust(rust_builder_add_expression_vector_to_vector_i(
+      ))
+      piopexec.prover_computes_rust(rust_line_add_expression_vector_to_vector_i(
         naive_g, "(%s) * (%s)" % (h2.dumpr_at_index(sym_i), rust(-z))
-      ).end())
+      ))
       # Pass this variable to the zkSNARK, because g has not been computed, cannot
       # make the comparison here.
       piopexec.naive_g = naive_g
@@ -1238,9 +1234,9 @@ class PIOPFromVOProtocol(object):
           )
         )
         lc.append(rust_eval_vector_expression_i(z, b.dumpr_at_index(sym_i), rust_n + rust_max_shift + q))
-      piopexec.prover_computes_rust(rust_builder_assert_eq(
+      piopexec.prover_computes_rust(rust_line_assert_eq(
         rust_builder_eval_vector_as_poly(h, z).mul(z**(-(rust_h_inverse_degree-1))), lc
-      ).end())
+      ))
 
     # Transform the lists into latex and rust builders
     for key, coeff_builder in coeff_builders.items():

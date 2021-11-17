@@ -20,14 +20,14 @@ class SparseMVP(VOProtocol):
     w = get_named_vector("w")
     v = get_named_vector("v")
     y = get_named_vector("y")
-    voexec.preprocess_rust(rust_builder_define_generator().end())
+    voexec.preprocess_rust(rust_line_define_generator())
     voexec.preprocess_latex(Math(u).assign(ExpressionVector("\\gamma^{\\mathsf{row}_i}", ell))),
     voexec.preprocess_latex(Math(w).assign(ExpressionVector("\\gamma^{\\mathsf{col}_i}", ell))),
     voexec.preprocess_latex(Math(v).assign(ExpressionVector("\\mathsf{val}_i", ell))),
-    voexec.preprocess_rust(rust_builder_define_matrix_vectors(u, w, v, voexec.M, "gamma").end())
+    voexec.preprocess_rust(rust_line_define_matrix_vectors(u, w, v, voexec.M, "gamma"))
     voexec.preprocess(
       Math(y).assign(u).circ(w),
-      rust_builder_define_hadamard_vector(y, u, w).end())
+      rust_line_define_hadamard_vector(y, u, w))
 
     voexec.preprocess_vector(u, ell)
     voexec.preprocess_vector(w, ell)
@@ -59,26 +59,26 @@ class SparseMVP(VOProtocol):
       voexec.rust_vector_size = voexec.verifier_redefine_symbol_rust(n, "n")
     rust_n = voexec.rust_vector_size
     rust_ell = voexec.verifier_redefine_symbol_rust(ell, "ell")
-    voexec.verifier_computes_rust(rust_builder_define_generator().end())
+    voexec.verifier_computes_rust(rust_line_define_generator())
     voexec.verifier_send_randomness(mu)
     r = get_named_vector("r")
     voexec.prover_computes(
       Math(r).assign(ExpressionVector("\\frac{1}{%s-\\gamma^i}" % tex(mu), H)),
-      rust_builder_define_expression_vector_inverse_i(
+      rust_line_define_expression_vector_inverse_i(
         r,
         rust_minus(mu, PowerVector(gamma, H).dumpr_at_index(sym_i)),
         H
-      ).end())
+      ))
     c = get_named_vector("c")
     voexec.prover_computes(Math(c).assign()
                            .transpose(r, paren=False).append("\\boldsymbol{M}"),
-                           rust_builder_define_left_sparse_mvp_vector(
+                           rust_line_define_left_sparse_mvp_vector(
                              c, rust_pk(M), r, H, K
-                           ).end())
+                           ))
     s = get_named_vector("s")
     voexec.prover_computes(
       Math(s).assign(r).double_bar().paren(-c),
-      rust_builder_define_concat_neg_vector(s, r, c).end())
+      rust_line_define_concat_neg_vector(s, r, c))
 
     voexec.prover_submit_vector(s, H + K)
     voexec.hadamard_query(
@@ -98,11 +98,11 @@ class SparseMVP(VOProtocol):
     h = get_named_vector("h")
     rnu = get_named_vector("rnu")
     voexec.prover_computes(LaTeXBuilder(),
-      rust_builder_define_expression_vector_inverse_i(
+      rust_line_define_expression_vector_inverse_i(
         rnu,
         rust_minus(nu, PowerVector(gamma, K).dumpr_at_index(sym_i)),
         K
-      ).end())
+      ))
     voexec.prover_computes(Math(h).assign(
         ExpressionVector("\\frac{1}{%s-\\gamma^i}" % tex(nu), K)
       ).double_bar(
@@ -110,9 +110,9 @@ class SparseMVP(VOProtocol):
                          (tex(mu), voexec.u.slice(Symbol("i")).dumps(),
                           tex(nu), voexec.w.slice(Symbol("i")).dumps()), ell)
       ),
-      rust_builder_define_concat_uwinverse_vector(
+      rust_line_define_concat_uwinverse_vector(
         h, rnu, mu, rust_pk(voexec.u), nu, rust_pk(voexec.w)
-      ).end())
+      ))
     voexec.prover_submit_vector(h, ell + K, rust_ell + K)
 
     voexec.hadamard_query(
@@ -249,17 +249,17 @@ class R1CS(VOProtocol):
 
   def preprocess(self, voexec, H, K, sa, sb, sc):
     M = Matrix("M")
-    voexec.preprocess_rust(rust_builder_init_size(H, "nrows").end())
-    # voexec.preprocess_rust(rust_builder_init_size(K, "ncols").end())
-    voexec.preprocess_rust(rust_builder_init_size(sa, "adensity").end())
-    voexec.preprocess_rust(rust_builder_init_size(sb, "bdensity").end())
-    voexec.preprocess_rust(rust_builder_init_size(sc, "cdensity").end())
+    voexec.preprocess_rust(rust_line_init_size(H, "nrows"))
+    # voexec.preprocess_rust(rust_line_init_size(K, "ncols"))
+    voexec.preprocess_rust(rust_line_init_size(sa, "adensity"))
+    voexec.preprocess_rust(rust_line_init_size(sb, "bdensity"))
+    voexec.preprocess_rust(rust_line_init_size(sc, "cdensity"))
 
     voexec.preprocess_rust(
-      rust_builder_concat_matrix_vertically(M, H,
+      rust_line_concat_matrix_vertically(M, H,
         "cs.arows", "cs.brows", "cs.crows",
         "cs.acols", "cs.bcols", "cs.ccols",
-        "cs.avals", "cs.bvals", "cs.cvals").end())
+        "cs.avals", "cs.bvals", "cs.cvals"))
 
     voexec.preprocess_output_pk(M)
     voexec.M = M
@@ -281,14 +281,14 @@ class R1CS(VOProtocol):
                           voexec.sa, voexec.sb, voexec.sc, voexec.vector_size
     M = voexec.M
 
-    voexec.verifier_computes_rust(rust_builder_define_vec(x, "x.instance.clone()").end())
-    voexec.prover_computes_rust(rust_builder_define_vec(w, "w.witness.clone()").end())
-    voexec.verifier_computes_rust(rust_builder_init_size(H, "nrows").end())
-    voexec.verifier_computes_rust(rust_builder_init_size(K, "ncols").end())
-    voexec.verifier_computes_rust(rust_builder_init_size(sa, "adensity").end())
-    voexec.verifier_computes_rust(rust_builder_init_size(sb, "bdensity").end())
-    voexec.verifier_computes_rust(rust_builder_init_size(sc, "cdensity").end())
-    voexec.verifier_computes_rust(rust_builder_init_size(ell, "input_size").end())
+    voexec.verifier_computes_rust(rust_line_define_vec(x, "x.instance.clone()"))
+    voexec.prover_computes_rust(rust_line_define_vec(w, "w.witness.clone()"))
+    voexec.verifier_computes_rust(rust_line_init_size(H, "nrows"))
+    voexec.verifier_computes_rust(rust_line_init_size(K, "ncols"))
+    voexec.verifier_computes_rust(rust_line_init_size(sa, "adensity"))
+    voexec.verifier_computes_rust(rust_line_init_size(sb, "bdensity"))
+    voexec.verifier_computes_rust(rust_line_init_size(sc, "cdensity"))
+    voexec.verifier_computes_rust(rust_line_init_size(ell, "input_size"))
     if voexec.rust_vector_size is None:
       voexec.rust_vector_size = voexec.verifier_redefine_symbol_rust(n, "n")
     rust_n = voexec.rust_vector_size
@@ -300,12 +300,12 @@ class R1CS(VOProtocol):
           LaTeXBuilder(1).double_bar(x).double_bar(w)
         )
       ).double_bar(1).double_bar(x).double_bar(w),
-      rust_builder_define_sparse_mvp_concat_vector(
+      rust_line_define_sparse_mvp_concat_vector(
         u,
         rust_pk(M),
         rust_concat_and_one(x, w),
         H * 3, K
-      ).end())
+      ))
 
     voexec.prover_submit_vector(u, 3 * H + K)
     voexec.run_subprotocol(SparseMVP(), u)
