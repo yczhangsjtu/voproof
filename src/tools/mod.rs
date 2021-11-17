@@ -816,6 +816,13 @@ macro_rules! power_power_mul {
 }
 
 #[macro_export]
+macro_rules! define_power_power_mul {
+    ($name:ident, $alpha:expr, $n:expr, $beta:expr, $m:expr) => {
+        define_vec!($name, power_power_mul!($alpha, $n, $beta, $m));
+    };
+}
+
+#[macro_export]
 macro_rules! eval_vector_expression {
     // Compute f(z), where f has coefficient vector
     // expressed by an expression

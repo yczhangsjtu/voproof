@@ -521,6 +521,10 @@ class RustCodePrinter(CodePrinter):
 
 class RustCodePrinterToField(RustCodePrinter):
     def _print_Integer(self, expr, _type=False):
+        if expr == 0:
+            return "E::Fr::zero()"
+        if expr == 1:
+            return "E::Fr::one()"
         ret = super()._print_Integer(expr, _type)
         return "to_field::<E::Fr>(%s)" % ret
 
