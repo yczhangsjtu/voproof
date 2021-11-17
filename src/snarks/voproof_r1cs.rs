@@ -752,55 +752,53 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             c_10
         );
         check_poly_eval!(g_poly, z, E::Fr::zero(), "g does not evaluate to 0 at z");
-        let fs = vec![h_vec_poly, u_vec_1_poly, r_vec_tilde_poly];
-        let gs = vec![g_poly];
-        let z1 = omega / z;
-        let z2 = z;
-        let rand_xi = hash_to_field::<E::Fr>(
-            to_bytes!(
-                x_vec,
-                pk.verifier_key.cm_u_vec,
-                pk.verifier_key.cm_w_vec,
-                pk.verifier_key.cm_v_vec,
-                pk.verifier_key.cm_y_vec,
-                cm_u_vec_1,
-                cm_s_vec,
-                cm_h_vec,
-                cm_r_vec_tilde,
-                cm_t_vec_1,
-                cm_h_vec_2,
-                cm_h_vec_3,
-                cm_g,
-                omega / z,
-                y,
-                y_1,
-                y_2,
-                z
-            )
-            .unwrap(),
+        define!(fs, vec!(h_vec_poly, u_vec_1_poly, r_vec_tilde_poly));
+        define!(gs, vec!(g_poly));
+        define!(z1, omega / z);
+        define!(z2, z);
+        get_randomness_from_hash!(
+            rand_xi,
+            E::Fr::one(),
+            x_vec,
+            vk.cm_u_vec,
+            vk.cm_w_vec,
+            vk.cm_v_vec,
+            vk.cm_y_vec,
+            cm_u_vec_1,
+            cm_s_vec,
+            cm_h_vec,
+            cm_r_vec_tilde,
+            cm_t_vec_1,
+            cm_h_vec_2,
+            cm_h_vec_3,
+            cm_g,
+            omega / z,
+            y,
+            y_1,
+            y_2,
+            z
         );
-        let rand_xi_2 = hash_to_field::<E::Fr>(
-            to_bytes!(
-                x_vec,
-                pk.verifier_key.cm_u_vec,
-                pk.verifier_key.cm_w_vec,
-                pk.verifier_key.cm_v_vec,
-                pk.verifier_key.cm_y_vec,
-                cm_u_vec_1,
-                cm_s_vec,
-                cm_h_vec,
-                cm_r_vec_tilde,
-                cm_t_vec_1,
-                cm_h_vec_2,
-                cm_h_vec_3,
-                cm_g,
-                omega / z,
-                y,
-                y_1,
-                y_2,
-                z
-            )
-            .unwrap(),
+        get_randomness_from_hash!(
+            rand_xi_2,
+            to_field::<E::Fr>(2),
+            x_vec,
+            vk.cm_u_vec,
+            vk.cm_w_vec,
+            vk.cm_v_vec,
+            vk.cm_y_vec,
+            cm_u_vec_1,
+            cm_s_vec,
+            cm_h_vec,
+            cm_r_vec_tilde,
+            cm_t_vec_1,
+            cm_h_vec_2,
+            cm_h_vec_3,
+            cm_g,
+            omega / z,
+            y,
+            y_1,
+            y_2,
+            z
         );
 
         let (cap_w, cap_w_1) =
@@ -1035,51 +1033,49 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_h_vec_3,
             c_10
         );
-        let rand_xi = hash_to_field::<E::Fr>(
-            to_bytes!(
-                x_vec,
-                vk.cm_u_vec,
-                vk.cm_w_vec,
-                vk.cm_v_vec,
-                vk.cm_y_vec,
-                cm_u_vec_1,
-                cm_s_vec,
-                cm_h_vec,
-                cm_r_vec_tilde,
-                cm_t_vec_1,
-                cm_h_vec_2,
-                cm_h_vec_3,
-                cm_g,
-                omega / z,
-                y,
-                y_1,
-                y_2,
-                z
-            )
-            .unwrap(),
+        get_randomness_from_hash!(
+            rand_xi,
+            E::Fr::one(),
+            x_vec,
+            vk.cm_u_vec,
+            vk.cm_w_vec,
+            vk.cm_v_vec,
+            vk.cm_y_vec,
+            cm_u_vec_1,
+            cm_s_vec,
+            cm_h_vec,
+            cm_r_vec_tilde,
+            cm_t_vec_1,
+            cm_h_vec_2,
+            cm_h_vec_3,
+            cm_g,
+            omega / z,
+            y,
+            y_1,
+            y_2,
+            z
         );
-        let rand_xi_2 = hash_to_field::<E::Fr>(
-            to_bytes!(
-                x_vec,
-                vk.cm_u_vec,
-                vk.cm_w_vec,
-                vk.cm_v_vec,
-                vk.cm_y_vec,
-                cm_u_vec_1,
-                cm_s_vec,
-                cm_h_vec,
-                cm_r_vec_tilde,
-                cm_t_vec_1,
-                cm_h_vec_2,
-                cm_h_vec_3,
-                cm_g,
-                omega / z,
-                y,
-                y_1,
-                y_2,
-                z
-            )
-            .unwrap(),
+        get_randomness_from_hash!(
+            rand_xi_2,
+            to_field::<E::Fr>(2),
+            x_vec,
+            vk.cm_u_vec,
+            vk.cm_w_vec,
+            vk.cm_v_vec,
+            vk.cm_y_vec,
+            cm_u_vec_1,
+            cm_s_vec,
+            cm_h_vec,
+            cm_r_vec_tilde,
+            cm_t_vec_1,
+            cm_h_vec_2,
+            cm_h_vec_3,
+            cm_g,
+            omega / z,
+            y,
+            y_1,
+            y_2,
+            z
         );
         let z1 = omega / z;
         let z2 = z;

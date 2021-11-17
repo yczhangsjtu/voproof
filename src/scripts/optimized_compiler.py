@@ -1314,6 +1314,12 @@ class ZKSNARK(object):
   def verifier_computes(self, latex_builder, rust_builder):
     self.verifier_computations.append(VerifierComputes(latex_builder, rust_builder, False))
 
+  def verifier_computes_latex(self, latex_builder):
+    self.verifier_computes(latex_builder, RustBuilder())
+
+  def verifier_computes_rust(self, rust_builder):
+    self.verifier_computes(LaTeXBuilder(), rust_builder)
+
   def verifier_prepare(self, latex_builder, rust_builder):
     self.verifier_preparations.append(VerifierComputes(latex_builder, rust_builder))
 
@@ -1544,19 +1550,18 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     open_computation.paren(array)
 
     open_computation_rust = RustBuilder()
-    open_computation_rust.let("fs").assign(rust_vec(fs)).end()
-    open_computation_rust.let("gs").assign(rust_vec(gs)).end()
-    open_computation_rust.let("z1").assign(open_points[0]).end()
-    open_computation_rust.let("z2").assign(open_points[1]).end()
+    open_computation_rust.append(rust_define("fs", rust_vec(fs))).end()
+    open_computation_rust.append(rust_define("gs", rust_vec(gs))).end()
+    open_computation_rust.append(rust_define("z1", open_points[0])).end()
+    open_computation_rust.append(rust_define("z2", open_points[1])).end()
 
-    open_computation_rust.let("rand_xi").assign().func("hash_to_field::<E::Fr>") \
-      .append_to_last(RustBuilder().func("to_bytes!") \
-        .append_to_last([rust_pk_vk(x) for x in transcript])
-        .invoke_method("unwrap")).end()
-    open_computation_rust.let("rand_xi_2").assign().func("hash_to_field::<E::Fr>") \
-      .append_to_last(RustBuilder().func("to_bytes!") \
-        .append_to_last([rust_pk_vk(x) for x in transcript])
-        .invoke_method("unwrap")).end()
+    compute_rand_xi = RustBuilder()
+    compute_rand_xi.append(rust_builder_get_randomness_from_hash(
+      "rand_xi", to_field(1), *[rust_vk(x) for x in transcript]
+    )).end()
+    compute_rand_xi.append(rust_builder_get_randomness_from_hash(
+      "rand_xi_2", to_field(2), *[rust_vk(x) for x in transcript]
+    )).end()
 
     lists = "\\\\\n".join([("\\left\\{%s\\right\\}," % (
                             ",".join([("\\left(%s,%s\\right)" %
@@ -1568,14 +1573,6 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     verify_computation = Math("\\mathsf{vrfy}").paren(array).equals(1)
     verify_computation_rust = RustBuilder()
 
-    verify_computation_rust.let("rand_xi").assign().func("hash_to_field::<E::Fr>") \
-      .append_to_last(RustBuilder().func("to_bytes!") \
-        .append_to_last([rust_vk(x) for x in transcript])
-        .invoke_method("unwrap")).end()
-    verify_computation_rust.let("rand_xi_2").assign().func("hash_to_field::<E::Fr>") \
-      .append_to_last(RustBuilder().func("to_bytes!") \
-        .append_to_last([rust_vk(x) for x in transcript])
-        .invoke_method("unwrap")).end()
     verify_computation_rust.let("z1").assign(open_points[0]).end()
     verify_computation_rust.let("z2").assign(open_points[1]).end()
     verify_computation_rust.let("f_commitments").assign(rust_vec(fcomms)).end()
@@ -1584,5 +1581,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     verify_computation_rust.let("g_values").assign(rust_vec(gvals)).end()
 
     self.prover_computes(open_computation, open_computation_rust)
+    self.prover_computes_rust(compute_rand_xi)
+    self.verifier_computes_rust(compute_rand_xi)
     self.verifier_computes(verify_computation, verify_computation_rust)
 
