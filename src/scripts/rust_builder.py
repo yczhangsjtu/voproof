@@ -325,6 +325,7 @@ rust_macro_list = [
     ("commit_vector", "commit_vector_with_pk", ("cm", "v", "deg"),
       (_ArgName("cm"), _ArgName("v"), "pk.powers", _ArgName("deg"))),
     ("define_sparse_mvp_vector", None, ("name", "M", "v", "H", "K"), ()),
+    ("define_sparse_mvp_concat_vector", None, ("name", "M", "v", "H", "K"), ()),
     ("define_left_sparse_mvp_vector", None, ("name", "M", "v", "H", "K"), ()),
     ("define_concat_vector", None, None, ()),
     ("sparse_mvp_vector", None, ("M", "v", "H", "K"), ()),

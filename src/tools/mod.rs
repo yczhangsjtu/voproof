@@ -807,6 +807,13 @@ macro_rules! define_sparse_mvp_vector {
 }
 
 #[macro_export]
+macro_rules! define_sparse_mvp_concat_vector {
+    ($name:ident, $mat:expr, $v:expr, $h:expr, $k:expr) => {
+        define_concat_vector!($name, sparse_mvp_vector!($mat, $v, $h, $k), $v);
+    };
+}
+
+#[macro_export]
 macro_rules! define_left_sparse_mvp_vector {
     ($name:ident, $mat:expr, $v:expr, $h:expr, $k:expr) => {
         let $name = sparse_mvp($k, $h, &$mat.1, &$mat.0, &$mat.2, &$v).unwrap();
