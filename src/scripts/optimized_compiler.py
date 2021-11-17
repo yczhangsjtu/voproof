@@ -514,12 +514,12 @@ class CombinePolynomial(object):
 
     if has_poly:
       latex_items.append(Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
-      rust_builder = rust_builder_define_vec_mut(
+      rust_builder = rust_line_define_vec_mut(
         self.poly.to_vec(),
         rust_expression_vector_i(
           rust_linear_combination_base_zero(poly_sum_rust_items),
           self.length
-        )).end()
+        ))
       if rust_const is not None:
         rust_builder.append(self.poly.to_vec()) \
                     .append("[0]").plus_assign(rust_const).end()
@@ -533,11 +533,11 @@ class CombinePolynomial(object):
     if has_commit:
       latex_items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
       if rust_const is not None:
-        rust_items.append(rust_builder_define_commitment_linear_combination(
-          self.poly.to_comm(), "vk", rust_const, *commit_sum_rust_items).end())
+        rust_items.append(rust_line_define_commitment_linear_combination(
+          self.poly.to_comm(), "vk", rust_const, *commit_sum_rust_items))
       else:
-        rust_items.append(rust_builder_define_commitment_linear_combination_no_one(
-          self.poly.to_comm(), "vk", *commit_sum_rust_items).end())
+        rust_items.append(rust_line_define_commitment_linear_combination_no_one(
+          self.poly.to_comm(), "vk", *commit_sum_rust_items))
     return latex_items, rust_items
 
 
@@ -600,19 +600,19 @@ class PIOPExecution(PublicCoinProtocolExecution):
     if self.debug_mode:
       self.preprocess(
         LaTeXBuilder(),
-        rust_builder_macro(
+        rust_line_macro(
           "println",
           *PIOPExecution._format_string(*args)
-        ).end()
+        )
       )
 
   def prover_debug(self, *args):
     if self.debug_mode:
       self.prover_computes_rust(
-        rust_builder_macro(
+        rust_line_macro(
           "println",
           *PIOPExecution._format_string(*args)
-        ).end()
+        )
       )
 
   def dumps(self):
@@ -821,11 +821,11 @@ class PIOPFromVOProtocol(object):
       piopexec.prover_computes(Math(randomizer).sample(Ftoq)
         .comma(rtilde).assign(AccumulationVector(r.slice("j"), n))
         .double_bar(randomizer),
-        rust_builder_define_concat_vector(
+        rust_line_define_concat_vector(
           rtilde,
           rust_accumulate_vector_plus(r),
           randomizer
-        ).end())
+        ))
       piopexec.prover_computes_rust(rust_line_define_poly_from_vec(fr, rtilde))
 
       piopexec.prover_send_polynomial(fr, n + q, rust_n + q)
@@ -1388,9 +1388,9 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           Math(poly.to_comm()).assign(
             "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)" % poly.dumps()
           ),
-          rust_builder_commit_vector(
+          rust_line_commit_vector(
             poly.to_comm(), poly.vector, rust_degree
-          ).end())
+          ))
       self.preprocess_output_vk(poly.to_comm())
       transcript.append(poly.to_comm())
 
@@ -1419,13 +1419,13 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           )
           self.prover_computes(
             compute_hash,
-            rust_builder_get_randomness_from_hash(
+            rust_line_get_randomness_from_hash(
               r, *[rust_pk_vk(x) for x in transcript]
-            ).end())
+            ))
           self.verifier_computes(compute_hash,
-            rust_builder_get_randomness_from_hash(
+            rust_line_get_randomness_from_hash(
               r, *[rust_vk(x) for x in transcript]
-            ).end())
+            ))
       if isinstance(interaction, ProverSendPolynomials):
         for poly, degree, rust_degree in interaction.polynomials:
           commit_computation = Math(poly.to_comm()).assign(
@@ -1438,9 +1438,9 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
                 .assign_func("KZG10::commit") \
                 .append_to_last(poly).end()
           elif isinstance(poly, NamedVectorPolynomial):
-            commit_rust_computation = rust_builder_commit_vector_with_pk(
+            commit_rust_computation = rust_line_commit_vector_with_pk(
               poly.to_comm(), poly.vector, rust_degree
-            ).end()
+            )
           else:
             raise Exception("Unrecognized polynomial type: %s" % type(poly))
           self.prover_computes(commit_computation, commit_rust_computation)
@@ -1465,14 +1465,14 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       transcript.append(poly_combine.poly.to_comm())
 
       if piopexec.debug_mode:
-        self.prover_computes_rust(rust_builder_assert_eq(
+        self.prover_computes_rust(rust_line_assert_eq(
           poly_combine.poly.to_comm(),
           RustBuilder().func("vector_to_commitment::<E>")
           .append_to_last("&pk.powers")
           .append_to_last("&%s" % rust(poly_combine.poly.to_vec()))
           .append_to_last("(%s) as u64" % rust(poly_combine.length))
           .invoke_method("unwrap")
-        ).end())
+        ))
 
     queries = piopexec.eval_queries + piopexec.eval_checks
 
@@ -1480,14 +1480,14 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       z = [query.point for query in queries if query.name == 0][0]
       naive_g = piopexec.naive_g
       self.prover_computes_rust(
-        rust_builder_define_poly_from_vec(
+        rust_line_define_poly_from_vec(
           naive_g.to_named_vector_poly(), naive_g
-        ).end())
-      self.prover_computes_rust(rust_builder_check_poly_eval(
+        ))
+      self.prover_computes_rust(rust_line_check_poly_eval(
                                  naive_g.to_named_vector_poly(),
                                  z,
                                  rust_zero(),
-                                 "naive g does not evaluate to 0 at z").end())
+                                 "naive g does not evaluate to 0 at z"))
 
     points_poly_dict = {}
     for query in queries:
@@ -1510,12 +1510,12 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           transcript.append(query.name)
         else:
           # Only make this check when the query result is an expected constant
-          self.prover_computes_rust(rust_builder_check_poly_eval(
+          self.prover_computes_rust(rust_line_check_poly_eval(
                                     query.poly,
                                     queries[0].point,
                                     rust_zero() if query.name == 0
                                                 else query.name,
-                                    "g does not evaluate to 0 at z").end())
+                                    "g does not evaluate to 0 at z"))
 
       ffs.append([rust(query.poly) for query in queries])
       fcomms.append([rust_vk(query.poly.to_comm()) for query in queries])
@@ -1550,12 +1550,12 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     compute_zs.append(rust_define("z2", open_points[1])).end()
 
     compute_rand_xi = RustBuilder()
-    compute_rand_xi.append(rust_builder_get_randomness_from_hash(
+    compute_rand_xi.append(rust_line_get_randomness_from_hash(
       "rand_xi", to_field(1), *[rust_vk(x) for x in transcript]
-    )).end()
-    compute_rand_xi.append(rust_builder_get_randomness_from_hash(
+    ))
+    compute_rand_xi.append(rust_line_get_randomness_from_hash(
       "rand_xi_2", to_field(2), *[rust_vk(x) for x in transcript]
-    )).end()
+    ))
 
     lists = "\\\\\n".join([("\\left\\{%s\\right\\}," % (
                             ",".join([("\\left(%s,%s\\right)" %
