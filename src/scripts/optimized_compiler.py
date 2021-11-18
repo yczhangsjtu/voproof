@@ -616,6 +616,14 @@ class PIOPExecution(PublicCoinProtocolExecution):
     self.eval_queries.append(EvalQuery(name, point, poly))
     self.distinct_points.add(tex(point))
 
+  def eval_query_for_possibly_local_poly(self, name, point, poly, vec, size):
+      if not vec.local_evaluate:
+        self.eval_query(name, point, poly)
+        self.prover_rust_define_eval_vector_expression_i(name, point, vec.dumpr_at_index(sym_i), size)
+      else:
+        self.verifier_computes_latex(Math(y).assign(voexec.poly.dumps_var(point)))
+        self.verifier_rust_define(name, vec.hint_computation(point))
+
   def combine_polynomial(self, poly, coeff_latex_builders, length):
     self.poly_combines.append(CombinePolynomial(poly, coeff_latex_builders, length))
 
@@ -1167,15 +1175,8 @@ class PIOPFromVOProtocol(object):
     for key, vec in left_named_vectors.items():
       y = Symbol(get_name("y"))
       query_results[key] = y
-      if not vec.local_evaluate:
-        piopexec.eval_query(y, z0, voexec.vec_to_poly_dict[key])
-        # Prover computes y to be ready to open
-        piopexec.prover_rust_define_eval_vector_expression_i(
-            y, z0, vec.dumpr_at_index(sym_i), rust_n + self.q)
-      else:
-        piopexec.verifier_computes_latex(
-            Math(y).assign(voexec.vec_to_poly_dict[key].dumps_var(z0)))
-        piopexec.verifier_rust_define(y, vec.hint_computation(z0))
+      piopexec.eval_query_for_possibly_local_poly(
+          y, z0, voexec.vec_to_poly_dict[key], vec, rust_n + self.q)
 
     self.debug("Compute gx")
     gx = get_named_polynomial("g")
