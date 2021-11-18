@@ -1210,14 +1210,11 @@ class PIOPFromVOProtocol(object):
 
       # check that multiplier = f_i(omega/z)
       if self.debug_mode:
-        piopexec.prover_computes_rust(
-          rust_line_assert_eq(
+        piopexec.prover_rust_assert_eq(
             multiplier,
             rust_eval_vector_expression_i(
-              z0, a.dumpr_at_index(sym_i), rust_n + rust_max_shift + q
-            )
-          )
-        )
+              z0, a.dumpr_at_index(sym_i),
+              rust_n + rust_max_shift + q))
 
       if multiplier == 0:
         continue
@@ -1226,8 +1223,8 @@ class PIOPFromVOProtocol(object):
       # The naive way to compute f_i(omega/z) g_i(X), is to directly dump g_i(X)
       # coefficients on [1..n+max_shift+q], multiplied by the multiplier
       if self.debug_mode:
-        piopexec.prover_computes_rust(
-          rust_line_add_expression_vector_to_vector_i(naive_g, b.dumpr_at_index(sym_i)))
+        piopexec.prover_rust_add_expression_vector_to_vector_i(
+            naive_g, b.dumpr_at_index(sym_i))
 
       # Now decompose g_i(X), i.e., the right side of this Extended Hadamard query
       # multiply every coefficient by the multiplier f_i(omega/z)
@@ -1239,14 +1236,8 @@ class PIOPFromVOProtocol(object):
         if value == 0 or rust_value == 0:
           raise Exception("value should not be zero")
 
-        # This term is normal: i.e., either the constant term that is a structured
-        # polynomial, or a normal NamedVector multiplied by some coefficient
-        if (isinstance(vec, NamedVector) and not vec.local_evaluate) or key == "one":
-          _key = key
-          poly = "one" if key == "one" else piopexec.vec_to_poly_dict[vec.key()]
-          value = latex(value)
-          rust_value = rust(rust_value)
-        else: # In case it is locally evaluatable polynomial, this term should be
+        if isinstance(vec, NamedVector) and vec.local_evaluate:
+          # In case it is locally evaluatable polynomial, this term should be
           # regarded as part of the constant, instead of a polynomial. Let the verifier
           # locally evaluate this polynomial at z
           _key = "one"
@@ -1254,6 +1245,13 @@ class PIOPFromVOProtocol(object):
           value = "%s\\cdot %s" \
                   % (latex(value), piopexec.vec_to_poly_dict[vec.key()].dumps_var(z))
           rust_value = rust_mul(rust(rust_value), rust(vec.hint_computation(z)))
+        else:
+          # This term is normal: i.e., either the constant term that is a structured
+          # polynomial, or a normal NamedVector multiplied by some coefficient
+          _key = key
+          poly = "one" if key == "one" else piopexec.vec_to_poly_dict[vec.key()]
+          value = latex(value)
+          rust_value = rust(rust_value)
 
         # if this polynomial (or constant) has not been handled before, just set the
         # value as the coefficient for this named polynomial
