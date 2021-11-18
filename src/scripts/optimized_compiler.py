@@ -622,7 +622,7 @@ class PIOPExecution(PublicCoinProtocolExecution):
       self.prover_rust_define_eval_vector_expression_i(
           name, point, vec.dumpr_at_index(sym_i), size)
     else:
-      self.verifier_computes_latex(Math(y).assign(voexec.poly.dumps_var(point)))
+      self.verifier_computes_latex(Math(y).assign(poly.dumps_var(point)))
       self.verifier_rust_define(name, vec.hint_computation(point))
 
   def combine_polynomial(self, poly, coeff_latex_builders, length):
@@ -726,16 +726,16 @@ class PIOPFromVOProtocol(object):
     return randomizer
 
   def _process_prover_submitted_vector(self, piopexec, v, size, rust_size, samples):
-    voexec = piopexec.reference_to_voexec
+    rust_n = piopexec.reference_to_voexec.rust_vector_size
     # Sample the randomizer
     randomizer = self._generate_new_randomizer(samples, 1)
     poly = v.to_named_vector_poly()
     # Zero pad the vector to size n then append the randomizer
     piopexec.prover_computes(
         Math(randomizer).sample(self.Ftoq).comma(Math(v)).assign(v).double_bar(randomizer),
-        rust_line_redefine_zero_pad_concat_vector(v, voexec.rust_vector_size, randomizer))
+        rust_line_redefine_zero_pad_concat_vector(v, rust_n, randomizer))
     piopexec.prover_send_polynomial(
-        poly, self.vector_size + self.q, voexec.rust_vector_size + self.q)
+        poly, self.vector_size + self.q, rust_n + self.q)
     # piopexec.prover_rust_define_poly_from_vec(poly, v)
     piopexec.vec_to_poly_dict[v.key()] = poly
 
@@ -857,9 +857,8 @@ class PIOPFromVOProtocol(object):
     ignore_in_t.add(len(extended_hadamard) - 1)
 
   def _process_vector_t(self, piopexec, samples, extended_hadamard, ignore_in_t):
-    voexec = piopexec.reference_to_voexec
-    rust_n = voexec.rust_vector_size
-    n = voexec.vector_size
+    rust_n = piopexec.reference_to_voexec.rust_vector_size
+    n = piopexec.reference_to_voexec.vector_size
     max_shift = piopexec.max_shift
     rust_max_shift = piopexec.rust_max_shift
 
@@ -1043,9 +1042,8 @@ class PIOPFromVOProtocol(object):
 
   def _process_h(self, piopexec, extended_hadamard):
     omega = piopexec.verifier_generate_and_send_rand("omega")
-    voexec = piopexec.reference_to_voexec
-    n = voexec.vector_size
-    rust_n = voexec.rust_vector_size
+    n = piopexec.reference_to_voexec.vector_size
+    rust_n = piopexec.reference_to_voexec.rust_vector_size
     max_shift = piopexec.max_shift
     rust_max_shift = piopexec.rust_max_shift
 
@@ -1162,10 +1160,9 @@ class PIOPFromVOProtocol(object):
 
   def _homomorphic_check(self, piopexec, extended_hadamard, h1, h2, h1x, h2x, omega,
       rust_h_inverse_degree, h_degree):
-    voexec = piopexec.reference_to_voexec
     z = piopexec.verifier_generate_and_send_rand("z")
     z0 = omega/z
-    rust_n = voexec.rust_vector_size
+    rust_n = piopexec.reference_to_voexec.rust_vector_size
     rust_max_shift = piopexec.rust_max_shift
 
     self.debug("Collect named vectors inside left operands")
@@ -1180,10 +1177,13 @@ class PIOPFromVOProtocol(object):
           y, z0, piopexec.vec_to_poly_dict[key], vec, rust_n + self.q)
 
     self.debug("Compute gx")
-    self._combine_polynomials_in_right_operands(piopexec, extended_hadamard, z, z0, query_results, h1x, h2x, rust_h_inverse_degree)
+    self._combine_polynomials_in_right_operands(
+        piopexec, extended_hadamard, z, z0, query_results,
+        h1x, h2x, rust_h_inverse_degree)
 
-  def _combine_polynomials_in_right_operands(self, piopexec, extended_hadamard, z, z0, query_results, h1x, h2x, rust_h_inverse_degree):
-    voexec = piopexec.reference_to_voexec
+  def _combine_polynomials_in_right_operands(
+      self, piopexec, extended_hadamard, z, z0,
+      query_results, h1x, h2x, rust_h_inverse_degree):
     gx = get_named_polynomial("g")
     coeff_builders = {} # map: key -> (poly, Symbol(coeff), latex_builder, rust_builder)
 
