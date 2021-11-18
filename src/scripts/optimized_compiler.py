@@ -1181,6 +1181,12 @@ class PIOPFromVOProtocol(object):
         piopexec, extended_hadamard, z, z0, query_results,
         h1x, h2x, rust_h_inverse_degree, rust_n + rust_max_shift + self.q)
 
+  def _add_to_naive_g(self, piopexec, vec, coeff=None):
+    value = vec_or_value.dumpr_at_index(sym_i)
+    value = value if coeff is None else rust_mul(value, coeff)
+    piopexec.prover_rust_add_expression_vector_to_vector_i(
+        piopexec.naive_g, value)
+
   def _populate_coeff_builder_by_hadamard_query(
       self, piopexec, side, coeff_builders, z0, z, query_results, size):
     """
@@ -1211,8 +1217,7 @@ class PIOPFromVOProtocol(object):
     # The naive way to compute f_i(omega/z) g_i(X), is to directly dump g_i(X)
     # coefficients on [1..n+max_shift+q], multiplied by the multiplier
     if self.debug_mode:
-      piopexec.prover_rust_add_expression_vector_to_vector_i(
-          naive_g, b.dumpr_at_index(sym_i))
+      self._add_to_naive_g(piopexec, b)
 
     # Now decompose g_i(X), i.e., the right side of this Extended Hadamard query
     # multiply every coefficient by the multiplier f_i(omega/z)
@@ -1253,6 +1258,9 @@ class PIOPFromVOProtocol(object):
 
     if self.debug_mode:
       naive_g = get_named_vector("naive_g")
+      # Pass this variable to the zkSNARK, because g has not been computed, cannot
+      # make the comparison in the PIOP level.
+      piopexec.naive_g = naive_g
       piopexec.prover_rust_define_vec_mut(naive_g,
         rust_vec_size(rust_zero(), size))
 
@@ -1275,13 +1283,8 @@ class PIOPFromVOProtocol(object):
         h2x, Symbol(get_name("c")), [- z], [- z], 0)
 
     if self.debug_mode:
-      piopexec.prover_rust_add_expression_vector_to_vector_i(
-        naive_g, rust_mul(h1.dumpr_at_index(sym_i), rust(-z**(-(h_inverse_degree-1)))))
-      piopexec.prover_rust_add_expression_vector_to_vector_i(
-        naive_g, rust_mul(h2.dumpr_at_index(sym_i), rust(-z)))
-      # Pass this variable to the zkSNARK, because g has not been computed, cannot
-      # make the comparison here.
-      piopexec.naive_g = naive_g
+      self._add_to_naive_g(piopexec, h1, -z**(-(h_inverse_degree-1)))
+      self._add_to_naive_g(piopexec, h2, -z)
 
       # Check that h(z) = sum_i f_i(omega/z) g_i(z) z^{n+maxshift+q}
       lc = rust_linear_combination(rust_zero())
