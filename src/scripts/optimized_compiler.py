@@ -617,12 +617,13 @@ class PIOPExecution(PublicCoinProtocolExecution):
     self.distinct_points.add(tex(point))
 
   def eval_query_for_possibly_local_poly(self, name, point, poly, vec, size):
-      if not vec.local_evaluate:
-        self.eval_query(name, point, poly)
-        self.prover_rust_define_eval_vector_expression_i(name, point, vec.dumpr_at_index(sym_i), size)
-      else:
-        self.verifier_computes_latex(Math(y).assign(voexec.poly.dumps_var(point)))
-        self.verifier_rust_define(name, vec.hint_computation(point))
+    if not vec.local_evaluate:
+      self.eval_query(name, point, poly)
+      self.prover_rust_define_eval_vector_expression_i(
+          name, point, vec.dumpr_at_index(sym_i), size)
+    else:
+      self.verifier_computes_latex(Math(y).assign(voexec.poly.dumps_var(point)))
+      self.verifier_rust_define(name, vec.hint_computation(point))
 
   def combine_polynomial(self, poly, coeff_latex_builders, length):
     self.poly_combines.append(CombinePolynomial(poly, coeff_latex_builders, length))
@@ -685,7 +686,6 @@ class PIOPExecution(PublicCoinProtocolExecution):
     return ret.dumps()
 
 
-
 class PIOPFromVOProtocol(object):
   def __init__(self, vo, vector_size, degree_bound):
     self.vo = vo
@@ -718,7 +718,7 @@ class PIOPFromVOProtocol(object):
     piopexec.indexer_output_pk = voexec.indexer_output_pk
     piopexec.indexer_output_vk = voexec.indexer_output_vk
     piopexec.reference_to_voexec = voexec
-    voexec.vec_to_poly_dict = vec_to_poly_dict
+    piopexec.vec_to_poly_dict = vec_to_poly_dict
 
   def _generate_new_randomizer(self, samples, k):
     randomizer = get_named_vector("delta")
@@ -737,7 +737,7 @@ class PIOPFromVOProtocol(object):
     piopexec.prover_send_polynomial(
         poly, self.vector_size + self.q, voexec.rust_vector_size + self.q)
     # piopexec.prover_rust_define_poly_from_vec(poly, v)
-    voexec.vec_to_poly_dict[v.key()] = poly
+    piopexec.vec_to_poly_dict[v.key()] = poly
 
     piopexec.prover_debug(
       "vector %s of length {} = \\n[{}]" % rust(v), "%s.len()" % rust(v),
@@ -842,7 +842,7 @@ class PIOPFromVOProtocol(object):
     # piopexec.prover_rust_define_poly_from_vec(fr, rtilde)
 
     piopexec.prover_send_polynomial(fr, n + self.q, rust_n + self.q)
-    voexec.vec_to_poly_dict[rtilde.key()] = fr
+    piopexec.vec_to_poly_dict[rtilde.key()] = fr
 
     alpha_power = alpha ** len(voexec.hadamards)
     extended_hadamard.append((- alpha_power) *
@@ -882,7 +882,7 @@ class PIOPFromVOProtocol(object):
       ]), 2 * self.q + rust_max_shift)))
 
     tx = t.to_named_vector_poly()
-    voexec.vec_to_poly_dict[t.key()] = tx
+    piopexec.vec_to_poly_dict[t.key()] = tx
     piopexec.prover_send_polynomial(tx, 2 * self.q + max_shift, 2 * self.q + rust_max_shift)
 
     extended_hadamard.append(VOQuerySide(
@@ -973,8 +973,8 @@ class PIOPFromVOProtocol(object):
 
     return extended_hadamard, max_shift, rust_max_shift
 
-  def _fix_missing_vector_key(self, vec, voexec):
-    if isinstance(vec, NamedVector) and vec.key() not in voexec.vec_to_poly_dict:
+  def _fix_missing_vector_key(self, vec, piopexec):
+    if isinstance(vec, NamedVector) and vec.key() not in piopexec.vec_to_poly_dict:
       """
       This is possible because some named vectors
       might be locally evaluatable, never submitted
@@ -983,26 +983,27 @@ class PIOPFromVOProtocol(object):
       if not vec.local_evaluate:
         raise Exception("Some non-local vector is not in the dict: %s"
                         % vec.dumps())
-      voexec.vec_to_poly_dict[vec.key()] = vec.to_named_vector_poly()
+      piopexec.vec_to_poly_dict[vec.key()] = vec.to_named_vector_poly()
 
   def _pick_the_non_constant(self, key1, key2, vec1, vec2, omega):
     if key2 == "one":
       return vec1, omega / X
     return vec2, X
 
-  def _named_vector_constant_product_omega(self, voexec, coeff, key1, key2, vec1, vec2, omega):
+  def _named_vector_constant_product_omega(
+      self, piopexec, coeff, key1, key2, vec1, vec2, omega):
     if key1 == "one" and key2 == "one": # Constant-Constant
       return "$%s$" % latex(coeff)
     elif key1 == "one" or key2 == "one": # Named-Constant
       named, named_var = self._pick_the_non_constant(key1, key2, vec1, vec2, omega)
       return "$%s\\cdot %s$" % (
         add_paren_if_add(coeff),
-        voexec.vec_to_poly_dict[named.key()].dumps_var(named_var))
+        piopexec.vec_to_poly_dict[named.key()].dumps_var(named_var))
     else: # Named-Named
       return "$%s\\cdot %s\\cdot %s$" % (
         add_paren_if_add(coeff),
-        voexec.vec_to_poly_dict[vec1.key()].dumps_var(omega / X),
-        voexec.vec_to_poly_dict[vec2.key()].dumps_var(X))
+        piopexec.vec_to_poly_dict[vec1.key()].dumps_var(omega / X),
+        piopexec.vec_to_poly_dict[vec2.key()].dumps_var(X))
 
   def _increment_h_omega_sum(self, h_omega_sum_check, h_omega_sum, omega, a, b, size):
     h_omega_sum_check.append(h_omega_sum).plus_assign(
@@ -1077,9 +1078,9 @@ class PIOPFromVOProtocol(object):
         for key2, vec_value2 in b.items():
           vec2, value2 = vec_value2
 
-          self._fix_missing_vector_key(vec1, voexec)
-          self._fix_missing_vector_key(vec2, voexec)
-          hx_items.append(self._named_vector_constant_product_omega(voexec,
+          self._fix_missing_vector_key(vec1, piopexec)
+          self._fix_missing_vector_key(vec2, piopexec)
+          hx_items.append(self._named_vector_constant_product_omega(piopexec,
             simplify(value1.to_poly_expr(omega / X) * value2.to_poly_expr(X)),
             key1, key2, vec1, vec2, omega))
 
@@ -1176,9 +1177,13 @@ class PIOPFromVOProtocol(object):
       y = Symbol(get_name("y"))
       query_results[key] = y
       piopexec.eval_query_for_possibly_local_poly(
-          y, z0, voexec.vec_to_poly_dict[key], vec, rust_n + self.q)
+          y, z0, piopexec.vec_to_poly_dict[key], vec, rust_n + self.q)
 
     self.debug("Compute gx")
+    self._combine_polynomials_in_right_operands(piopexec, extended_hadamard, z, z0, query_results, h1x, h2x, rust_h_inverse_degree)
+
+  def _combine_polynomials_in_right_operands(self, piopexec, extended_hadamard, z, z0, query_results, h1x, h2x, rust_h_inverse_degree):
+    voexec = piopexec.reference_to_voexec
     gx = get_named_polynomial("g")
     coeff_builders = {} # map: key -> (poly, Symbol(coeff), latex_builder, rust_builder)
 
@@ -1249,7 +1254,7 @@ class PIOPFromVOProtocol(object):
         # polynomial, or a normal NamedVector multiplied by some coefficient
         if (isinstance(vec, NamedVector) and not vec.local_evaluate) or key == "one":
           _key = key
-          poly = "one" if key == "one" else voexec.vec_to_poly_dict[vec.key()]
+          poly = "one" if key == "one" else piopexec.vec_to_poly_dict[vec.key()]
           value = latex(value)
           rust_value = rust(rust_value)
         else: # In case it is locally evaluatable polynomial, this term should be
@@ -1258,7 +1263,7 @@ class PIOPFromVOProtocol(object):
           _key = "one"
           poly = "one"
           value = "%s\\cdot %s" \
-                  % (latex(value), voexec.vec_to_poly_dict[vec.key()].dumps_var(z))
+                  % (latex(value), piopexec.vec_to_poly_dict[vec.key()].dumps_var(z))
           rust_value = rust_mul(rust(rust_value), rust(vec.hint_computation(z)))
 
         # if this polynomial (or constant) has not been handled before, just set the
@@ -1338,7 +1343,6 @@ class PIOPFromVOProtocol(object):
 
     self.debug("Combine polynomial")
     piopexec.eval_check(0, z, gx)
-    piopexec.max_degree = h_degree - 1
 
   def execute(self, piopexec, *args):
     voexec = piopexec.reference_to_voexec
@@ -1366,6 +1370,7 @@ class PIOPFromVOProtocol(object):
     h, hx, h_vec_combination, h_degree, h_inverse_degree, \
         rust_h_degree, rust_h_inverse_degree, omega = \
         self._process_h(piopexec, extended_hadamard)
+    piopexec.max_degree = h_degree - 1
 
     """
     Split h into two halves
