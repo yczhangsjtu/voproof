@@ -250,6 +250,11 @@ class PublicCoinProtocolExecution(object):
     else:
       self.interactions.append(VerifierSendRandomnesses(*args))
 
+  def verifier_generate_and_send_rand(self, name):
+    ret = Symbol(get_name(name))
+    self.verifier_send_randomness(ret)
+    return ret
+
 
 class VOQuerySide(object):
   def __init__(self, a, b):
@@ -765,10 +770,10 @@ class PIOPFromVOProtocol(object):
         "The %d\'th hadamard check is not satisfied" % (i+1)
       )).end()
 
-  def _process_inner_product(self, piopexec, extended_hadamard, shifts, samples, ignore_in_t):
+  def _process_inner_product(self, piopexec, extended_hadamard,
+      shifts, samples, ignore_in_t, alpha):
     voexec = piopexec.reference_to_voexec
-    beta = Symbol(get_name("beta"))
-    piopexec.verifier_send_randomness(beta)
+    beta = piopexec.verifier_generate_and_send_rand("beta")
     r = get_named_vector("r")
     rust_n = voexec.rust_vector_size
     n = voexec.vector_size
@@ -862,6 +867,11 @@ class PIOPFromVOProtocol(object):
     ))
 
   def _process_extended_hadamards(self, piopexec, samples):
+    """
+    Although alpha is sent to the prover after the prover sends all the
+    vectors except t, this symbol is used in processing the extended hadamard
+    queries. So first declare it here.
+    """
     alpha = Symbol(get_name('alpha'))
     """
     A list of VO query sides, each is of the form vec{a} circ vec{b}
@@ -925,7 +935,8 @@ class PIOPFromVOProtocol(object):
 
     self.debug("Process inner products")
     if len(voexec.inner_products) > 0:
-      self._process_inner_product(piopexec, extended_hadamard, shifts, samples, ignore_in_t)
+      self._process_inner_product(piopexec, extended_hadamard,
+          shifts, samples, ignore_in_t, alpha)
 
     max_shift = voexec.simplify_max(Max(*shifts))
     rust_max_shift = piopexec.prover_redefine_symbol_rust(max_shift, "maxshift")
@@ -1006,8 +1017,7 @@ class PIOPFromVOProtocol(object):
     return atimesb_vec
 
   def _process_h(self, piopexec, extended_hadamard):
-    omega = Symbol(get_name('omega'))
-    piopexec.verifier_send_randomness(omega)
+    omega = piopexec.verifier_generate_and_send_rand("omega")
     voexec = piopexec.reference_to_voexec
     n = voexec.vector_size
     rust_n = voexec.rust_vector_size
@@ -1087,7 +1097,7 @@ class PIOPFromVOProtocol(object):
            rust_h_degree, rust_h_inverse_degree, omega
 
   def _split_h(self, piopexec, h, hx, h_vec_combination,
-      rust_h_degree, rust_h_inverse_degree):
+      h_degree, h_inverse_degree, rust_h_degree, rust_h_inverse_degree):
     h1 = get_named_vector("h")
     h2 = get_named_vector("h")
 
@@ -1111,100 +1121,40 @@ class PIOPFromVOProtocol(object):
     piopexec.prover_computes_latex(Math(h2x).assign("\\frac{%s}{X}" % hx.dumps_var(X))
              .minus("X^{%s}\\cdot %s" % (latex(-self.degree_bound-1), h1x.dumps_var(X))))
 
-    return h1, h2, h1x, h2x
-
-  def execute(self, piopexec, *args):
-    voexec = piopexec.reference_to_voexec
-    n = self.vector_size
-    vec_to_poly_dict = voexec.vec_to_poly_dict
-    q = Integer(1)
-    Ftoq = UnevaluatedExpr(F ** q)
-    self.q = q
-    self.Ftoq = Ftoq
-
-    samples = rust_sample_randomizers()
-    piopexec.prover_computes_rust(RustBuilder(samples).end())
-
-    self.debug("Executing VO protocol")
-    self.vo.execute(voexec, *args)
-    piopexec.prover_inputs = voexec.prover_inputs
-    piopexec.verifier_inputs = voexec.verifier_inputs
-    piopexec.prover_preparations = voexec.prover_preparations
-    piopexec.verifier_preparations = voexec.verifier_preparations
-    self.debug("Process interactions")
-    # Since the value n can be long and complex, define a new symbol in rust
-    # and put the long expression of n in this new symbol. This rust version
-    # of symbol should never be used outside rust context
-    rust_n = None
-    for interaction in voexec.interactions:
-      if isinstance(interaction, ProverComputes):
-        piopexec.prover_computes(interaction.latex_builder, interaction.rust_builder)
-      elif isinstance(interaction, VerifierComputes):
-        piopexec.verifier_computes(interaction.latex_builder, interaction.rust_builder)
-      elif isinstance(interaction, VerifierSendRandomnesses):
-        piopexec.verifier_send_randomness(*interaction.names)
-      elif isinstance(interaction, ProverSubmitVectors):
-        # Must be postponed to here because only now it is guaranteed that all the
-        # necessary variables that n depends on are defined
-        if rust_n is None:
-          voexec.try_verifier_redefine_vector_size_rust("n", n, piopexec)
-          rust_n = voexec.rust_vector_size
-
-        for v, size, rust_size in interaction.vectors:
-          self._process_prover_submitted_vector(piopexec, v, size, rust_size, samples)
-      else:
-        raise ValueError("Interaction of type %s should not appear" % type(interaction))
-
-    self.debug("Prepare extended hadamard")
-    extended_hadamard, max_shift, rust_max_shift = \
-        self._process_extended_hadamards(piopexec, samples)
-
-    self.debug("Process polynomial h")
-    h, hx, h_vec_combination, h_degree, h_inverse_degree, \
-        rust_h_degree, rust_h_inverse_degree, omega = \
-        self._process_h(piopexec, extended_hadamard)
-
-    """
-    Split h into two halves
-    """
-    self.debug("Compute h1 and h2")
-    h1, h2, h1x, h2x = self._split_h(piopexec, h, hx, h_vec_combination,
-                           rust_h_degree, rust_h_inverse_degree)
     piopexec.prover_send_polynomial(h1x, self.degree_bound)
     piopexec.prover_send_polynomial(h2x, h_degree - 1, rust_h_degree - 1)
 
-    self.debug("Verifier's turn")
-    z = Symbol(get_name("z"))
-    piopexec.verifier_send_randomness(z)
+    return h1, h2, h1x, h2x
 
-    self.debug("Collect named polynomials on left")
+  def _homomorphic_check(self, piopexec, extended_hadamard, h1, h2, h1x, h2x, omega,
+      rust_h_inverse_degree, h_degree):
+    voexec = piopexec.reference_to_voexec
+    self.debug("Verifier's turn")
+    z = piopexec.verifier_generate_and_send_rand("z")
+    rust_n = voexec.rust_vector_size
+
+    self.debug("Collect named polynomials inside left operands")
     left_named_vectors = {}
     for had in extended_hadamard:
       if isinstance(had.a, NamedVector):
         left_named_vectors[had.a.key()] = had.a
       elif isinstance(had.a, VectorCombination):
-        for key, vec_value in had.a.items():
-          if key != "one" and key not in left_named_vectors:
-            vec, value = vec_value
-            left_named_vectors[key] = vec
+        had.a.dump_named_vectors(left_named_vectors)
 
     self.debug("Make evaluation queries")
     query_results = {}
     for key, vec in left_named_vectors.items():
       y = Symbol(get_name("y"))
       if not vec.local_evaluate:
-        piopexec.eval_query(y, omega/z, vec_to_poly_dict[key])
-        piopexec.prover_computes(
-          LaTeXBuilder(),
-          rust_line_define_eval_vector_expression_i(y,
-              omega/z,
-              vec.dumpr_at_index(sym_i),
-              rust_n + q
-          )
+        piopexec.eval_query(y, omega/z, voexec.vec_to_poly_dict[key])
+        piopexec.prover_rust_define_eval_vector_expression_i(y,
+          omega/z,
+          vec.dumpr_at_index(sym_i),
+          rust_n + self.q
         )
       else:
         piopexec.verifier_computes(
-            Math(y).assign(vec_to_poly_dict[key].dumps_var(omega/z)),
+            Math(y).assign(voexec.vec_to_poly_dict[key].dumps_var(omega/z)),
             rust_line_define(y, vec.hint_computation(omega/z))
         )
       query_results[key] = y
@@ -1280,7 +1230,7 @@ class PIOPFromVOProtocol(object):
         # polynomial, or a normal NamedVector multiplied by some coefficient
         if (isinstance(vec, NamedVector) and not vec.local_evaluate) or key == "one":
           _key = key
-          poly = "one" if key == "one" else vec_to_poly_dict[vec.key()]
+          poly = "one" if key == "one" else voexec.vec_to_poly_dict[vec.key()]
           value = latex(value)
           rust_value = rust(rust_value)
         else: # In case it is locally evaluatable polynomial, this term should be
@@ -1289,7 +1239,7 @@ class PIOPFromVOProtocol(object):
           _key = "one"
           poly = "one"
           value = "%s\\cdot %s" \
-                  % (latex(value), vec_to_poly_dict[vec.key()].dumps_var(z))
+                  % (latex(value), voexec.vec_to_poly_dict[vec.key()].dumps_var(z))
           rust_value = rust_mul(rust(rust_value), rust(vec.hint_computation(z)))
 
         # if this polynomial (or constant) has not been handled before, just set the
@@ -1370,6 +1320,73 @@ class PIOPFromVOProtocol(object):
     self.debug("Combine polynomial")
     piopexec.eval_check(0, z, gx)
     piopexec.max_degree = h_degree - 1
+
+  def execute(self, piopexec, *args):
+    voexec = piopexec.reference_to_voexec
+    n = self.vector_size
+    q = Integer(1)
+    Ftoq = UnevaluatedExpr(F ** q)
+    self.q = q
+    self.Ftoq = Ftoq
+
+    samples = rust_sample_randomizers()
+    piopexec.prover_computes_rust(RustBuilder(samples).end())
+
+    self.debug("Executing VO protocol")
+    self.vo.execute(voexec, *args)
+    piopexec.prover_inputs = voexec.prover_inputs
+    piopexec.verifier_inputs = voexec.verifier_inputs
+    piopexec.prover_preparations = voexec.prover_preparations
+    piopexec.verifier_preparations = voexec.verifier_preparations
+    self.debug("Process interactions")
+    # Since the value n can be long and complex, define a new symbol in rust
+    # and put the long expression of n in this new symbol. This rust version
+    # of symbol should never be used outside rust context
+    rust_n = None
+    for interaction in voexec.interactions:
+      if isinstance(interaction, ProverComputes):
+        piopexec.prover_computes(interaction.latex_builder, interaction.rust_builder)
+      elif isinstance(interaction, VerifierComputes):
+        piopexec.verifier_computes(interaction.latex_builder, interaction.rust_builder)
+      elif isinstance(interaction, VerifierSendRandomnesses):
+        piopexec.verifier_send_randomness(*interaction.names)
+      elif isinstance(interaction, ProverSubmitVectors):
+        # Must be postponed to here because only now it is guaranteed that all the
+        # necessary variables that n depends on are defined
+        if rust_n is None:
+          voexec.try_verifier_redefine_vector_size_rust("n", n, piopexec)
+          rust_n = voexec.rust_vector_size
+
+        for v, size, rust_size in interaction.vectors:
+          self._process_prover_submitted_vector(piopexec, v, size, rust_size, samples)
+      else:
+        raise ValueError("Interaction of type %s should not appear" % type(interaction))
+
+    self.debug("Prepare extended hadamard")
+    extended_hadamard, max_shift, rust_max_shift = \
+        self._process_extended_hadamards(piopexec, samples)
+
+    self.debug("Process polynomial h")
+    h, hx, h_vec_combination, h_degree, h_inverse_degree, \
+        rust_h_degree, rust_h_inverse_degree, omega = \
+        self._process_h(piopexec, extended_hadamard)
+
+    """
+    Split h into two halves
+    """
+    self.debug("Compute h1 and h2")
+    h1, h2, h1x, h2x = self._split_h(piopexec, h, hx, h_vec_combination,
+                           h_degree, h_inverse_degree, rust_h_degree, rust_h_inverse_degree)
+
+    """
+    Here we assume that the underlying polynomial commitment scheme is
+    homomorphic. In that case, the prover only needs to open the polynomials
+    involved in all the left operands of the Hadamard queries and the verifier
+    can later merge the commitments of polynomials involved in right operands
+    linearly.
+    """
+    self._homomorphic_check(piopexec, extended_hadamard, h1, h2, h1x, h2x, omega,
+        rust_h_inverse_degree, h_degree)
 
 
 class ZKSNARK(object):

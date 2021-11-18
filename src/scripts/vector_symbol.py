@@ -680,6 +680,12 @@ class VectorCombination(CoeffMap):
 
   def dumpr_at_index(self, index):
     return _dumpr_at_index_for_sparse_coefficient(self, index)
+  
+  def dump_named_vectors(self, result):
+    for key, vec_value in self.items():
+      if key != "one" and key not in result:
+        vec, value = vec_value
+        result[key] = vec
 
 class PowerVector(object):
   def __init__(self, alpha, size, rust_size=None):
