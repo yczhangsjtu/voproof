@@ -1155,7 +1155,9 @@ class PIOPFromVOProtocol(object):
       rust_h_inverse_degree, h_degree):
     voexec = piopexec.reference_to_voexec
     z = piopexec.verifier_generate_and_send_rand("z")
+    z0 = omega/z
     rust_n = voexec.rust_vector_size
+    rust_max_shift = piopexec.rust_max_shift
 
     self.debug("Collect named vectors inside left operands")
     left_named_vectors = self._collect_named_vec_in_left_operands(extended_hadamard)
@@ -1164,19 +1166,16 @@ class PIOPFromVOProtocol(object):
     query_results = {}
     for key, vec in left_named_vectors.items():
       y = Symbol(get_name("y"))
-      if not vec.local_evaluate:
-        piopexec.eval_query(y, omega/z, voexec.vec_to_poly_dict[key])
-        piopexec.prover_rust_define_eval_vector_expression_i(y,
-          omega/z,
-          vec.dumpr_at_index(sym_i),
-          rust_n + self.q
-        )
-      else:
-        piopexec.verifier_computes(
-            Math(y).assign(voexec.vec_to_poly_dict[key].dumps_var(omega/z)),
-            rust_line_define(y, vec.hint_computation(omega/z))
-        )
       query_results[key] = y
+      if not vec.local_evaluate:
+        piopexec.eval_query(y, z0, voexec.vec_to_poly_dict[key])
+        # Prover computes y to be ready to open
+        piopexec.prover_rust_define_eval_vector_expression_i(
+            y, z0, vec.dumpr_at_index(sym_i), rust_n + self.q)
+      else:
+        piopexec.verifier_computes_latex(
+            Math(y).assign(voexec.vec_to_poly_dict[key].dumps_var(z0)))
+        piopexec.verifier_rust_define(y, vec.hint_computation(z0))
 
     self.debug("Compute gx")
     gx = get_named_polynomial("g")
@@ -1204,12 +1203,12 @@ class PIOPFromVOProtocol(object):
         vec, value = vec_value
         if key == "one":
           # the constant term is a structured polynomial, directly evaluate it at omega/z
-          a_items.append(value.to_poly_expr(omega/z))
+          a_items.append(value.to_poly_expr(z0))
         else:
           # directly evaluate the coefficient at omega/z
           # then multiply with p_1(omega/z) which has been obtained by querying
           # and stored under the key of p_1 in a dictionary
-          a_items.append(query_results[key] * value.to_poly_expr(omega/z))
+          a_items.append(query_results[key] * value.to_poly_expr(z0))
 
       # now multiplier should equal f_i(omega/z). if zero, then ignore this term
       multiplier = simplify(sum(a_items))
@@ -1220,7 +1219,7 @@ class PIOPFromVOProtocol(object):
           rust_line_assert_eq(
             multiplier,
             rust_eval_vector_expression_i(
-              omega/z, a.dumpr_at_index(sym_i), rust_n + rust_max_shift + q
+              z0, a.dumpr_at_index(sym_i), rust_n + rust_max_shift + q
             )
           )
         )
@@ -1307,7 +1306,7 @@ class PIOPFromVOProtocol(object):
         b = VectorCombination._from(had.b)
         lc.append(
           rust_eval_vector_expression_i(
-            omega/z, a.dumpr_at_index(sym_i), rust_n + rust_max_shift + q
+            z0, a.dumpr_at_index(sym_i), rust_n + rust_max_shift + q
           )
         )
         lc.append(rust_eval_vector_expression_i(z, b.dumpr_at_index(sym_i), rust_n + rust_max_shift + q))
