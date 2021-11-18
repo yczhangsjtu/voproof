@@ -568,8 +568,7 @@ class CombinePolynomial(object):
           self.length
         ))
       if rust_const is not None:
-        rust_builder.append(self.poly.to_vec()) \
-                    .append("[0]").plus_assign(rust_const).end()
+        rust_builder.append(rust_line_add_to_first_item(self.poly.to_vec(), rust_const))
 
       rust_items.append(rust_builder)
 

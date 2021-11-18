@@ -357,6 +357,7 @@ rust_macro_list = [
     ("define_power_power_mul", None, ("name", "alpha", "n", "beta", "m"), ()),
     ("define_commitment_linear_combination", None, None, ()),
     ("define_commitment_linear_combination_no_one", None, None, ()),
+    ("add_to_first_item", None, ("v", "e"), ()),
 ]
 
 

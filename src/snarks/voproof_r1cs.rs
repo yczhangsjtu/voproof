@@ -683,7 +683,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                 cap_d
             )
         );
-        g_vec[0] += c_1;
+        add_to_first_item!(g_vec, c_1);
         define_commitment_linear_combination!(
             cm_g,
             vk,

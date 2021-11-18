@@ -858,6 +858,13 @@ macro_rules! define_vector_poly_mul_shift {
 }
 
 #[macro_export]
+macro_rules! add_to_first_item {
+    ($v:expr, $e:expr) => {
+        $v[0] += $e;
+    }
+}
+
+#[macro_export]
 macro_rules! vector_power_mul {
     // Given vector v, element alpha, length n, compute
     // the coefficient vector of v * power(alpha, n)
