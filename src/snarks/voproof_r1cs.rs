@@ -166,7 +166,6 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         redefine_zero_pad_concat_vector!(u_vec_1, n, delta_vec);
         commit_vector!(cm_u_vec_1, u_vec_1, pk.powers, n + 1);
-        define_poly_from_vec!(u_vec_1_poly, u_vec_1);
         define!(ell_1, cap_s_a + cap_s_b + cap_s_c);
         define_generator!(gamma, E);
         get_randomness_from_hash!(
@@ -188,7 +187,6 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define_concat_neg_vector!(s_vec, r_vec, c_vec);
         redefine_zero_pad_concat_vector!(s_vec, n, delta_vec_1);
         commit_vector!(cm_s_vec, s_vec, pk.powers, n + 1);
-        define_poly_from_vec!(s_vec_poly, s_vec);
         get_randomness_from_hash!(
             nu,
             x_vec,
@@ -208,7 +206,6 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define_concat_uwinverse_vector!(h_vec, rnu_vec, mu, pk.u_vec, nu, pk.w_vec);
         redefine_zero_pad_concat_vector!(h_vec, n, delta_vec_2);
         commit_vector!(cm_h_vec, h_vec, pk.powers, n + 1);
-        define_poly_from_vec!(h_vec_poly, h_vec);
         get_randomness_from_hash!(
             beta,
             x_vec,
@@ -243,7 +240,6 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             n
         );
         define_concat_vector!(r_vec_tilde, accumulate_vector_plus!(r_vec_1), delta_vec_3);
-        define_poly_from_vec!(r_vec_tilde_poly, r_vec_tilde);
         commit_vector!(cm_r_vec_tilde, r_vec_tilde, pk.powers, n + 1);
         define!(maxshift, cap_s_a + cap_s_b + cap_s_c);
         get_randomness_from_hash!(
@@ -688,7 +684,6 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             )
         );
         g_vec[0] += c_1;
-        define_poly_from_vec!(g_poly, g_vec);
         define_commitment_linear_combination!(
             cm_g,
             vk,
@@ -714,6 +709,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
             cm_h_vec_3,
             c_10
         );
+        define_poly_from_vec!(h_vec_poly, h_vec);
+        define_poly_from_vec!(u_vec_1_poly, u_vec_1);
+        define_poly_from_vec!(r_vec_tilde_poly, r_vec_tilde);
+        define_poly_from_vec!(g_poly, g_vec);
         check_poly_eval!(g_poly, z, zero!(), "g does not evaluate to 0 at z");
         define!(fs, vec!(h_vec_poly, u_vec_1_poly, r_vec_tilde_poly));
         define!(gs, vec!(g_poly));

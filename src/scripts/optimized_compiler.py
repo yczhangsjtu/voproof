@@ -571,11 +571,7 @@ class CombinePolynomial(object):
         rust_builder.append(self.poly.to_vec()) \
                     .append("[0]").plus_assign(rust_const).end()
 
-      rust_items.append(
-        rust_builder.append(rust_define_poly_from_vec(
-            self.poly, self.poly.to_vec()
-          )
-        ).end())
+      rust_items.append(rust_builder)
 
     if has_commit:
       latex_items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
@@ -735,7 +731,7 @@ class PIOPFromVOProtocol(object):
         rust_line_redefine_zero_pad_concat_vector(v, voexec.rust_vector_size, randomizer))
     piopexec.prover_send_polynomial(
         poly, self.vector_size + self.q, voexec.rust_vector_size + self.q)
-    piopexec.prover_rust_define_poly_from_vec(poly, v)
+    # piopexec.prover_rust_define_poly_from_vec(poly, v)
     voexec.vec_to_poly_dict[v.key()] = poly
 
     piopexec.prover_debug(
@@ -838,7 +834,7 @@ class PIOPFromVOProtocol(object):
       randomizer)
 
     fr = rtilde.to_named_vector_poly()
-    piopexec.prover_rust_define_poly_from_vec(fr, rtilde)
+    # piopexec.prover_rust_define_poly_from_vec(fr, rtilde)
 
     piopexec.prover_send_polynomial(fr, n + self.q, rust_n + self.q)
     voexec.vec_to_poly_dict[rtilde.key()] = fr
@@ -1149,20 +1145,23 @@ class PIOPFromVOProtocol(object):
 
     return h1, h2, h1x, h2x
 
+  def _collect_named_vec_in_left_operands(self, extended_hadamard):
+    ret = {}
+    for had in extended_hadamard:
+      if isinstance(had.a, NamedVector):
+        ret[had.a.key()] = had.a
+      elif isinstance(had.a, VectorCombination):
+        had.a.dump_named_vectors(ret)
+    return ret
+
   def _homomorphic_check(self, piopexec, extended_hadamard, h1, h2, h1x, h2x, omega,
       rust_h_inverse_degree, h_degree):
     voexec = piopexec.reference_to_voexec
-    self.debug("Verifier's turn")
     z = piopexec.verifier_generate_and_send_rand("z")
     rust_n = voexec.rust_vector_size
 
-    self.debug("Collect named polynomials inside left operands")
-    left_named_vectors = {}
-    for had in extended_hadamard:
-      if isinstance(had.a, NamedVector):
-        left_named_vectors[had.a.key()] = had.a
-      elif isinstance(had.a, VectorCombination):
-        had.a.dump_named_vectors(left_named_vectors)
+    self.debug("Collect named vectors inside left operands")
+    left_named_vectors = self._collect_named_vec_in_left_operands(extended_hadamard)
 
     self.debug("Make evaluation queries")
     query_results = {}
@@ -1346,11 +1345,8 @@ class PIOPFromVOProtocol(object):
 
   def execute(self, piopexec, *args):
     voexec = piopexec.reference_to_voexec
-    n = self.vector_size
-    q = Integer(1)
-    Ftoq = UnevaluatedExpr(F ** q)
-    self.q = q
-    self.Ftoq = Ftoq
+    self.q = Integer(1)
+    self.Ftoq = UnevaluatedExpr(F ** self.q)
 
     samples = rust_sample_randomizers()
     piopexec.prover_computes_rust(RustBuilder(samples).end())
@@ -1388,6 +1384,7 @@ class PIOPFromVOProtocol(object):
     can later merge the commitments of polynomials involved in right operands
     linearly.
     """
+    self.debug("Verifier's turn")
     self._homomorphic_check(piopexec, extended_hadamard, h1, h2, h1x, h2x, omega,
         rust_h_inverse_degree, h_degree)
 
@@ -1615,6 +1612,11 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
 
     points_poly_dict = {}
     for query in queries:
+      if isinstance(query.poly, NamedVectorPolynomial):
+        self.prover_rust_define_poly_from_vec(query.poly, query.poly.vector)
+      elif isinstance(query.poly, NamedPolynomial):
+        self.prover_rust_define_poly_from_vec(query.poly, query.poly.to_vec())
+
       key = latex(query.point)
       if key not in points_poly_dict:
         points_poly_dict[key] = []
