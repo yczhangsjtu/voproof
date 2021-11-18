@@ -1515,6 +1515,17 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       self.verifier_rust_get_randomness_from_hash(
         r, to_field(i+1), *[rust_vk(x) for x in self.transcript])
 
+  def _process_prover_send_polynomials(self, polynomials):
+    for poly, degree, rust_degree in polynomials:
+      if not isinstance(poly, NamedVectorPolynomial):
+        raise Exception("Unrecognized polynomial type: %s" % type(poly))
+      self.prover_computes_latex(Math(poly.to_comm()).assign(
+        "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
+        % (poly.dumps())))
+      self.prover_rust_commit_vector_with_pk(poly.to_comm(), poly.vector, rust_degree)
+      self.transcript.append(poly.to_comm())
+      self.proof.append(poly.to_comm())
+
   def process_piopexec(self, piopexec):
     transcript = [x for x in piopexec.verifier_inputs]
     self.transcript = transcript
@@ -1529,20 +1540,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       elif isinstance(interaction, VerifierSendRandomnesses):
         self._generate_randomness_from_hashes(interaction.names)
       if isinstance(interaction, ProverSendPolynomials):
-        for poly, degree, rust_degree in interaction.polynomials:
-          commit_computation = Math(poly.to_comm()).assign(
-            "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
-            % (poly.dumps())
-            )
-          if isinstance(poly, NamedVectorPolynomial):
-            commit_rust_computation = rust_line_commit_vector_with_pk(
-              poly.to_comm(), poly.vector, rust_degree
-            )
-          else:
-            raise Exception("Unrecognized polynomial type: %s" % type(poly))
-          self.prover_computes(commit_computation, commit_rust_computation)
-          transcript.append(poly.to_comm())
-          self.proof.append(poly.to_comm())
+        self._process_prover_send_polynomials(interaction.polynomials)
 
     self.prover_computes(Math(",".join(["%s:=%s" %
       (tex(query.name), tex(query.poly.dumps_var(query.point)))
