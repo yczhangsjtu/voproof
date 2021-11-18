@@ -1544,13 +1544,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       for query in piopexec.eval_queries])))
     self.proof += [query.name for query in piopexec.eval_queries]
 
-  def process_piopexec(self, piopexec):
-    transcript = [x for x in piopexec.verifier_inputs]
-    self.transcript = transcript
-    self._process_piopexec_indexer(piopexec)
-    self._process_piopexec_interactions(piopexec)
-    self._process_piopexec_computes_query_results(piopexec)
-
+  def _process_polynomial_combination(self, piopexec):
     for poly_combine in piopexec.poly_combines:
       prover_items, prover_rust_items = poly_combine.dump_items(
           has_oracle=False, has_commit=True, has_poly=True)
@@ -1564,7 +1558,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         self.verifier_computes_latex(item)
       for rust_item in verifier_rust_items:
         self.verifier_computes_rust(rust_item)
-      transcript.append(poly_combine.poly.to_comm())
+      self.transcript.append(poly_combine.poly.to_comm())
 
       if piopexec.debug_mode:
         self.prover_rust_assert_eq(
@@ -1573,8 +1567,15 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           .append_to_last("&pk.powers")
           .append_to_last("&%s" % rust(poly_combine.poly.to_vec()))
           .append_to_last("(%s) as u64" % rust(poly_combine.length))
-          .invoke_method("unwrap")
-        )
+          .invoke_method("unwrap"))
+
+  def process_piopexec(self, piopexec):
+    transcript = [x for x in piopexec.verifier_inputs]
+    self.transcript = transcript
+    self._process_piopexec_indexer(piopexec)
+    self._process_piopexec_interactions(piopexec)
+    self._process_piopexec_computes_query_results(piopexec)
+    self._process_polynomial_combination(piopexec)
 
     queries = piopexec.eval_queries + piopexec.eval_checks
 
