@@ -743,6 +743,29 @@ class PIOPFromVOProtocol(object):
       rust_fmt_ff_vector(v),
     )
 
+  def _process_interactions(self, piopexec, samples):
+    voexec = piopexec.reference_to_voexec
+    for interaction in voexec.interactions:
+      if isinstance(interaction, ProverComputes):
+        piopexec.prover_computes(interaction.latex_builder, interaction.rust_builder)
+      elif isinstance(interaction, VerifierComputes):
+        piopexec.verifier_computes(interaction.latex_builder, interaction.rust_builder)
+      elif isinstance(interaction, VerifierSendRandomnesses):
+        piopexec.verifier_send_randomness(*interaction.names)
+      elif isinstance(interaction, ProverSubmitVectors):
+        """
+        Since the value n can be long and complex, define a new symbol in rust
+        and put the long expression of n in this new symbol. This rust version
+        of symbol should never be used outside rust context
+        Must be postponed to here because only now it is guaranteed that all the
+        necessary variables that n depends on are defined
+        """
+        voexec.try_verifier_redefine_vector_size_rust("n", voexec.vector_size, piopexec)
+        for v, size, rust_size in interaction.vectors:
+          self._process_prover_submitted_vector(piopexec, v, size, rust_size, samples)
+      else:
+        raise ValueError("Interaction of type %s should not appear" % type(interaction))
+
   """
   Check that the hadamard product of a query is indeed zero
   """
@@ -1338,25 +1361,9 @@ class PIOPFromVOProtocol(object):
     piopexec.verifier_inputs = voexec.verifier_inputs
     piopexec.prover_preparations = voexec.prover_preparations
     piopexec.verifier_preparations = voexec.verifier_preparations
+
     self.debug("Process interactions")
-    # Since the value n can be long and complex, define a new symbol in rust
-    # and put the long expression of n in this new symbol. This rust version
-    # of symbol should never be used outside rust context
-    for interaction in voexec.interactions:
-      if isinstance(interaction, ProverComputes):
-        piopexec.prover_computes(interaction.latex_builder, interaction.rust_builder)
-      elif isinstance(interaction, VerifierComputes):
-        piopexec.verifier_computes(interaction.latex_builder, interaction.rust_builder)
-      elif isinstance(interaction, VerifierSendRandomnesses):
-        piopexec.verifier_send_randomness(*interaction.names)
-      elif isinstance(interaction, ProverSubmitVectors):
-        # Must be postponed to here because only now it is guaranteed that all the
-        # necessary variables that n depends on are defined
-        voexec.try_verifier_redefine_vector_size_rust("n", n, piopexec)
-        for v, size, rust_size in interaction.vectors:
-          self._process_prover_submitted_vector(piopexec, v, size, rust_size, samples)
-      else:
-        raise ValueError("Interaction of type %s should not appear" % type(interaction))
+    self._process_interactions(piopexec, samples)
 
     self.debug("Prepare extended hadamard")
     extended_hadamard, max_shift, rust_max_shift = \
