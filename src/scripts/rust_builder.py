@@ -22,9 +22,11 @@ def rust(expr, to_field=False):
 def to_field(expr):
   if isinstance(expr, Integer) or isinstance(expr, int):
     if expr == 0:
-      return rust(rust_one())
-    if expr == 1:
       return rust(rust_zero())
+    if expr == 1:
+      return rust(rust_one())
+    if expr == -1:
+      return "-%s" % rust(rust_one())
     if expr > 0:
       return rust(rust_to_field(expr))
     return "-%s" % rust(rust_to_field(-expr))

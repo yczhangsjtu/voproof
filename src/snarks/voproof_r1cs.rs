@@ -170,6 +170,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define_generator!(gamma, E);
         get_randomness_from_hash!(
             mu,
+            one!(),
             x_vec,
             pk.verifier_key.cm_u_vec,
             pk.verifier_key.cm_w_vec,
@@ -189,6 +190,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         commit_vector!(cm_s_vec, s_vec, pk.powers, n + 1);
         get_randomness_from_hash!(
             nu,
+            one!(),
             x_vec,
             pk.verifier_key.cm_u_vec,
             pk.verifier_key.cm_w_vec,
@@ -208,6 +210,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         commit_vector!(cm_h_vec, h_vec, pk.powers, n + 1);
         get_randomness_from_hash!(
             beta,
+            one!(),
             x_vec,
             pk.verifier_key.cm_u_vec,
             pk.verifier_key.cm_w_vec,
@@ -244,6 +247,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define!(maxshift, cap_s_a + cap_s_b + cap_s_c);
         get_randomness_from_hash!(
             alpha,
+            one!(),
             x_vec,
             pk.verifier_key.cm_u_vec,
             pk.verifier_key.cm_w_vec,
@@ -264,7 +268,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                         linear_combination_base_zero!(
                             mu,
                             range_index!(1, 3 * cap_h, minus_i64!(i + n, 1)),
-                            -scalar_to_field!(1),
+                            -one!(),
                             power_vector_index!(gamma, 3 * cap_h, minus_i64!(i + n, 1))
                         ),
                         vector_index!(s_vec, i + n),
@@ -289,7 +293,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
                             vector_index!(pk.w_vec, minus_i64!(i + n, cap_k + 1)),
                             -nu,
                             vector_index!(pk.u_vec, minus_i64!(i + n, cap_k + 1)),
-                            zero!(),
+                            one!(),
                             vector_index!(pk.y_vec, minus_i64!(i + n, cap_k + 1))
                         ),
                         mul!(
@@ -337,6 +341,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         commit_vector!(cm_t_vec, t_vec, pk.powers, maxshift + 2);
         get_randomness_from_hash!(
             omega,
+            one!(),
             x_vec,
             pk.verifier_key.cm_u_vec,
             pk.verifier_key.cm_w_vec,
@@ -544,6 +549,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         commit_vector!(cm_h_vec_3, h_vec_3, pk.powers, maxshift + n);
         get_randomness_from_hash!(
             z,
+            one!(),
             x_vec,
             pk.verifier_key.cm_u_vec,
             pk.verifier_key.cm_w_vec,
@@ -706,7 +712,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define!(gs, vec!(g_poly));
         get_randomness_from_hash!(
             rand_xi,
-            zero!(),
+            one!(),
             x_vec,
             vk.cm_u_vec,
             vk.cm_w_vec,
@@ -796,6 +802,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define_generator!(gamma, E);
         get_randomness_from_hash!(
             mu,
+            one!(),
             x_vec,
             vk.cm_u_vec,
             vk.cm_w_vec,
@@ -805,6 +812,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         get_randomness_from_hash!(
             nu,
+            one!(),
             x_vec,
             vk.cm_u_vec,
             vk.cm_w_vec,
@@ -815,6 +823,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         get_randomness_from_hash!(
             beta,
+            one!(),
             x_vec,
             vk.cm_u_vec,
             vk.cm_w_vec,
@@ -826,6 +835,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         get_randomness_from_hash!(
             alpha,
+            one!(),
             x_vec,
             vk.cm_u_vec,
             vk.cm_w_vec,
@@ -838,6 +848,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         get_randomness_from_hash!(
             omega,
+            one!(),
             x_vec,
             vk.cm_u_vec,
             vk.cm_w_vec,
@@ -851,6 +862,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         );
         get_randomness_from_hash!(
             z,
+            one!(),
             x_vec,
             vk.cm_u_vec,
             vk.cm_w_vec,
@@ -975,7 +987,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         define!(z2, z);
         get_randomness_from_hash!(
             rand_xi,
-            zero!(),
+            one!(),
             x_vec,
             vk.cm_u_vec,
             vk.cm_w_vec,

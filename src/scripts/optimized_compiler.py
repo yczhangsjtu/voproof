@@ -1397,6 +1397,18 @@ class ZKSNARK(object):
   def verifier_computes_rust(self, rust_builder):
     self.verifier_computes(LaTeXBuilder(), rust_builder)
 
+  def prover_verifier_computes(self, latex_builder, rust_builder):
+    self.prover_computes(latex_builder, rust_builder)
+    self.verifier_computes(latex_builder, rust_builder)
+
+  def prover_verifier_computes_latex(self, latex_builder):
+    self.prover_computes_latex(latex_builder)
+    self.verifier_computes_latex(latex_builder)
+
+  def prover_verifier_computes_rust(self, rust_builder):
+    self.prover_computes_rust(rust_builder)
+    self.verifier_computes_rust(rust_builder)
+
   def dump_indexer(self):
     enum = Enumerate()
     for computation in self.indexer_computations:
@@ -1470,29 +1482,43 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
   def __init__(self, piopexec):
     super(ZKSNARKFromPIOPExecKZG, self).__init__()
     self.debug_mode = piopexec.debug_mode
+    self.process_piopexec(piopexec)
 
-    transcript = [x for x in piopexec.verifier_inputs]
+  def _process_indexer_polynomial(self, poly, degree, rust_degree):
+    self.preprocess(Math(poly.to_comm()).assign(
+        "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)" % poly.dumps()),
+      rust_line_commit_vector(poly.to_comm(), poly.vector, rust_degree))
+    self.preprocess_output_vk(poly.to_comm())
+    self.transcript.append(poly.to_comm())
 
+  def _process_piopexec_indexer(self, piopexec):
     for preprocess in piopexec.preprocessings:
       self.preprocess(preprocess.latex_builder, preprocess.rust_builder)
 
     for poly, degree, rust_degree in piopexec.indexer_polynomials.polynomials:
-      self.preprocess(
-          Math(poly.to_comm()).assign(
-            "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)" % poly.dumps()
-          ),
-          rust_line_commit_vector(
-            poly.to_comm(), poly.vector, rust_degree
-          ))
-      self.preprocess_output_vk(poly.to_comm())
-      transcript.append(poly.to_comm())
+      self._process_indexer_polynomial(poly, degree, rust_degree)
 
     for p in piopexec.indexer_output_pk:
       self.preprocess_output_pk(p)
 
     for v in piopexec.indexer_output_vk:
       self.preprocess_output_vk(v)
-      transcript.append(v)
+      self.transcript.append(v)
+
+  def _generate_randomness_from_hashes(self, names):
+    for i, r in enumerate(names):
+      self.prover_verifier_computes_latex(
+        Math(r).assign("\\mathsf{H}_{%d}(%s)"
+        % (i+1, ",".join([tex(x) for x in self.transcript]))))
+      self.prover_rust_get_randomness_from_hash(
+        r, to_field(i+1), *[rust_pk_vk(x) for x in self.transcript])
+      self.verifier_rust_get_randomness_from_hash(
+        r, to_field(i+1), *[rust_vk(x) for x in self.transcript])
+
+  def process_piopexec(self, piopexec):
+    transcript = [x for x in piopexec.verifier_inputs]
+    self.transcript = transcript
+    self._process_piopexec_indexer(piopexec)
 
     for interaction in piopexec.interactions:
       if isinstance(interaction, ProverComputes):
@@ -1501,20 +1527,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         self.prover_computes(interaction.latex_builder, interaction.rust_builder)
         self.verifier_computes(interaction.latex_builder, interaction.rust_builder)
       elif isinstance(interaction, VerifierSendRandomnesses):
-        for i, r in enumerate(interaction.names):
-          compute_hash = Math(r).assign(
-            "\\mathsf{H}_{%d}(%s)"
-            % (i+1, ",".join([tex(x) for x in transcript]))
-          )
-          self.prover_computes(
-            compute_hash,
-            rust_line_get_randomness_from_hash(
-              r, *[rust_pk_vk(x) for x in transcript]
-            ))
-          self.verifier_computes(compute_hash,
-            rust_line_get_randomness_from_hash(
-              r, *[rust_vk(x) for x in transcript]
-            ))
+        self._generate_randomness_from_hashes(interaction.names)
       if isinstance(interaction, ProverSendPolynomials):
         for poly, degree, rust_degree in interaction.polynomials:
           commit_computation = Math(poly.to_comm()).assign(
