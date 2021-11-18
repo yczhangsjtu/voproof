@@ -33,13 +33,17 @@ class LaTeXList(object):
 
 
 class Itemize(LaTeXList):
-  def __init__(self):
+  def __init__(self, init=None):
     super(Itemize, self).__init__("itemize")
+    if init is not None:
+      self.append(init)
 
 
 class Enumerate(LaTeXList):
-  def __init__(self):
+  def __init__(self, init=None):
     super(Enumerate, self).__init__("enumerate")
+    if init is not None:
+      self.append(init)
 
 
 def encapsulate_type(item):

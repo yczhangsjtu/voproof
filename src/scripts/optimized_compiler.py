@@ -507,6 +507,19 @@ class CombinationCoeffBuilder(object):
     self.rust_builder = rust_builder
     self.shifts = shifts
 
+  def transform_lists_to_builders(self):
+    """
+    Assume that the latex builder and rust builder are currently lists
+    Transform them into Itemize() and rust_define_sum respectively
+    """
+    self.latex_builder = LaTeXBuilder().start_math().append(self.coeff) \
+        .assign().end_math().space("the sum of:") \
+        .append(Itemize([Math(item) for item in self.latex_builder])) \
+      if len(self.latex_builder) > 1 else \
+        Math(self.coeff).assign(self.latex_builder[0])
+
+    self.rust_builder = rust_line_define_sum(self.coeff, *self.rust_builder)
+
 class CombinePolynomial(object):
   def __init__(self, poly, coeff_builders, length):
     self.poly = poly
@@ -1251,10 +1264,21 @@ class PIOPFromVOProtocol(object):
       coeff_builder.latex_builder.append(value)
       coeff_builder.rust_builder.append(rust_value)
 
+  def _check_hz(self, z0, z, extended_hadamard, size, h, rust_h_inverse_degree):
+    # Check that h(z) = sum_i f_i(omega/z) g_i(z) z^{n+maxshift+q}
+    lc = rust_linear_combination_base_zero()
+    for had in extended_hadamard:
+      lc.append(rust_eval_vector_expression_i(z0,
+        VectorCombination._from(had.a).dumpr_at_index(sym_i), size))
+      lc.append(rust_eval_vector_expression_i(z,
+        VectorCombination._from(had.b).dumpr_at_index(sym_i), size))
+    piopexec.prover_rust_assert_eq(lc,
+      rust_mul(rust_eval_vector_as_poly(h, z),
+        z**(-(rust_h_inverse_degree-1))))
+
   def _combine_polynomials_in_right_operands(
       self, piopexec, extended_hadamard, z, z0,
       query_results, h1x, h2x, rust_h_inverse_degree, size):
-    gx = get_named_polynomial("g")
 
     if self.debug_mode:
       naive_g = get_named_vector("naive_g")
@@ -1285,33 +1309,14 @@ class PIOPFromVOProtocol(object):
     if self.debug_mode:
       self._add_to_naive_g(piopexec, h1, -z**(-(h_inverse_degree-1)))
       self._add_to_naive_g(piopexec, h2, -z)
-
-      # Check that h(z) = sum_i f_i(omega/z) g_i(z) z^{n+maxshift+q}
-      lc = rust_linear_combination(rust_zero())
-      for had in extended_hadamard:
-        lc.append(rust_eval_vector_expression_i(z0,
-          VectorCombination._from(had.a).dumpr_at_index(sym_i), size))
-        lc.append(rust_eval_vector_expression_i(z,
-          VectorCombination._from(had.b).dumpr_at_index(sym_i), size))
-      piopexec.prover_rust_assert_eq(lc,
-        rust_mul(rust_eval_vector_as_poly(h, z),
-          z**(-(rust_h_inverse_degree-1))))
+      self._check_hz(z0, z, extended_hadamard, size, h, rust_h_inverse_degree)
 
     # Transform the lists into latex and rust builders
     for key, coeff_builder in coeff_builders.items():
-      coeff_builder.latex_builder = \
-          LaTeXBuilder().start_math().append(coeff_builder.coeff) \
-          .assign().end_math().space("the sum of:") \
-          .append(Itemize().append([Math(item) for item in coeff_builder.latex_builder])) \
-      if len(coeff_builder.latex_builder) > 1 else \
-        Math(coeff_builder.coeff).assign(coeff_builder.latex_builder[0])
+      coeff_builder.transform_lists_to_builders()
 
-      coeff_builder.rust_builder = rust_line_define_sum(
-          coeff_builder.coeff, *coeff_builder.rust_builder)
-
+    gx = get_named_polynomial("g")
     piopexec.combine_polynomial(gx, coeff_builders, self.degree_bound)
-
-    self.debug("Combine polynomial")
     piopexec.eval_check(0, z, gx)
 
   def execute(self, piopexec, *args):
