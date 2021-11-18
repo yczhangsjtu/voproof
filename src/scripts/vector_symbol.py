@@ -739,10 +739,10 @@ class PowerVector(object):
       rust_length + 1 if rust_length is not None else None))
 
   def to_poly_expr(self, var):
-    return ((self.alpha * var) ** self.size - Symbol("E::Fr::one()")) / (self.alpha * var - Symbol("E::Fr::one()"))
+    return ((self.alpha * var) ** self.size - Symbol("one!()")) / (self.alpha * var - Symbol("one!()"))
 
   def to_poly_expr_rust(self, var):
-    return ((self.alpha * var) ** self.rust_size - Symbol("E::Fr::one()")) / (self.alpha * var - Symbol("E::Fr::one()"))
+    return ((self.alpha * var) ** self.rust_size - Symbol("one!()")) / (self.alpha * var - Symbol("one!()"))
   
   def dumpr_at_index(self, index):
     if self.alpha != 1:
