@@ -1159,7 +1159,7 @@ class PIOPFromVOProtocol(object):
     return ret
 
   def _homomorphic_check(self, piopexec, extended_hadamard, h1, h2, h1x, h2x, omega,
-      rust_h_inverse_degree, h_degree):
+      rust_h_inverse_degree, h_degree, rust_max_shift):
     z = piopexec.verifier_generate_and_send_rand("z")
     z0 = omega/z
     rust_n = piopexec.reference_to_voexec.rust_vector_size
@@ -1179,19 +1179,18 @@ class PIOPFromVOProtocol(object):
     self.debug("Compute gx")
     self._combine_polynomials_in_right_operands(
         piopexec, extended_hadamard, z, z0, query_results,
-        h1x, h2x, rust_h_inverse_degree)
+        h1x, h2x, rust_h_inverse_degree, rust_max_shift)
 
   def _combine_polynomials_in_right_operands(
       self, piopexec, extended_hadamard, z, z0,
-      query_results, h1x, h2x, rust_h_inverse_degree):
+      query_results, h1x, h2x, rust_h_inverse_degree, rust_max_shift):
     gx = get_named_polynomial("g")
     coeff_builders = {} # map: key -> (poly, Symbol(coeff), latex_builder, rust_builder)
 
     if self.debug_mode:
       naive_g = get_named_vector("naive_g")
       piopexec.prover_rust_define_vec_mut(naive_g,
-        rust_vec_size(rust_zero(), rust_n + rust_max_shift + q)
-      )
+        rust_vec_size(rust_zero(), rust_n + rust_max_shift + q))
 
     # 1. The part contributed by the extended hadamard query
     for i, side in enumerate(extended_hadamard):
@@ -1204,20 +1203,10 @@ class PIOPFromVOProtocol(object):
       f_i(omega/z) = s_1(omega/z) p_1(omega/z) + ... + s_k(omega/z) p_k(omega/z) + s_0(omega/z)
       """
       a = VectorCombination._from(side.a)
-      a_items = []
-      for key, vec_value in a.items():
-        vec, value = vec_value
-        if key == "one":
-          # the constant term is a structured polynomial, directly evaluate it at omega/z
-          a_items.append(value.to_poly_expr(z0))
-        else:
-          # directly evaluate the coefficient at omega/z
-          # then multiply with p_1(omega/z) which has been obtained by querying
-          # and stored under the key of p_1 in a dictionary
-          a_items.append(query_results[key] * value.to_poly_expr(z0))
-
       # now multiplier should equal f_i(omega/z). if zero, then ignore this term
-      multiplier = simplify(sum(a_items))
+      multiplier = simplify(sum([
+          vec_value[1].to_poly_expr(z0) * (1 if key == "one" else query_results[key])
+          for key, vec_value in a.items()]))
 
       # check that multiplier = f_i(omega/z)
       if self.debug_mode:
@@ -1388,7 +1377,7 @@ class PIOPFromVOProtocol(object):
     """
     self.debug("Verifier's turn")
     self._homomorphic_check(piopexec, extended_hadamard, h1, h2, h1x, h2x, omega,
-        rust_h_inverse_degree, h_degree)
+        rust_h_inverse_degree, h_degree, rust_max_shift)
 
 
 class ZKSNARK(object):
