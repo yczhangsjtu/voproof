@@ -88,42 +88,23 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, set_pa
     with open("../snarks/template.rs") as template:
       temp = template.readlines()
     temp = [line.replace("__NAME__", name) for line in temp]
-    size_mark = "/*{size}*/"
-    vk_definition_mark, vk_return_mark = "/*{VerifierKey}*/", "/*{index verifier key}*/"
-    pk_definition_mark, pk_return_mark = "/*{ProverKey}*/", "/*{index prover key}*/"
-    proof_definition_mark, proof_return_mark = "/*{Proof}*/", "/*{proof}*/"
-    indexer_mark, prover_mark, verifier_mark = "/*{index}*/", "/*{prove}*/", "/*{verify}*/"
-    indexer_code, prover_code, verifier_code = \
-        zkSNARK.dump_indexer_rust(), zkSNARK.dump_prover_rust(), \
-        zkSNARK.dump_verifier_rust()
-    verifier_key_definition = zkSNARK.dump_vk_definition()
-    prover_key_definition = zkSNARK.dump_pk_definition()
-    proof_definition = zkSNARK.dump_proof_definition()
-    verifier_key_construction = zkSNARK.dump_vk_construction()
-    prover_key_construction = zkSNARK.dump_pk_construction()
-    proof_construction = zkSNARK.dump_proof_construction()
+    mark_content_map = [("/*{size}*/",
+        "%s\n        (%s) as usize" %  (rust(size_init), rust(piopexec.max_degree))),
+      ("/*{VerifierKey}*/", zkSNARK.dump_vk_definition()),
+      ("/*{index verifier key}*/", zkSNARK.dump_vk_construction()),
+      ("/*{ProverKey}*/", zkSNARK.dump_pk_definition()),
+      ("/*{Proof}*/", zkSNARK.dump_proof_definition()),
+      ("/*{index prover key}*/", zkSNARK.dump_pk_construction()),
+      ("/*{proof}*/", zkSNARK.dump_proof_construction()),
+      ("/*{index}*/", zkSNARK.dump_indexer_rust()),
+      ("/*{prove}*/", zkSNARK.dump_prover_rust()),
+      ("/*{verify}*/", zkSNARK.dump_verifier_rust()),
+    ]
+        
     for i in range(len(temp)):
-      if size_mark in temp[i]:
-        temp[i] = temp[i].replace(size_mark, "%s\n        (%s) as usize" % 
-                                             (rust(size_init), rust(piopexec.max_degree)))
-      if vk_definition_mark in temp[i]:
-        temp[i] = temp[i].replace(vk_definition_mark, verifier_key_definition)
-      if pk_definition_mark in temp[i]:
-        temp[i] = temp[i].replace(pk_definition_mark, prover_key_definition)
-      if proof_definition_mark in temp[i]:
-        temp[i] = temp[i].replace(proof_definition_mark, proof_definition)
-      if vk_return_mark in temp[i]:
-        temp[i] = temp[i].replace(vk_return_mark, verifier_key_construction)
-      if pk_return_mark in temp[i]:
-        temp[i] = temp[i].replace(pk_return_mark, prover_key_construction)
-      if proof_return_mark in temp[i]:
-        temp[i] = temp[i].replace(proof_return_mark, proof_construction)
-      if indexer_mark in temp[i]:
-        temp[i] = temp[i].replace(indexer_mark, indexer_code)
-      if prover_mark in temp[i]:
-        temp[i] = temp[i].replace(prover_mark, prover_code)
-      if verifier_mark in temp[i]:
-        temp[i] = temp[i].replace(verifier_mark, verifier_code)
+      for mark, content in mark_content_map:
+        if mark in temp[i]:
+          temp[i] = temp[i].replace(mark, content)
     temp = "".join(temp)
 
     with open("../snarks/%s.rs" % filename, "w") as f:
