@@ -1181,96 +1181,98 @@ class PIOPFromVOProtocol(object):
         piopexec, extended_hadamard, z, z0, query_results,
         h1x, h2x, rust_h_inverse_degree, rust_max_shift)
 
+  def _populate_coeff_builder_by_hadamard_query(self, piopexec, side, coeff_builders, z0, z, query_results):
+    """
+    assume side.a = f_i(X), side.b = g_i(X)
+    then this query branch contributes a f_i(omega/z) * g_i(X) to the final polynomial g(X)
+    to compute f_i(omega/z), split f_i(X) into linear combination of named polynomials
+    where the coefficients are structured polynomials, i.e.,
+    f_i(omega/z) = s_1(omega/z) p_1(omega/z) + ... + s_k(omega/z) p_k(omega/z) + s_0(omega/z)
+    """
+    a = VectorCombination._from(side.a)
+    # now multiplier should equal f_i(omega/z). if zero, then ignore this term
+    multiplier = simplify(sum([
+        vec_value[1].to_poly_expr(z0) * (1 if key == "one" else query_results[key])
+        for key, vec_value in a.items()]))
+
+    # check that multiplier = f_i(omega/z)
+    if self.debug_mode:
+      piopexec.prover_rust_assert_eq(
+          multiplier,
+          rust_eval_vector_expression_i(
+            z0, a.dumpr_at_index(sym_i),
+            rust_n + rust_max_shift + q))
+
+    if multiplier == 0:
+      return
+    b = VectorCombination._from(side.b) * multiplier
+
+    # The naive way to compute f_i(omega/z) g_i(X), is to directly dump g_i(X)
+    # coefficients on [1..n+max_shift+q], multiplied by the multiplier
+    if self.debug_mode:
+      piopexec.prover_rust_add_expression_vector_to_vector_i(
+          naive_g, b.dumpr_at_index(sym_i))
+
+    # Now decompose g_i(X), i.e., the right side of this Extended Hadamard query
+    # multiply every coefficient by the multiplier f_i(omega/z)
+    # then evaluate the coefficient at z
+    for key, vec_value in b.items():
+      vec, value = vec_value
+      rust_value = simplify(value.to_poly_expr_rust(z))
+      value = simplify(value.to_poly_expr(z))
+      if value == 0 or rust_value == 0:
+        raise Exception("value should not be zero")
+
+      poly = "one" if key == "one" else piopexec.vec_to_poly_dict[vec.key()]
+      value = latex(value)
+
+      if isinstance(vec, NamedVector) and vec.local_evaluate:
+        # In case it is locally evaluatable polynomial, this term should be
+        # regarded as part of the constant, instead of a polynomial. Let the verifier
+        # locally evaluate this polynomial at z
+        value = "%s\\cdot %s" % (value, poly.dumps_var(z))
+        rust_value = rust_mul(rust_value, vec.hint_computation(z))
+        key, poly = "one", "one"
+
+      # if this polynomial (or constant) has not been handled before, initialize
+      # it with empty list and a new symbol for the coefficient
+      # We temporarily use list here, because the format depends on whether
+      # this list size is > 1
+      if key not in coeff_builders:
+        coeff_builders[key] = CombinationCoeffBuilder(
+            poly, Symbol(get_name("c")), [], [])
+
+      # Get the existing coefficient for this named polynomial
+      coeff_builder = coeff_builders[key]
+      coeff_builder.latex_builder.append(value)
+      coeff_builder.rust_builder.append(rust_value)
+
   def _combine_polynomials_in_right_operands(
       self, piopexec, extended_hadamard, z, z0,
       query_results, h1x, h2x, rust_h_inverse_degree, rust_max_shift):
     gx = get_named_polynomial("g")
-    coeff_builders = {} # map: key -> (poly, Symbol(coeff), latex_builder, rust_builder)
 
     if self.debug_mode:
       naive_g = get_named_vector("naive_g")
       piopexec.prover_rust_define_vec_mut(naive_g,
         rust_vec_size(rust_zero(), rust_n + rust_max_shift + q))
 
+    coeff_builders = {} # map: key -> (poly, Symbol(coeff), latex_builder, rust_builder)
     # 1. The part contributed by the extended hadamard query
     for i, side in enumerate(extended_hadamard):
       self.debug("  Extended Hadamard %d" % (i + 1))
-      """
-      assume side.a = f_i(X), side.b = g_i(X)
-      then this query branch contributes a f_i(omega/z) * g_i(X) to the final polynomial g(X)
-      to compute f_i(omega/z), split f_i(X) into linear combination of named polynomials
-      where the coefficients are structured polynomials, i.e.,
-      f_i(omega/z) = s_1(omega/z) p_1(omega/z) + ... + s_k(omega/z) p_k(omega/z) + s_0(omega/z)
-      """
-      a = VectorCombination._from(side.a)
-      # now multiplier should equal f_i(omega/z). if zero, then ignore this term
-      multiplier = simplify(sum([
-          vec_value[1].to_poly_expr(z0) * (1 if key == "one" else query_results[key])
-          for key, vec_value in a.items()]))
-
-      # check that multiplier = f_i(omega/z)
-      if self.debug_mode:
-        piopexec.prover_rust_assert_eq(
-            multiplier,
-            rust_eval_vector_expression_i(
-              z0, a.dumpr_at_index(sym_i),
-              rust_n + rust_max_shift + q))
-
-      if multiplier == 0:
-        continue
-      b = VectorCombination._from(side.b) * multiplier
-
-      # The naive way to compute f_i(omega/z) g_i(X), is to directly dump g_i(X)
-      # coefficients on [1..n+max_shift+q], multiplied by the multiplier
-      if self.debug_mode:
-        piopexec.prover_rust_add_expression_vector_to_vector_i(
-            naive_g, b.dumpr_at_index(sym_i))
-
-      # Now decompose g_i(X), i.e., the right side of this Extended Hadamard query
-      # multiply every coefficient by the multiplier f_i(omega/z)
-      # then evaluate the coefficient at z
-      for key, vec_value in b.items():
-        vec, value = vec_value
-        rust_value = simplify(value.to_poly_expr_rust(z))
-        value = simplify(value.to_poly_expr(z))
-        if value == 0 or rust_value == 0:
-          raise Exception("value should not be zero")
-
-        poly = "one" if key == "one" else piopexec.vec_to_poly_dict[vec.key()]
-        value = latex(value)
-
-        if isinstance(vec, NamedVector) and vec.local_evaluate:
-          # In case it is locally evaluatable polynomial, this term should be
-          # regarded as part of the constant, instead of a polynomial. Let the verifier
-          # locally evaluate this polynomial at z
-          value = "%s\\cdot %s" % (value, poly.dumps_var(z))
-          rust_value = rust_mul(rust_value, vec.hint_computation(z))
-          key, poly = "one", "one"
-
-        # if this polynomial (or constant) has not been handled before, initialize
-        # it with empty list and a new symbol for the coefficient
-        # We temporarily use list here, because the format depends on whether
-        # this list size is > 1
-        if key not in coeff_builders:
-          coeff_builders[key] = CombinationCoeffBuilder(
-              poly, Symbol(get_name("c")), [], [])
-
-        # Get the existing coefficient for this named polynomial
-        coeff_builder = coeff_builders[key]
-        coeff_builder.latex_builder.append(value)
-        coeff_builder.rust_builder.append(rust_value)
+      self._populate_coeff_builder_by_hadamard_query(piopexec, side, coeff_builders, z0, z, query_results)
 
     # 2. The part contributed by h1(X) and h2(X)
     # h1(X) is committed aligned to the right boundary of the universal parameters
     # so we should additionally multiply a power of z to it when computing g(X)
-    c = Symbol(get_name("c"))
     coeff_builders[h1x.key()] = CombinationCoeffBuilder(
-        h1x, c,
-        [- z ** (-self.degree_bound)],
-        [- z ** (-self.degree_bound)],
+        h1x, Symbol(get_name("c")),
+        [- z ** (-self.degree_bound)], [- z ** (-self.degree_bound)],
         self.degree_bound - (rust_h_inverse_degree-1))
-    c = Symbol(get_name("c"))
-    coeff_builders[h2x.key()] = CombinationCoeffBuilder(h2x, c, [- z], [- z], 0)
+
+    coeff_builders[h2x.key()] = CombinationCoeffBuilder(
+        h2x, Symbol(get_name("c")), [- z], [- z], 0)
 
     if self.debug_mode:
       piopexec.prover_rust_add_expression_vector_to_vector_i(
