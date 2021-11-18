@@ -1237,33 +1237,29 @@ class PIOPFromVOProtocol(object):
           raise Exception("value should not be zero")
 
         poly = "one" if key == "one" else piopexec.vec_to_poly_dict[vec.key()]
+        value = latex(value)
+        rust_value = rust(rust_value)
 
         if isinstance(vec, NamedVector) and vec.local_evaluate:
           # In case it is locally evaluatable polynomial, this term should be
           # regarded as part of the constant, instead of a polynomial. Let the verifier
           # locally evaluate this polynomial at z
-          _key = "one"
-          value = "%s\\cdot %s" % (latex(value), poly.dumps_var(z))
-          rust_value = rust_mul(rust(rust_value), rust(vec.hint_computation(z)))
+          key = "one"
+          value = "%s\\cdot %s" % (value, poly.dumps_var(z))
+          rust_value = rust_mul(rust_value, vec.hint_computation(z))
           poly = "one"
-        else:
-          # This term is normal: i.e., either the constant term that is a structured
-          # polynomial, or a normal NamedVector multiplied by some coefficient
-          _key = key
-          value = latex(value)
-          rust_value = rust(rust_value)
 
         # if this polynomial (or constant) has not been handled before, just set the
         # value as the coefficient for this named polynomial
         # otherwise, add the value to the current coefficient
-        if _key not in coeff_builders:
+        if key not in coeff_builders:
           c = Symbol(get_name("c"))
           # Temporarily use list, because the format depends on whether
           # this list size is > 1
-          coeff_builders[_key] = CombinationCoeffBuilder(poly, c, [value], [rust_value])
+          coeff_builders[key] = CombinationCoeffBuilder(poly, c, [value], [rust_value])
         else:
           # Get the existing coefficient for this named polynomial
-          coeff_builder = coeff_builders[_key]
+          coeff_builder = coeff_builders[key]
           if coeff_builder.poly != poly:
             raise Exception("%s != %s" % (coeff_builder.poly.dumps(), poly.dumps()))
           coeff_builder.latex_builder.append(value)
