@@ -1434,25 +1434,36 @@ class ZKSNARK(object):
 
   def dump_verifier_rust(self):
     return self.dump_proof_init() + \
-        "".join([computation.dumpr() for computation in self.verifier_computations])
+        "".join([computation.dumpr()
+          for computation in self.verifier_computations])
+
+  def dump_definition(self, items):
+    return "\n    ".join([
+      "pub %s: %s," % (rust(item), get_rust_type(item))
+      for item in items])
+
+  def dump_construction(self, items):
+    return ("\n" + " " * 12).join([
+      "%s: %s," % (rust(item), rust(item))
+      for item in items])
 
   def dump_vk_definition(self):
-    return "\n    ".join(["pub %s: %s," % (rust(item), get_rust_type(item)) for item in self.vk])
+    return self.dump_definition(self.vk)
 
   def dump_pk_definition(self):
-    return "\n    ".join(["pub %s: %s," % (rust(item), get_rust_type(item)) for item in self.pk])
+    return self.dump_definition(self.pk)
 
   def dump_proof_definition(self):
-    return "\n    ".join(["pub %s: %s," % (rust(item), get_rust_type(item)) for item in self.proof])
+    return self.dump_definition(self.proof)
 
   def dump_vk_construction(self):
-    return ("\n" + " " * 12).join(["%s: %s," % (rust(item), rust(item)) for item in self.vk])
+    return self.dump_construction(self.vk)
 
   def dump_pk_construction(self):
-    return ("\n" + " " * 12).join(["%s: %s," % (rust(item), rust(item)) for item in self.pk])
+    return self.dump_construction(self.pk)
 
   def dump_proof_construction(self):
-    return ("\n" + " " * 12).join(["%s: %s," % (rust(item), rust(item)) for item in self.proof])
+    return self.dump_construction(self.proof)
 
 
 class ZKSNARKFromPIOPExecKZG(ZKSNARK):

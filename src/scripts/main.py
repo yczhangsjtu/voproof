@@ -87,8 +87,8 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, set_pa
   if filename is not None:
     with open("../snarks/template.rs") as template:
       temp = template.readlines()
-    temp = [line.replace("__NAME__", name) for line in temp]
-    mark_content_map = [("/*{size}*/",
+    mark_content_map = [("__NAME__", name),
+      ("/*{size}*/",
         "%s\n        (%s) as usize" %  (rust(size_init), rust(piopexec.max_degree))),
       ("/*{VerifierKey}*/", zkSNARK.dump_vk_definition()),
       ("/*{index verifier key}*/", zkSNARK.dump_vk_construction()),
