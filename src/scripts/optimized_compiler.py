@@ -1538,17 +1538,18 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       if isinstance(interaction, ProverSendPolynomials):
         self._process_prover_send_polynomials(interaction.polynomials)
 
+  def _process_piopexec_computes_query_results(self, piopexec):
+    self.prover_computes_latex(Math(",".join(["%s:=%s" %
+      (tex(query.name), tex(query.poly.dumps_var(query.point)))
+      for query in piopexec.eval_queries])))
+    self.proof += [query.name for query in piopexec.eval_queries]
+
   def process_piopexec(self, piopexec):
     transcript = [x for x in piopexec.verifier_inputs]
     self.transcript = transcript
     self._process_piopexec_indexer(piopexec)
     self._process_piopexec_interactions(piopexec)
-
-    self.prover_computes(Math(",".join(["%s:=%s" %
-      (tex(query.name), tex(query.poly.dumps_var(query.point)))
-      for query in piopexec.eval_queries])),
-      RustBuilder())
-    self.proof += [query.name for query in piopexec.eval_queries]
+    self._process_piopexec_computes_query_results(piopexec)
 
     for poly_combine in piopexec.poly_combines:
       prover_items, prover_rust_items = poly_combine.dump_items(
