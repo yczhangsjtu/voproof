@@ -179,8 +179,6 @@ class PublicCoinProtocolExecution(object):
     self.preprocessings = []
     self.indexer_output_pk = []
     self.indexer_output_vk = []
-    self.prover_preparations = []
-    self.verifier_preparations = []
     self.interactions = []
     _register_rust_functions(self)
 
@@ -220,9 +218,6 @@ class PublicCoinProtocolExecution(object):
     self.prover_rust_define(new_s, s)
     return new_s
 
-  def prover_prepare(self, latex_builder, rust_builder):
-    self.prover_preparations.append(ProverComputes(latex_builder, rust_builder))
-
   def verifier_computes(self, latex_builder, rust_builder):
     self.interactions.append(VerifierComputes(latex_builder, rust_builder))
 
@@ -233,9 +228,6 @@ class PublicCoinProtocolExecution(object):
     new_s = Symbol(get_name(name))
     self.verifier_computes_rust(rust_line_define(new_s, s))
     return new_s
-
-  def verifier_prepare(self, latex_builder, rust_builder):
-    self.verifier_preparations.append(VerifierComputes(latex_builder, rust_builder))
 
   def invoke_subprotocol(self, name, *args):
     self.interactions.append(InvokeSubprotocol(name, *args))
@@ -1331,8 +1323,6 @@ class PIOPFromVOProtocol(object):
     self.vo.execute(voexec, *args)
     piopexec.prover_inputs = voexec.prover_inputs
     piopexec.verifier_inputs = voexec.verifier_inputs
-    piopexec.prover_preparations = voexec.prover_preparations
-    piopexec.verifier_preparations = voexec.verifier_preparations
 
     self.debug("Process interactions")
     self._process_interactions(piopexec, samples)
@@ -1370,9 +1360,7 @@ class ZKSNARK(object):
   def __init__(self):
     self.indexer_computations = []
     self.prover_computations = []
-    self.prover_preparations = []
     self.verifier_computations = []
-    self.verifier_preparations = []
     self.vk = []
     self.pk = []
     self.proof = []
@@ -1400,9 +1388,6 @@ class ZKSNARK(object):
   def prover_computes_rust(self, rust_builder):
     self.prover_computes(LaTeXBuilder(), rust_builder)
 
-  def prover_prepare(self, latex_builder, rust_builder):
-    self.prover_preparations.append(ProverComputes(latex_builder, rust_builder))
-
   def verifier_computes(self, latex_builder, rust_builder):
     self.verifier_computations.append(VerifierComputes(latex_builder, rust_builder, False))
 
@@ -1411,9 +1396,6 @@ class ZKSNARK(object):
 
   def verifier_computes_rust(self, rust_builder):
     self.verifier_computes(LaTeXBuilder(), rust_builder)
-
-  def verifier_prepare(self, latex_builder, rust_builder):
-    self.verifier_preparations.append(VerifierComputes(latex_builder, rust_builder))
 
   def dump_indexer(self):
     enum = Enumerate()
@@ -1438,8 +1420,7 @@ class ZKSNARK(object):
     return enum.dumps()
 
   def dump_prover_rust(self):
-    return "".join([computation.dumpr() for computation in self.prover_preparations] +
-        [computation.dumpr() for computation in self.prover_computations])
+    return "".join([computation.dumpr() for computation in self.prover_computations])
 
   def dump_verifier(self):
     enum = Enumerate()
@@ -1453,9 +1434,7 @@ class ZKSNARK(object):
 
   def dump_verifier_rust(self):
     return self.dump_proof_init() + \
-        "".join(
-            [computation.dumpr() for computation in self.verifier_preparations] +
-            [computation.dumpr() for computation in self.verifier_computations])
+        "".join([computation.dumpr() for computation in self.verifier_computations])
 
   def dump_vk_definition(self):
     return "\n    ".join(["pub %s: %s," % (rust(item), get_rust_type(item)) for item in self.vk])
@@ -1503,10 +1482,6 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     for v in piopexec.indexer_output_vk:
       self.preprocess_output_vk(v)
       transcript.append(v)
-
-    for computation in piopexec.verifier_preparations:
-      self.prover_computes(computation.latex_builder, computation.rust_builder)
-      self.verifier_computes(computation.latex_builder, computation.rust_builder)
 
     for interaction in piopexec.interactions:
       if isinstance(interaction, ProverComputes):
