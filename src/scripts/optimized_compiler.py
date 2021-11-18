@@ -1179,9 +1179,10 @@ class PIOPFromVOProtocol(object):
     self.debug("Compute gx")
     self._combine_polynomials_in_right_operands(
         piopexec, extended_hadamard, z, z0, query_results,
-        h1x, h2x, rust_h_inverse_degree, rust_max_shift)
+        h1x, h2x, rust_h_inverse_degree, rust_n + rust_max_shift + self.q)
 
-  def _populate_coeff_builder_by_hadamard_query(self, piopexec, side, coeff_builders, z0, z, query_results):
+  def _populate_coeff_builder_by_hadamard_query(
+      self, piopexec, side, coeff_builders, z0, z, query_results, size):
     """
     assume side.a = f_i(X), side.b = g_i(X)
     then this query branch contributes a f_i(omega/z) * g_i(X) to the final polynomial g(X)
@@ -1198,10 +1199,10 @@ class PIOPFromVOProtocol(object):
     # check that multiplier = f_i(omega/z)
     if self.debug_mode:
       piopexec.prover_rust_assert_eq(
-          multiplier,
-          rust_eval_vector_expression_i(
-            z0, a.dumpr_at_index(sym_i),
-            rust_n + rust_max_shift + q))
+        multiplier,
+        rust_eval_vector_expression_i(
+          z0, a.dumpr_at_index(sym_i),
+          rust_n + rust_max_shift + q))
 
     if multiplier == 0:
       return
@@ -1230,11 +1231,10 @@ class PIOPFromVOProtocol(object):
         # In case it is locally evaluatable polynomial, this term should be
         # regarded as part of the constant, instead of a polynomial. Let the verifier
         # locally evaluate this polynomial at z
-        value = "%s\\cdot %s" % (value, poly.dumps_var(z))
+        key, value, poly = "one", "%s\\cdot %s" % (value, poly.dumps_var(z)), "one"
         rust_value = rust_mul(rust_value, vec.hint_computation(z))
-        key, poly = "one", "one"
 
-      # if this polynomial (or constant) has not been handled before, initialize
+      # If this polynomial (or constant) has not been handled before, initialize
       # it with empty list and a new symbol for the coefficient
       # We temporarily use list here, because the format depends on whether
       # this list size is > 1
@@ -1242,26 +1242,26 @@ class PIOPFromVOProtocol(object):
         coeff_builders[key] = CombinationCoeffBuilder(
             poly, Symbol(get_name("c")), [], [])
 
-      # Get the existing coefficient for this named polynomial
       coeff_builder = coeff_builders[key]
       coeff_builder.latex_builder.append(value)
       coeff_builder.rust_builder.append(rust_value)
 
   def _combine_polynomials_in_right_operands(
       self, piopexec, extended_hadamard, z, z0,
-      query_results, h1x, h2x, rust_h_inverse_degree, rust_max_shift):
+      query_results, h1x, h2x, rust_h_inverse_degree, size):
     gx = get_named_polynomial("g")
 
     if self.debug_mode:
       naive_g = get_named_vector("naive_g")
       piopexec.prover_rust_define_vec_mut(naive_g,
-        rust_vec_size(rust_zero(), rust_n + rust_max_shift + q))
+        rust_vec_size(rust_zero(), size))
 
     coeff_builders = {} # map: key -> (poly, Symbol(coeff), latex_builder, rust_builder)
     # 1. The part contributed by the extended hadamard query
     for i, side in enumerate(extended_hadamard):
       self.debug("  Extended Hadamard %d" % (i + 1))
-      self._populate_coeff_builder_by_hadamard_query(piopexec, side, coeff_builders, z0, z, query_results)
+      self._populate_coeff_builder_by_hadamard_query(
+          piopexec, side, coeff_builders, z0, z, query_results, size)
 
     # 2. The part contributed by h1(X) and h2(X)
     # h1(X) is committed aligned to the right boundary of the universal parameters
@@ -1269,18 +1269,16 @@ class PIOPFromVOProtocol(object):
     coeff_builders[h1x.key()] = CombinationCoeffBuilder(
         h1x, Symbol(get_name("c")),
         [- z ** (-self.degree_bound)], [- z ** (-self.degree_bound)],
-        self.degree_bound - (rust_h_inverse_degree-1))
+        self.degree_bound - (rust_h_inverse_degree - 1))
 
     coeff_builders[h2x.key()] = CombinationCoeffBuilder(
         h2x, Symbol(get_name("c")), [- z], [- z], 0)
 
     if self.debug_mode:
       piopexec.prover_rust_add_expression_vector_to_vector_i(
-        naive_g, "(%s) * (%s)" % (h1.dumpr_at_index(sym_i), rust(-z**(-(h_inverse_degree-1))))
-      )
+        naive_g, rust_mul(h1.dumpr_at_index(sym_i), rust(-z**(-(h_inverse_degree-1)))))
       piopexec.prover_rust_add_expression_vector_to_vector_i(
-        naive_g, "(%s) * (%s)" % (h2.dumpr_at_index(sym_i), rust(-z))
-      )
+        naive_g, rust_mul(h2.dumpr_at_index(sym_i), rust(-z)))
       # Pass this variable to the zkSNARK, because g has not been computed, cannot
       # make the comparison here.
       piopexec.naive_g = naive_g
@@ -1288,20 +1286,13 @@ class PIOPFromVOProtocol(object):
       # Check that h(z) = sum_i f_i(omega/z) g_i(z) z^{n+maxshift+q}
       lc = rust_linear_combination(rust_zero())
       for had in extended_hadamard:
-        a = VectorCombination._from(had.a)
-        b = VectorCombination._from(had.b)
-        lc.append(
-          rust_eval_vector_expression_i(
-            z0, a.dumpr_at_index(sym_i), rust_n + rust_max_shift + q
-          )
-        )
-        lc.append(rust_eval_vector_expression_i(z, b.dumpr_at_index(sym_i), rust_n + rust_max_shift + q))
-      piopexec.prover_rust_assert_eq(
-        rust_mul(
-          rust_eval_vector_as_poly(h, z),
-          z**(-(rust_h_inverse_degree-1))),
-        lc
-      )
+        lc.append(rust_eval_vector_expression_i(z0,
+          VectorCombination._from(had.a).dumpr_at_index(sym_i), size))
+        lc.append(rust_eval_vector_expression_i(z,
+          VectorCombination._from(had.b).dumpr_at_index(sym_i), size))
+      piopexec.prover_rust_assert_eq(lc,
+        rust_mul(rust_eval_vector_as_poly(h, z),
+          z**(-(rust_h_inverse_degree-1))))
 
     # Transform the lists into latex and rust builders
     for key, coeff_builder in coeff_builders.items():
