@@ -1526,11 +1526,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       self.transcript.append(poly.to_comm())
       self.proof.append(poly.to_comm())
 
-  def process_piopexec(self, piopexec):
-    transcript = [x for x in piopexec.verifier_inputs]
-    self.transcript = transcript
-    self._process_piopexec_indexer(piopexec)
-
+  def _process_piopexec_interactions(self, piopexec):
     for interaction in piopexec.interactions:
       if isinstance(interaction, ProverComputes):
         self.prover_computes(interaction.latex_builder, interaction.rust_builder)
@@ -1541,6 +1537,12 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         self._generate_randomness_from_hashes(interaction.names)
       if isinstance(interaction, ProverSendPolynomials):
         self._process_prover_send_polynomials(interaction.polynomials)
+
+  def process_piopexec(self, piopexec):
+    transcript = [x for x in piopexec.verifier_inputs]
+    self.transcript = transcript
+    self._process_piopexec_indexer(piopexec)
+    self._process_piopexec_interactions(piopexec)
 
     self.prover_computes(Math(",".join(["%s:=%s" %
       (tex(query.name), tex(query.poly.dumps_var(query.point)))
