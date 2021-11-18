@@ -1342,7 +1342,6 @@ class PIOPFromVOProtocol(object):
     # Since the value n can be long and complex, define a new symbol in rust
     # and put the long expression of n in this new symbol. This rust version
     # of symbol should never be used outside rust context
-    rust_n = None
     for interaction in voexec.interactions:
       if isinstance(interaction, ProverComputes):
         piopexec.prover_computes(interaction.latex_builder, interaction.rust_builder)
@@ -1353,10 +1352,7 @@ class PIOPFromVOProtocol(object):
       elif isinstance(interaction, ProverSubmitVectors):
         # Must be postponed to here because only now it is guaranteed that all the
         # necessary variables that n depends on are defined
-        if rust_n is None:
-          voexec.try_verifier_redefine_vector_size_rust("n", n, piopexec)
-          rust_n = voexec.rust_vector_size
-
+        voexec.try_verifier_redefine_vector_size_rust("n", n, piopexec)
         for v, size, rust_size in interaction.vectors:
           self._process_prover_submitted_vector(piopexec, v, size, rust_size, samples)
       else:
