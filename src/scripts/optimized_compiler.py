@@ -1086,6 +1086,33 @@ class PIOPFromVOProtocol(object):
     return h, hx, h_vec_combination, h_degree, h_inverse_degree, \
            rust_h_degree, rust_h_inverse_degree, omega
 
+  def _split_h(self, piopexec, h, hx, h_vec_combination,
+      rust_h_degree, rust_h_inverse_degree):
+    h1 = get_named_vector("h")
+    h2 = get_named_vector("h")
+
+    piopexec.prover_rust_define_expression_vector_i(h1,
+       h_vec_combination.dumpr_at_index(sym_i - rust_h_inverse_degree + 1),
+       rust_h_inverse_degree - 1)
+    piopexec.prover_rust_define_expression_vector_i(h2,
+       h_vec_combination.dumpr_at_index(sym_i + 1),
+       rust_h_degree - 1)
+
+    if self.debug_mode:
+      piopexec.prover_rust_check_vector_eq(h,
+              rust_vector_concat(h1, rust_vec(rust_zero()), h2),
+              "h != h1 || 0 || h2")
+      piopexec.prover_rust_assert_eq(h_vec_combination.dumpr_at_index(1), rust_zero())
+
+    h1x = h1.to_named_vector_poly()
+    h2x = h2.to_named_vector_poly()
+    piopexec.prover_computes_latex(Math(h1x).assign(hx).dot(X ** self.degree_bound)
+            .append("\\bmod").append(X ** self.degree_bound))
+    piopexec.prover_computes_latex(Math(h2x).assign("\\frac{%s}{X}" % hx.dumps_var(X))
+             .minus("X^{%s}\\cdot %s" % (latex(-self.degree_bound-1), h1x.dumps_var(X))))
+
+    return h1, h2, h1x, h2x
+
   def execute(self, piopexec, *args):
     voexec = piopexec.reference_to_voexec
     n = self.vector_size
@@ -1140,37 +1167,9 @@ class PIOPFromVOProtocol(object):
     """
     Split h into two halves
     """
-
     self.debug("Compute h1 and h2")
-    h1 = get_named_vector("h")
-    h2 = get_named_vector("h")
-    # For producing the latex code only
-    h1x = get_named_polynomial("h")
-    h2x = get_named_polynomial("h")
-
-    piopexec.prover_computes(
-        Math(h1x).assign(hx).dot(X ** self.degree_bound)
-                            .append("\\bmod").append(X ** self.degree_bound),
-        rust_line_define_expression_vector_i(h1,
-           h_vec_combination.dumpr_at_index(sym_i - rust_h_inverse_degree + 1),
-           rust_h_inverse_degree - 1))
-    piopexec.prover_computes(
-        Math(h2x).assign("\\frac{%s}{X}" % hx.dumps_var(X))
-                 .minus("X^{%s}\\cdot %s" %
-                        (latex(-self.degree_bound-1), h1x.dumps_var(X))),
-        rust_line_define_expression_vector_i(h2,
-           h_vec_combination.dumpr_at_index(sym_i + 1),
-           rust_h_degree - 1))
-
-    if self.debug_mode:
-      piopexec.prover_rust_check_vector_eq(h,
-              rust_vector_concat(h1, rust_vec(rust_zero()), h2),
-              "h != h1 || 0 || h2")
-      piopexec.prover_rust_assert_eq(h_vec_combination.dumpr_at_index(1), rust_zero())
-
-    # For the rust code, use the vector instead
-    h1x = h1.to_named_vector_poly()
-    h2x = h2.to_named_vector_poly()
+    h1, h2, h1x, h2x = self._split_h(piopexec, h, hx, h_vec_combination,
+                           rust_h_degree, rust_h_inverse_degree)
     piopexec.prover_send_polynomial(h1x, self.degree_bound)
     piopexec.prover_send_polynomial(h2x, h_degree - 1, rust_h_degree - 1)
 
