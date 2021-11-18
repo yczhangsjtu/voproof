@@ -1236,20 +1236,20 @@ class PIOPFromVOProtocol(object):
         if value == 0 or rust_value == 0:
           raise Exception("value should not be zero")
 
+        poly = "one" if key == "one" else piopexec.vec_to_poly_dict[vec.key()]
+
         if isinstance(vec, NamedVector) and vec.local_evaluate:
           # In case it is locally evaluatable polynomial, this term should be
           # regarded as part of the constant, instead of a polynomial. Let the verifier
           # locally evaluate this polynomial at z
           _key = "one"
-          poly = "one"
-          value = "%s\\cdot %s" \
-                  % (latex(value), piopexec.vec_to_poly_dict[vec.key()].dumps_var(z))
+          value = "%s\\cdot %s" % (latex(value), poly.dumps_var(z))
           rust_value = rust_mul(rust(rust_value), rust(vec.hint_computation(z)))
+          poly = "one"
         else:
           # This term is normal: i.e., either the constant term that is a structured
           # polynomial, or a normal NamedVector multiplied by some coefficient
           _key = key
-          poly = "one" if key == "one" else piopexec.vec_to_poly_dict[vec.key()]
           value = latex(value)
           rust_value = rust(rust_value)
 
