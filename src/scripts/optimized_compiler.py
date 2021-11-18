@@ -561,16 +561,14 @@ class CombinePolynomial(object):
 
     if has_poly:
       latex_items.append(Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
-      rust_builder = rust_line_define_vec_mut(
+      rust_items.append(rust_line_define_vec_mut(
         self.poly.to_vec(),
         rust_expression_vector_i(
           rust_linear_combination_base_zero(poly_sum_rust_items),
           self.length
-        ))
+        )))
       if rust_const is not None:
-        rust_builder.append(rust_line_add_to_first_item(self.poly.to_vec(), rust_const))
-
-      rust_items.append(rust_builder)
+        rust_items.append(rust_line_add_to_first_item(self.poly.to_vec(), rust_const))
 
     if has_commit:
       latex_items.append(Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
@@ -672,8 +670,8 @@ class PIOPExecution(PublicCoinProtocolExecution):
     for query in self.eval_queries:
       ret.append(query.dumps())
     for polycom in self.poly_combines:
-      for item, rust_items in polycom.dump_items():
-        ret.append(VerifierComputes(item, RustBuilder()).dumps())
+      item, rust_items = polycom.dump_items()
+      ret.append(VerifierComputes(item, RustBuilder()).dumps())
     for query in self.eval_checks:
       ret.append(query.dumps_check())
     return ret.dumps()
@@ -1578,10 +1576,14 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           has_oracle=False, has_commit=True, has_poly=True)
       verifier_items, verifier_rust_items = poly_combine.dump_items(
           has_oracle=False, has_commit=True, has_poly=False)
-      for item, rust_item in zip(prover_items, prover_rust_items):
-        self.prover_computes(item, rust_item)
-      for item, rust_item in zip(verifier_items, verifier_rust_items):
-        self.verifier_computes(item, rust_item)
+      for item in prover_items:
+        self.prover_computes_latex(item)
+      for rust_item in prover_rust_items:
+        self.prover_computes_rust(rust_item)
+      for item in verifier_items:
+        self.verifier_computes_latex(item)
+      for rust_item in verifier_rust_items:
+        self.verifier_computes_rust(rust_item)
       transcript.append(poly_combine.poly.to_comm())
 
       if piopexec.debug_mode:
