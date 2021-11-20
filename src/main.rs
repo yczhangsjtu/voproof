@@ -1,14 +1,21 @@
 use ark_ec::PairingEngine;
 use ark_ff::fields::PrimeField;
-use ark_relations::{lc, r1cs::{
-  ConstraintSynthesizer, ConstraintSystemRef,
-  SynthesisError, ConstraintSystem as ArkR1CS, Variable}};
-use voproof::*;
+use ark_relations::{
+  lc,
+  r1cs::{
+    ConstraintSynthesizer, ConstraintSystem as ArkR1CS, ConstraintSystemRef, SynthesisError,
+    Variable,
+  },
+};
+use voproof::cs::{
+  r1cs::{R1CSInstance, R1CSWitness, R1CS},
+  ConstraintSystem,
+};
 use voproof::error::Error;
-use voproof::tools::{to_int, to_field};
-use voproof::cs::{ConstraintSystem, r1cs::{R1CS, R1CSInstance, R1CSWitness}};
-use voproof::snarks::{SNARK, voproof_r1cs::*};
 use voproof::kzg::UniversalParams;
+use voproof::snarks::{voproof_r1cs::*, SNARK};
+use voproof::tools::{to_field, to_int};
+use voproof::*;
 // use voproof::kzg::{KZG10, UniversalParams, Powers, VerifierKey, Randomness};
 
 #[derive(Copy)]
@@ -48,7 +55,7 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for TestCircuit<F> {
     for _ in 0..self.num_constraints - 1 {
       cs.enforce_constraint(lc!() + a, lc!() + b, lc!() + c)?;
     }
-    
+
     cs.enforce_constraint(lc!(), lc!(), lc!())?;
 
     Ok(())
@@ -80,8 +87,8 @@ fn run_r1cs_example<E: PairingEngine>() -> Result<(), Error> {
   println!("R1CS C col indices: {:?}", r1cs.ccols);
   println!("R1CS C vals: {:?}", to_int!(r1cs.cvals));
 
-  let instance = R1CSInstance{instance: x};
-  let witness = R1CSWitness{witness: w};
+  let instance = R1CSInstance { instance: x };
+  let witness = R1CSWitness { witness: w };
 
   if r1cs.satisfy(&instance, &witness) {
     println!("R1CS satisfied!");
@@ -91,8 +98,11 @@ fn run_r1cs_example<E: PairingEngine>() -> Result<(), Error> {
 
   let max_degree = VOProofR1CS::get_max_degree(r1cs.get_size());
   // Let the universal parameters take a larger size than expected
-  let universal_params : UniversalParams::<E> = VOProofR1CS::setup(max_degree + 10).unwrap();
-  println!("Universal parameter size: {}", universal_params.powers_of_g.len());
+  let universal_params: UniversalParams<E> = VOProofR1CS::setup(max_degree + 10).unwrap();
+  println!(
+    "Universal parameter size: {}",
+    universal_params.powers_of_g.len()
+  );
   let (pk, vk) = VOProofR1CS::index(&universal_params, &r1cs).unwrap();
   println!("Degree bound: {}", vk.degree_bound);
   println!("Max degree: {}", pk.max_degree);
@@ -111,7 +121,6 @@ fn run_r1cs_example<E: PairingEngine>() -> Result<(), Error> {
   let proof = VOProofR1CS::prove(&pk, &instance, &witness)?;
   VOProofR1CS::verify(&vk, &instance, &proof)
 }
-
 
 fn main() {
   if let Err(err) = run_r1cs_example::<ark_bls12_381::Bls12_381>() {

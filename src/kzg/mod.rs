@@ -10,9 +10,7 @@ use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::{One, PrimeField, UniformRand, Zero};
 use ark_poly::UVPolynomial;
 use ark_poly_commit::LabeledPolynomial;
-use ark_std::{
-  format, marker::PhantomData, ops::Div, string::ToString, vec, vec::Vec,
-};
+use ark_std::{format, marker::PhantomData, ops::Div, string::ToString, vec, vec::Vec};
 
 use ark_std::ops::Mul;
 use ark_std::rand::RngCore;
@@ -174,11 +172,7 @@ where
   }
 
   /// On input a polynomial `p` and a point `point`, outputs a proof for the same.
-  pub fn open<'a>(
-    powers: &Vec<E::G1Affine>,
-    p: &P,
-    point: &P::Point,
-  ) -> Result<Proof<E>, Error> {
+  pub fn open<'a>(powers: &Vec<E::G1Affine>, p: &P, point: &P::Point) -> Result<Proof<E>, Error> {
     Self::check_degree_is_too_large(p.degree(), powers.len())?;
     let open_time = start_timer!(|| format!("Opening polynomial of degree {}", p.degree()));
 
@@ -438,14 +432,14 @@ mod tests {
   #![allow(non_camel_case_types)]
   use crate::kzg::*;
   use crate::*;
-  use ark_poly_commit::{PCCommitment, Polynomial};
   use ark_ec::group::Group;
+  use ark_poly_commit::{PCCommitment, Polynomial};
 
   use ark_bls12_377::Bls12_377;
   use ark_bls12_381::Bls12_381;
   use ark_ec::PairingEngine;
   use ark_poly::univariate::DensePolynomial as DensePoly;
-  use ark_std::{test_rng, collections::BTreeMap};
+  use ark_std::{collections::BTreeMap, test_rng};
 
   type Fr = <ark_bls12_381::Bls12_381 as PairingEngine>::Fr;
   type UniPoly_381 = DensePoly<<Bls12_381 as PairingEngine>::Fr>;

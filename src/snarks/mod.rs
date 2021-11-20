@@ -1,8 +1,8 @@
 // mod template;
 
 use crate::cs::{
-    r1cs::{R1CSInstance, R1CSSize, R1CSWitness, R1CS},
-    CSSize, ConstraintSystem, Instance, Witness,
+  r1cs::{R1CSInstance, R1CSSize, R1CSWitness, R1CS},
+  CSSize, ConstraintSystem, Instance, Witness,
 };
 use crate::error::Error;
 use crate::kzg::*;
@@ -24,46 +24,49 @@ pub trait SNARKProof<E: PairingEngine> {}
 // items in the middle.
 // degree_bound always equals the exponent of the largest power + 1
 pub fn vector_to_commitment<E: PairingEngine>(
-    powers: &Vec<E::G1Affine>,
-    vec: &Vec<E::Fr>,
-    degree: u64,
+  powers: &Vec<E::G1Affine>,
+  vec: &Vec<E::Fr>,
+  degree: u64,
 ) -> Result<Commitment<E>, Error> {
-    KZG10::<E, DensePoly<E::Fr>>::commit_with_coefficients(
-        &powers[if (degree as usize) < vec.len() {
-            0
-        } else {
-            degree as usize - vec.len()
-        }..],
-        vec,
-    )
+  KZG10::<E, DensePoly<E::Fr>>::commit_with_coefficients(
+    &powers[if (degree as usize) < vec.len() {
+      0
+    } else {
+      degree as usize - vec.len()
+    }..],
+    vec,
+  )
 }
 
 pub fn scalar_to_commitment<E: PairingEngine>(
-    g: &E::G1Affine,
-    c: &E::Fr,
+  g: &E::G1Affine,
+  c: &E::Fr,
 ) -> Result<Commitment<E>, Error> {
-    KZG10::<E, DensePoly<E::Fr>>::commit_single(g, c)
+  KZG10::<E, DensePoly<E::Fr>>::commit_single(g, c)
 }
 
 macro_rules! commit_scalar {
   ($vk:expr, $c:expr) => {
-    scalar_to_commitment::<E>(&$vk.kzg_vk.g, &$c).unwrap().0.into_projective()
-  }
+    scalar_to_commitment::<E>(&$vk.kzg_vk.g, &$c)
+      .unwrap()
+      .0
+      .into_projective()
+  };
 }
 
 pub trait SNARK<E: PairingEngine> {
-    type Size: CSSize;
-    type CS: ConstraintSystem<E::Fr, Self::Size>;
-    type PK: SNARKProverKey<E>;
-    type VK: SNARKVerifierKey<E>;
-    type Ins: Instance<E::Fr>;
-    type Wit: Witness<E::Fr>;
-    type Pf: SNARKProof<E>;
+  type Size: CSSize;
+  type CS: ConstraintSystem<E::Fr, Self::Size>;
+  type PK: SNARKProverKey<E>;
+  type VK: SNARKVerifierKey<E>;
+  type Ins: Instance<E::Fr>;
+  type Wit: Witness<E::Fr>;
+  type Pf: SNARKProof<E>;
 
-    fn setup(size: usize) -> Result<UniversalParams<E>, Error>;
-    fn index(pp: &UniversalParams<E>, cs: &Self::CS) -> Result<(Self::PK, Self::VK), Error>;
-    fn prove(pk: &Self::PK, x: &Self::Ins, w: &Self::Wit) -> Result<Self::Pf, Error>;
-    fn verify(vk: &Self::VK, x: &Self::Ins, proof: &Self::Pf) -> Result<(), Error>;
+  fn setup(size: usize) -> Result<UniversalParams<E>, Error>;
+  fn index(pp: &UniversalParams<E>, cs: &Self::CS) -> Result<(Self::PK, Self::VK), Error>;
+  fn prove(pk: &Self::PK, x: &Self::Ins, w: &Self::Wit) -> Result<Self::Pf, Error>;
+  fn verify(vk: &Self::VK, x: &Self::Ins, proof: &Self::Pf) -> Result<(), Error>;
 }
 
 pub mod voproof_hpr;
