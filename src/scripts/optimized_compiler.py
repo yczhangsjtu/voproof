@@ -56,14 +56,14 @@ class Computes(object):
 
 class IndexerComputes(Computes):
     def __init__(self, latex_builder, rust_builder, has_indexer=True):
-        super(IndexerComputes, self).__init__(latex_builder, rust_builder,
-                                              "indexer" if has_indexer else None)
+        super().__init__(latex_builder, rust_builder,
+                         "indexer" if has_indexer else None)
 
 
 class ProverComputes(Computes):
     def __init__(self, latex_builder, rust_builder, has_prover=True):
-        super(ProverComputes, self).__init__(latex_builder, rust_builder,
-                                             "prover" if has_prover else None)
+        super().__init__(latex_builder, rust_builder,
+                         "prover" if has_prover else None)
 
 
 class VerifierComputes(Computes):
@@ -106,13 +106,13 @@ class SubmitVectors(object):
 
 class ProverSubmitVectors(SubmitVectors):
     def __init__(self, vector, size, rust_size=None):
-        super(ProverSubmitVectors, self).__init__(
+        super().__init__(
             "prover", vector, size, rust_size)
 
 
 class IndexerSubmitVectors(SubmitVectors):
     def __init__(self, vector, size, rust_size=None):
-        super(IndexerSubmitVectors, self).__init__(
+        super().__init__(
             "indexer", vector, size, rust_size)
 
 
@@ -122,7 +122,8 @@ class InvokeSubprotocol(object):
         self.name = name
 
     def dumps(self):
-        return "\\prover and \\verifier invokes protocol $\\mathsf{%s}$ with inputs %s" % \
+        return "\\prover and \\verifier invokes protocol " \
+            "$\\mathsf{%s}$ with inputs %s" % \
                (self.name, ", ".join(["$%s$" % tex(arg) for arg in self.args]))
 
 
@@ -132,7 +133,8 @@ class IndexerInvokeSubprotocol(object):
         self.name = name
 
     def dumps(self):
-        return "\\indexer invokes the indexer of protocol $\\mathsf{%s}$ with inputs %s" % \
+        return "\\indexer invokes the indexer of protocol " \
+            "$\\mathsf{%s}$ with inputs %s" % \
                (self.name, ", ".join(["$%s$" % tex(arg) for arg in self.args]))
 
 
@@ -157,13 +159,13 @@ class SendPolynomials(object):
 
 class ProverSendPolynomials(SendPolynomials):
     def __init__(self, polynomial, degree, rust_degree):
-        super(ProverSendPolynomials, self).__init__(
+        super().__init__(
             "prover", polynomial, degree, rust_degree)
 
 
 class IndexerSendPolynomials(SendPolynomials):
     def __init__(self, polynomial, degree, rust_degree):
-        super(IndexerSendPolynomials, self).__init__(
+        super().__init__(
             "indexer", polynomial, degree, rust_degree)
 
 
@@ -361,19 +363,19 @@ class VOQuery(object):
 
 class HadamardQuery(VOQuery):
     def __init__(self, a, b, c=None, d=None):
-        super(HadamardQuery, self).__init__(a, b, c, d)
+        super().__init__(a, b, c, d)
         self.oper = "circ"
 
 
 class InnerProductQuery(VOQuery):
     def __init__(self, a, b, c=None, d=None):
-        super(InnerProductQuery, self).__init__(a, b, c, d)
+        super().__init__(a, b, c, d)
         self.oper = "cdot"
 
 
 class VOProtocolExecution(PublicCoinProtocolExecution):
     def __init__(self, vector_size, *args):
-        super(VOProtocolExecution, self).__init__()
+        super().__init__()
         self.args = args
         self.vector_size = vector_size
         self.rust_vector_size = None
@@ -609,7 +611,7 @@ class CombinePolynomial(object):
 
 class PIOPExecution(PublicCoinProtocolExecution):
     def __init__(self, *args):
-        super(PIOPExecution, self).__init__()
+        super().__init__()
         self.args = args
         self.indexer_polynomials = None
         self.eval_queries = []
@@ -1546,7 +1548,7 @@ class ZKSNARK(object):
 
 class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     def __init__(self, piopexec):
-        super(ZKSNARKFromPIOPExecKZG, self).__init__()
+        super().__init__()
         self.debug_mode = piopexec.debug_mode
         self.process_piopexec(piopexec)
 
@@ -1678,8 +1680,8 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
                 points_poly_dict[key] = []
             points_poly_dict[key].append(query)
 
-        open_proof, open_points, query_tuple_lists, ffs, fcomms, fvals = \
-            [], [], [], [], [], []
+        open_proof, open_points, query_tuple_lists, ffs, fcomms, fvals = [
+            [] for i in range(6)]
         for point, queries in points_poly_dict.items():
             open_proof.append(Symbol(get_name("W")))
             open_points.append(queries[0].point)
