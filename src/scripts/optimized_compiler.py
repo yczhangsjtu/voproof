@@ -711,9 +711,9 @@ class PIOPExecution(PublicCoinProtocolExecution):
     for polycom in self.poly_combines:
       computes = polycom.dump_computes()
       ret.append(VerifierComputes(
-        computes.coefficient_items, RustBuilder()).dumps())
+          computes.coefficient_items, RustBuilder()).dumps())
       ret.append(VerifierComputes(
-        computes.oracle_items, RustBuilder()).dumps())
+          computes.oracle_items, RustBuilder()).dumps())
     for query in self.eval_checks:
       ret.append(query.dumps_check())
     return ret.dumps()
@@ -1643,8 +1643,24 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         self.prover_rust_assert_eq(
             poly_combine.poly.to_comm(),
             rust_commit_vector_with_pk(
-              poly_combine.poly.to_vec(),
-              poly_combine.length))
+                poly_combine.poly.to_vec(),
+                poly_combine.length))
+
+  def _generate_points_poly_dict(self, queries):
+    points_poly_dict = {}
+    for query in queries:
+      if isinstance(query.poly, NamedVectorPolynomial):
+        self.prover_rust_define_poly_from_vec(
+            query.poly, query.poly.vector)
+      elif isinstance(query.poly, NamedPolynomial):
+        self.prover_rust_define_poly_from_vec(
+            query.poly, query.poly.to_vec())
+
+      key = latex(query.point)
+      if key not in points_poly_dict:
+        points_poly_dict[key] = []
+      points_poly_dict[key].append(query)
+    return points_poly_dict
 
   def process_piopexec(self, piopexec):
     transcript = [x for x in piopexec.verifier_inputs]
@@ -1659,29 +1675,15 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     if piopexec.debug_mode:
       z = [query.point for query in queries if query.name == 0][0]
       naive_g = piopexec.naive_g
-      self.prover_computes_rust(
-          rust_line_define_poly_from_vec(
-              naive_g.to_named_vector_poly(), naive_g
-          ))
+      self.prover_rust_define_poly_from_vec(
+          naive_g.to_named_vector_poly(), naive_g)
       self.prover_rust_check_poly_eval(
           naive_g.to_named_vector_poly(),
           z,
           rust_zero(),
           "naive g does not evaluate to 0 at z")
 
-    points_poly_dict = {}
-    for query in queries:
-      if isinstance(query.poly, NamedVectorPolynomial):
-        self.prover_rust_define_poly_from_vec(
-            query.poly, query.poly.vector)
-      elif isinstance(query.poly, NamedPolynomial):
-        self.prover_rust_define_poly_from_vec(
-            query.poly, query.poly.to_vec())
-
-      key = latex(query.point)
-      if key not in points_poly_dict:
-        points_poly_dict[key] = []
-      points_poly_dict[key].append(query)
+    points_poly_dict = self._generate_points_poly_dict(queries)
 
     open_proof, open_points, query_tuple_lists, ffs, fcomms, fvals = [
         [] for i in range(6)]
