@@ -1600,11 +1600,16 @@ class KZGInfo(object):
     return open_computation, verify_computation
 
   def generate_computations_rust(self):
+    fcomms = [q.rust_comm for q in self.points_info[0].queries_info]
+    gcomms = [q.rust_comm for q in self.points_info[1].queries_info]
+    fnames = [q.rust_name for q in self.points_info[0].queries_info]
+    gnames = [q.rust_name for q in self.points_info[1].queries_info]
+    fpolys = [q.rust_poly for q in self.points_info[0].queries_info]
+    gpolys = [q.rust_poly for q in self.points_info[1].queries_info]
+
     open_computation_rust = RustBuilder()
-    open_computation_rust.append(rust_define("fs", rust_vec(
-      [q.rust_poly for q in self.points_info[0].queries_info]))).end()
-    open_computation_rust.append(rust_define("gs", rust_vec(
-      [q.rust_poly for q in self.points_info[1].queries_info]))).end()
+    open_computation_rust.append(rust_define("fs", rust_vec(fpolys))).end()
+    open_computation_rust.append(rust_define("gs", rust_vec(gpolys))).end()
 
     compute_zs = RustBuilder()
     compute_zs.append(rust_define("z1", self.points_info[0].point)).end()
@@ -1612,13 +1617,13 @@ class KZGInfo(object):
 
     verify_computation_rust = RustBuilder()
     verify_computation_rust.append(rust_define(
-        "f_commitments", rust_vec([q.rust_comm for q in self.points_info[0].queries_info]))).end()
+        "f_commitments", rust_vec(fcomms))).end()
     verify_computation_rust.append(rust_define(
-        "g_commitments", rust_vec([q.rust_comm for q in self.points_info[1].queries_info]))).end()
+        "g_commitments", rust_vec(gcomms))).end()
     verify_computation_rust.append(
-        rust_define("f_values", rust_vec([q.rust_name for q in self.points_info[0].queries_info]))).end()
+        rust_define("f_values", rust_vec(fnames))).end()
     verify_computation_rust.append(
-        rust_define("g_values", rust_vec([q.rust_name for q in self.points_info[1].queries_info]))).end()
+        rust_define("g_values", rust_vec(gnames))).end()
     return open_computation_rust, verify_computation_rust, compute_zs
 
 
