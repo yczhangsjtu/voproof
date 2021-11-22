@@ -424,3 +424,15 @@ for macro_name, funcname, argnames, outargs in rust_macro_list:
         macro_name, argnames, outargs
       ))
 
+
+def register_rust_functions(self):
+  for attr in dir(current_module):
+    if attr.startswith("rust_line_"):
+      f = getattr(current_module, attr)
+      name = attr[len("rust_line_"):]
+      setattr(self, "prover_rust_" + name,
+              (lambda f: lambda *args: self.prover_computes_rust(f(*args)))(f))
+      setattr(self, "verifier_rust_" + name,
+              (lambda f: lambda *args: self.verifier_computes_rust(f(*args)))(f))
+      setattr(self, "pp_rust_" + name,
+              (lambda f: lambda *args: self.preprocess_rust(f(*args)))(f))

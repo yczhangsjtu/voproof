@@ -1422,6 +1422,23 @@ def convolution(left, right, omega):
   return left.reverse_omega(omega) * right
 
 
+def get_rust_type(expr):
+  if isinstance(expr, PolynomialCommitment):
+    return "Commitment<E>"
+  if isinstance(expr, NamedVector):
+    return "Vec<E::Fr>"
+  if isinstance(expr, Matrix):
+    # Sparse representation of a matrix
+    return "(Vec<u64>, Vec<u64>, Vec<E::Fr>)"
+  if isinstance(expr, Symbol):
+    if str(expr).startswith("W"):
+      return "KZGProof<E>"
+    else:
+      return "E::Fr"
+  raise Exception("Unknown rust type for: %s of type %s" %
+                  (latex(expr), type(expr)))
+
+
 if __name__ == "__main__":
   H = Symbol("H")
   ell = Symbol("ell")

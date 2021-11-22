@@ -2,12 +2,12 @@ from sympy import Symbol, latex, sympify, Integer, simplify
 from os.path import basename
 from sympy.abc import alpha, beta, gamma, X, D, S
 from optimized_compiler import VOProtocol, PIOPExecution, PIOPFromVOProtocol, \
-                               ZKSNARKFromPIOPExecKZG, VOProtocolExecution, \
-                               ProverComputes, VerifierComputes
+    VOProtocolExecution, ProverComputes, VerifierComputes
+from zksnark import ZKSNARKFromPIOPExecKZG
 from vector_symbol import get_named_vector, reset_name_counters, get_name
 from smvp_protocols import SparseMVP, SparseMVPProverEfficient, \
-                           R1CS, R1CSProverEfficient, \
-                           HPR, HPRProverEfficient
+    R1CS, R1CSProverEfficient, \
+    HPR, HPRProverEfficient
 from pov_protocols import POV, POVProverEfficient
 from rust_builder import RustBuilder, rust, RustMacro
 from latex_builder import LaTeXBuilder
@@ -28,9 +28,11 @@ Sc = Symbol("S_c", positive=True)
 
 k = Symbol("k", positive=True)
 
+
 def dump_performance(piopexec, zkSNARK, name):
   voexec = piopexec.reference_to_voexec
-  print("%s preprocessed polynomials: %d" % (name, len(piopexec.indexer_polynomials)))
+  print("%s preprocessed polynomials: %d" %
+        (name, len(piopexec.indexer_polynomials)))
   print("%s online polynomials: %d" % (name, len(piopexec.prover_polynomials)))
   n_distinct = len(piopexec.distinct_points)
   print("%s distinct points: %d" % (name, n_distinct))
@@ -38,7 +40,8 @@ def dump_performance(piopexec, zkSNARK, name):
   print("%s eval queries: %d" % (name, n_evals))
   print("%s max degree: %s" % (name, latex(piopexec.max_degree)))
   print("%s minimal n: %s" % (name, latex(voexec.vector_size_bound)))
-  n_field_elements = len([p for p in zkSNARK.proof if latex(p).startswith("y")])
+  n_field_elements = len(
+      [p for p in zkSNARK.proof if latex(p).startswith("y")])
   print("%s proof size: %d G + %d F" %
         (name, len(zkSNARK.proof) - n_field_elements, n_field_elements))
   c_g_exps = sum([len(poly_combine.coeff_builders)
@@ -58,8 +61,9 @@ def get_minimal_vector_size(protocol, ppargs, execargs, simplify_hints):
   reset_name_counters()
   return voexec.vector_size_bound
 
+
 def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, set_parameters,
-    filename=None):
+                    filename=None):
   name = protocol.__class__.__name__
   n = get_minimal_vector_size(protocol, ppargs, execargs, simplify_hints)
   set_parameters()
@@ -77,7 +81,8 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, set_pa
   piopexec.reference_to_voexec._simplify_max_hints = simplify_hints
   debug("Start executing...")
   piop.execute(piopexec, *execargs)
-  piopexec.max_degree = piopexec.reference_to_voexec.simplify_max(piopexec.max_degree)
+  piopexec.max_degree = piopexec.reference_to_voexec.simplify_max(
+      piopexec.max_degree)
 
   debug("Start compiling to zkSNARK...")
   zkSNARK = ZKSNARKFromPIOPExecKZG(piopexec)
@@ -88,19 +93,21 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, set_pa
     with open("../snarks/template.rs") as template:
       temp = template.readlines()
     mark_content_map = [("__NAME__", name),
-      ("/*{size}*/",
-        "%s\n        (%s) as usize" %  (rust(size_init), rust(piopexec.max_degree))),
-      ("/*{VerifierKey}*/", zkSNARK.dump_vk_definition()),
-      ("/*{index verifier key}*/", zkSNARK.dump_vk_construction()),
-      ("/*{ProverKey}*/", zkSNARK.dump_pk_definition()),
-      ("/*{Proof}*/", zkSNARK.dump_proof_definition()),
-      ("/*{index prover key}*/", zkSNARK.dump_pk_construction()),
-      ("/*{proof}*/", zkSNARK.dump_proof_construction()),
-      ("/*{index}*/", zkSNARK.dump_indexer_rust()),
-      ("/*{prove}*/", zkSNARK.dump_prover_rust()),
-      ("/*{verify}*/", zkSNARK.dump_verifier_rust()),
-    ]
-        
+                        ("/*{size}*/",
+                         "%s\n        (%s) as usize" % (rust(size_init), rust(piopexec.max_degree))),
+                        ("/*{VerifierKey}*/", zkSNARK.dump_vk_definition()),
+                        ("/*{index verifier key}*/",
+                         zkSNARK.dump_vk_construction()),
+                        ("/*{ProverKey}*/", zkSNARK.dump_pk_definition()),
+                        ("/*{Proof}*/", zkSNARK.dump_proof_definition()),
+                        ("/*{index prover key}*/",
+                         zkSNARK.dump_pk_construction()),
+                        ("/*{proof}*/", zkSNARK.dump_proof_construction()),
+                        ("/*{index}*/", zkSNARK.dump_indexer_rust()),
+                        ("/*{prove}*/", zkSNARK.dump_prover_rust()),
+                        ("/*{verify}*/", zkSNARK.dump_verifier_rust()),
+                        ]
+
     for i in range(len(temp)):
       for mark, content in mark_content_map:
         if mark in temp[i]:
@@ -110,7 +117,7 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, set_pa
     with open("../snarks/%s.rs" % filename, "w") as f:
       print("///! This file is generated by scripts/%s"
             % basename(__file__), file=f)
-      print(temp, file=f);
+      print(temp, file=f)
 
   reset_name_counters()
 
@@ -124,6 +131,7 @@ def set_r1cs_parameters():
   ell = Symbol(get_name("ell"), positive=True)
   return H, K, Sa, Sb, Sc, ell
 
+
 def analyzeR1CS():
   H, K, Sa, Sb, Sc, ell = set_r1cs_parameters()
   hints = [(H, K), (Sa, K + 1), (Sa, H + 1), (Sb, K + 1), (Sb, H + 1), (Sc, K + 1), (Sc, H + 1),
@@ -134,12 +142,13 @@ def analyzeR1CS():
   x = get_named_vector("x")
   x.local_evaluate = True
   x.hint_computation = lambda z: RustMacro("eval_vector_expression").append([
-        z, Symbol("i"), x.dumpr_at_index(Symbol("i")), ell
-      ])
+      z, Symbol("i"), x.dumpr_at_index(Symbol("i")), ell
+  ])
   ppargs = (H, K, Sa, Sb, Sc)
   execargs = (x, get_named_vector("w"), ell)
   analyzeProtocol(R1CS(), ppargs, execargs, hints, size_map, set_r1cs_parameters,
-      filename="voproof_r1cs")
+                  filename="voproof_r1cs")
+
 
 def set_r1cs_prover_efficient_parameters():
   H = Symbol(get_name("H"), positive=True)
@@ -147,6 +156,7 @@ def set_r1cs_prover_efficient_parameters():
   S = Symbol(get_name("S"), positive=True)
   ell = Symbol(get_name("ell"), positive=True)
   return H, K, S, ell
+
 
 def analyzeR1CSProverEfficient():
   H, K, S, ell = set_r1cs_prover_efficient_parameters()
@@ -157,7 +167,8 @@ def analyzeR1CSProverEfficient():
   ppargs = (H, K, S*3)
   execargs = (x, get_named_vector("w"), ell)
   analyzeProtocol(R1CSProverEfficient(), ppargs, execargs, hints, size_map,
-      set_r1cs_prover_efficient_parameters)
+                  set_r1cs_prover_efficient_parameters)
+
 
 def set_hpr_parameters():
   H = Symbol(get_name("H"), positive=True)
@@ -167,6 +178,7 @@ def set_hpr_parameters():
   Sp = Symbol(get_name("S'"), positive=True)
   return H, K, S, ell, Sp
 
+
 def analyzeHPR():
   H, K, S, ell, Sp = set_hpr_parameters()
 
@@ -175,20 +187,26 @@ def analyzeHPR():
   x = get_named_vector("x")
   x.local_evaluate = True
   ppargs = (H, K, S*3+Sp)
-  execargs = (x, get_named_vector("w"), get_named_vector("w"), get_named_vector("w"), ell)
+  execargs = (x, get_named_vector("w"), get_named_vector(
+      "w"), get_named_vector("w"), ell)
   analyzeProtocol(HPR(), ppargs, execargs, hints, size_map, set_hpr_parameters,
-      filename="voproof_hpr")
+                  filename="voproof_hpr")
+
 
 def analyzeHPRProverEfficient():
   H, K, S, ell, Sp = set_hpr_parameters()
 
-  hints = [(S, H + 1), (S, K + 1), (H, Sp), (K, ell), (H, ell), (S, ell + 1), (H, K)]
+  hints = [(S, H + 1), (S, K + 1), (H, Sp),
+           (K, ell), (H, ell), (S, ell + 1), (H, K)]
   size_map = [(H, "nrows"), (K, "ncols"), (S, "density"), (Sp, "d_density")]
   x = get_named_vector("x")
   x.local_evaluate = True
   ppargs = (H, K, S*3+Sp)
-  execargs = (x, get_named_vector("w"), get_named_vector("w"), get_named_vector("w"), ell)
-  analyzeProtocol(HPRProverEfficient(), ppargs, execargs, hints, size_map, set_hpr_parameters)
+  execargs = (x, get_named_vector("w"), get_named_vector(
+      "w"), get_named_vector("w"), ell)
+  analyzeProtocol(HPRProverEfficient(), ppargs, execargs,
+                  hints, size_map, set_hpr_parameters)
+
 
 def set_pov_parameters():
   C = Symbol(get_name("C"), positive=True)
@@ -197,34 +215,44 @@ def set_pov_parameters():
   Cc = Symbol(get_name("C_c"), positive=True)
   return C, Ca, Cm, Cc
 
+
 def analyzePOV():
   C, Ca, Cm, Cc = set_pov_parameters()
 
   hints = [(C, Ca + Cm + 1), (C, 1), (Ca, 1), (Cm, 1)]
-  size_map = [(C, "nconsts + size.nadd + size.nmul"), (Ca, "nadd"), (Cm, "nmul"), (Cc, "nconsts")]
+  size_map = [(C, "nconsts + size.nadd + size.nmul"),
+              (Ca, "nadd"), (Cm, "nmul"), (Cc, "nconsts")]
   x = get_named_vector("x")
   x.local_evaluate = True
   ppargs = (get_named_vector("d"), C - Ca - Cm, Ca, Cm)
-  execargs = (x, get_named_vector("a"), get_named_vector("b"), get_named_vector("c"))
+  execargs = (x, get_named_vector("a"),
+              get_named_vector("b"), get_named_vector("c"))
   analyzeProtocol(POV(), ppargs, execargs, hints, size_map, set_pov_parameters,
-      filename="voproof_pov")
+                  filename="voproof_pov")
+
 
 def analyzePOVProverEfficient():
   C, Ca, Cm, Cc = set_pov_parameters()
 
   hints = [(C, Ca + Cm + 1), (C, 1), (Ca, 1), (Cm, 1)]
-  size_map = [(C, "nconsts + size.nadd + size.nmul"), (Ca, "nadd"), (Cm, "nmul"), (Cc, "nconsts")]
+  size_map = [(C, "nconsts + size.nadd + size.nmul"),
+              (Ca, "nadd"), (Cm, "nmul"), (Cc, "nconsts")]
   x = get_named_vector("x")
   x.local_evaluate = True
   ppargs = (get_named_vector("d"), C - Ca - Cm, Ca, Cm)
-  execargs = (x, get_named_vector("a"), get_named_vector("b"), get_named_vector("c"))
-  analyzeProtocol(POVProverEfficient(), ppargs, execargs, hints, size_map, set_pov_parameters)
+  execargs = (x, get_named_vector("a"),
+              get_named_vector("b"), get_named_vector("c"))
+  analyzeProtocol(POVProverEfficient(), ppargs, execargs,
+                  hints, size_map, set_pov_parameters)
+
 
 debug_mode = False
+
 
 def debug(info=""):
   if debug_mode:
     print(info)
+
 
 if __name__ == '__main__':
   # analyzeR1CSProverEfficient()
@@ -233,4 +261,3 @@ if __name__ == '__main__':
   analyzeR1CS()
   # analyzeHPR()
   # analyzePOV()
-
