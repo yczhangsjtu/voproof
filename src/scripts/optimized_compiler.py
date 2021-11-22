@@ -1545,6 +1545,83 @@ class ZKSNARK(object):
     return self.dump_construction(self.proof)
 
 
+class KZGQueryInfo(object):
+  def __init__(self):
+    self.comm = None
+    self.name = None
+    self.poly = None
+    self.rust_comm = None
+    self.rust_name = None
+    self.rust_poly = None
+
+
+class KZGPointInfo(object):
+  def __init__(self):
+    self.proof_symbol = None
+    self.point = None
+    self.queries_info = []
+
+  def _add_query(self, name, poly):
+    query = KZGQueryInfo()
+    query.comm = poly.to_comm()
+    query.name = name
+    query.poly = poly.dumps()
+    query.rust_poly = rust(poly)
+    query.rust_comm = rust_vk(poly.to_comm())
+    query.rust_name = rust_zero() if name == 0 else name
+    self.queries_info.append(query)
+
+  def add_query(self, query):
+    self._add_query(query.name, query.poly)
+
+
+class KZGInfo(object):
+  def __init__(self):
+    self.points_info = []
+
+  def generate_computations_latex(self):
+    proof_str = ",".join(tex(p.proof_symbol) for p in self.points_info)
+    open_computation = Math("\\left(%s\\right)" % proof_str)
+    open_computation.assign("\\mathsf{open}")
+    lists = "\\\\\n".join([("\\{%s\\}," % (
+                            ",".join([("%s\\left(%s,%s,%s\\right)" %
+                                       ("\\\\\n" if i % 3 == 0 and i > 0 else "",
+                                        tex(query.comm), tex(query.name), tex(query.poly)))
+                                      for i, query in enumerate(point_info.queries_info)])
+                            )) for point_info in self.points_info])
+    points = "\\left\\{%s\\right\\}" % (
+        ",".join(tex(point_info.point) for point_info in self.points_info))
+    array = "\\begin{array}{l}\n%s\\\\\n%s\n\\end{array}" % (lists, points)
+    open_computation.paren(array)
+
+    array = "\\begin{array}{l}\n%s\\\\\n%s\n\\left\\{%s\\right\\},[x]_2\\end{array}" \
+            % (lists, points, proof_str)
+    verify_computation = Math("\\mathsf{vrfy}").paren(array).equals(1)
+    return open_computation, verify_computation
+
+  def generate_computations_rust(self):
+    open_computation_rust = RustBuilder()
+    open_computation_rust.append(rust_define("fs", rust_vec(
+      [q.rust_poly for q in self.points_info[0].queries_info]))).end()
+    open_computation_rust.append(rust_define("gs", rust_vec(
+      [q.rust_poly for q in self.points_info[1].queries_info]))).end()
+
+    compute_zs = RustBuilder()
+    compute_zs.append(rust_define("z1", self.points_info[0].point)).end()
+    compute_zs.append(rust_define("z2", self.points_info[1].point)).end()
+
+    verify_computation_rust = RustBuilder()
+    verify_computation_rust.append(rust_define(
+        "f_commitments", rust_vec([q.rust_comm for q in self.points_info[0].queries_info]))).end()
+    verify_computation_rust.append(rust_define(
+        "g_commitments", rust_vec([q.rust_comm for q in self.points_info[1].queries_info]))).end()
+    verify_computation_rust.append(
+        rust_define("f_values", rust_vec([q.rust_name for q in self.points_info[0].queries_info]))).end()
+    verify_computation_rust.append(
+        rust_define("g_values", rust_vec([q.rust_name for q in self.points_info[1].queries_info]))).end()
+    return open_computation_rust, verify_computation_rust, compute_zs
+
+
 class ZKSNARKFromPIOPExecKZG(ZKSNARK):
   def __init__(self, piopexec):
     super().__init__()
@@ -1661,38 +1738,30 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         points_poly_dict[key] = []
       points_poly_dict[key].append(query)
     return points_poly_dict
-    
+
   def _parepare_for_kzg_open(self, points_poly_dict, transcript):
-    open_proof, open_points, query_tuple_lists, ffs, fcomms, fvals = [
-        [] for i in range(6)]
-    for point, queries in points_poly_dict.items():
-      open_proof.append(Symbol(get_name("W")))
-      open_points.append(queries[0].point)
-      transcript.append(queries[0].point)
-      query_tuple_lists.append([(query.poly.to_comm(),
-                                 query.name, query.poly.dumps())
-                                for query in queries])
+    kzginfo = KZGInfo()
+    for key, queries in points_poly_dict.items():
+      point = queries[0].point
+      kzgpoint_info = KZGPointInfo()
+      kzginfo.points_info.append(kzgpoint_info)
+      kzgpoint_info.proof_symbol = Symbol(get_name("W"))
+      kzgpoint_info.point = point
+      transcript.append(point)
       for query in queries:
+        kzgpoint_info.add_query(query)
+        kzgquery_info = kzgpoint_info.queries_info[-1]
         if not isinstance(query.name, int):
           transcript.append(query.name)
         else:
           # Only make this check when the query result is an expected constant
           self.prover_rust_check_poly_eval(
-              query.poly,
-              queries[0].point,
-              rust_zero() if query.name == 0
-              else query.name,
+              kzgquery_info.rust_poly,
+              kzgpoint_info.point,
+              kzgquery_info.rust_name,
               "g does not evaluate to 0 at z")
 
-      ffs.append([rust(query.poly) for query in queries])
-      fcomms.append([rust_vk(query.poly.to_comm()) for query in queries])
-      fvals.append([rust_zero() if query.name == 0 else query.name
-                    for query in queries])
-
-    fs, gs = ffs
-    fcomms, gcomms = fcomms
-    fvals, gvals = fvals
-    return open_proof, open_points, query_tuple_lists, fs, gs, fcomms, gcomms, fvals, gvals
+    return kzginfo
 
   def process_piopexec(self, piopexec):
     transcript = [x for x in piopexec.verifier_inputs]
@@ -1716,58 +1785,19 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           "naive g does not evaluate to 0 at z")
 
     points_poly_dict = self._generate_points_poly_dict(queries)
-    open_proof, open_points, query_tuple_lists, fs, gs, fcomms, gcomms, fvals, gvals = self._parepare_for_kzg_open(points_poly_dict, transcript)
+    kzginfo = self._parepare_for_kzg_open(points_poly_dict, transcript)
 
-    self.proof += open_proof
-
-    proof_str = ",".join(tex(p) for p in open_proof)
-    open_computation = Math("\\left(%s\\right)" % proof_str)
-    open_computation.assign("\\mathsf{open}")
-    lists = "\\\\\n".join([("\\{%s\\}," % (
-                            ",".join([("%s\\left(%s,%s,%s\\right)" %
-                                       ("\\\\\n" if i % 3 == 0 and i > 0 else "",
-                                        tex(query[0]), tex(query[1]), tex(query[2])))
-                                      for i, query in enumerate(tuple_list)])
-                            )) for tuple_list in query_tuple_lists])
-    points = "\\left\\{%s\\right\\}" % (
-        ",".join(tex(p) for p in open_points))
-    array = "\\begin{array}{l}\n%s\\\\\n%s\n\\end{array}" % (lists, points)
-    open_computation.paren(array)
-
-    open_computation_rust = RustBuilder()
-    open_computation_rust.append(rust_define("fs", rust_vec(fs))).end()
-    open_computation_rust.append(rust_define("gs", rust_vec(gs))).end()
-
-    compute_zs = RustBuilder()
-    compute_zs.append(rust_define("z1", open_points[0])).end()
-    compute_zs.append(rust_define("z2", open_points[1])).end()
+    self.proof += [p.proof_symbol for p in kzginfo.points_info]
+    open_computation, verify_computation = \
+        kzginfo.generate_computations_latex()
+    open_computation_rust, verify_computation_rust, compute_zs = \
+        kzginfo.generate_computations_rust()
 
     compute_rand_xi = RustBuilder()
     compute_rand_xi.append(rust_line_get_randomness_from_hash(
-        "rand_xi", to_field(1), *[rust_vk(x) for x in transcript]
-    ))
+        "rand_xi", to_field(1), *[rust_vk(x) for x in transcript]))
     compute_rand_xi.append(rust_line_get_randomness_from_hash(
-        "rand_xi_2", to_field(2), *[rust_vk(x) for x in transcript]
-    ))
-
-    lists = "\\\\\n".join([("\\left\\{%s\\right\\}," % (
-                            ",".join([("\\left(%s,%s\\right)" %
-                                       (tex(query[0]), tex(query[1])))
-                                      for query in tuple_list])
-                            )) for tuple_list in query_tuple_lists])
-    array = "\\begin{array}{l}\n%s\\\\\n%s\n\\left\\{%s\\right\\},[x]_2\\end{array}" \
-            % (lists, points, proof_str)
-    verify_computation = Math("\\mathsf{vrfy}").paren(array).equals(1)
-
-    verify_computation_rust = RustBuilder()
-    verify_computation_rust.append(rust_define(
-        "f_commitments", rust_vec(fcomms))).end()
-    verify_computation_rust.append(rust_define(
-        "g_commitments", rust_vec(gcomms))).end()
-    verify_computation_rust.append(
-        rust_define("f_values", rust_vec(fvals))).end()
-    verify_computation_rust.append(
-        rust_define("g_values", rust_vec(gvals))).end()
+        "rand_xi_2", to_field(2), *[rust_vk(x) for x in transcript]))
 
     self.prover_computes(open_computation, open_computation_rust)
     self.prover_computes_rust(compute_rand_xi)
