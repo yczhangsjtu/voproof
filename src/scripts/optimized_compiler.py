@@ -732,6 +732,9 @@ class ExtendedHadamard(object):
   def ignore_last(self):
     self.ignore_index(len(self.items) - 1)
 
+  def ignored(self, index):
+    return index in self.ignore_in_t
+
   def append(self, right):
     self.items.append(right)
 
@@ -949,21 +952,25 @@ class PIOPFromVOProtocol(object):
     t = get_named_vector("t")
     randomizer = self._generate_new_randomizer(samples, 1)
 
-    piopexec.prover_computes_latex(LaTeXBuilder().start_math().append(randomizer)
-                                   .sample(self.Ftoq).comma(t).assign(randomizer).double_bar().end_math()
+    piopexec.prover_computes_latex(
+        LaTeXBuilder().start_math()
+        .append(randomizer)
+        .sample(self.Ftoq).comma(t).assign(randomizer).double_bar().end_math()
                                    .space("the sum of:").eol().append(Itemize().append([
                                        "$%s$" % side._dumps("circ")
                                        for i, side in enumerate(extended_hadamard.items)
-                                       if not i in extended_hadamard.ignore_in_t])))
+                                       if not extended_hadamard.ignored(i)])))
 
-    piopexec.prover_rust_define_vec(t, rust_vector_concat(randomizer,
-                                                          rust_expression_vector_i(rust_linear_combination_base_zero(*[
-                                                              operand.dumpr_at_index(
-                                                                  simplify(sym_i + rust_n))
-                                                              for i, side in enumerate(extended_hadamard.items)
-                                                              for operand in [side.a, side.b]
-                                                              if not i in extended_hadamard.ignore_in_t
-                                                          ]), 2 * self.q + rust_max_shift)))
+    piopexec.prover_rust_define_vec(
+        t, rust_vector_concat(
+            randomizer,
+            rust_expression_vector_i(rust_linear_combination_base_zero(*[
+                operand.dumpr_at_index(
+                    simplify(sym_i + rust_n))
+                for i, side in enumerate(extended_hadamard.items)
+                for operand in [side.a, side.b]
+                if not extended_hadamard.ignored(i)
+            ]), 2 * self.q + rust_max_shift)))
 
     tx = t.to_named_vector_poly()
     piopexec.vec_to_poly_dict[t.key()] = tx
@@ -1022,7 +1029,8 @@ class PIOPFromVOProtocol(object):
 
     self.debug("Process inner products")
     if len(voexec.inner_products) > 0:
-      self._process_inner_product(piopexec, extended_hadamard, shifts, samples, alpha)
+      self._process_inner_product(
+          piopexec, extended_hadamard, shifts, samples, alpha)
 
     max_shift = voexec.simplify_max(Max(*shifts))
     rust_max_shift = piopexec.prover_redefine_symbol_rust(
