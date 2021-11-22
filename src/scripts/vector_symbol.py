@@ -976,6 +976,9 @@ class NamedVectorPolynomial(object):
 
   def dumpr_at_index(self, index):
     return self.vector.dumpr_at_index(index)
+    
+  def to_vec(self):
+    return self.vector
 
 
 class PolynomialCombination(CoeffMap):

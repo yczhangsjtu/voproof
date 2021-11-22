@@ -1757,13 +1757,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
   def _generate_points_poly_dict(self, queries):
     points_poly_dict = {}
     for query in queries:
-      if isinstance(query.poly, NamedVectorPolynomial):
-        self.prover_rust_define_poly_from_vec(
-            query.poly, query.poly.vector)
-      elif isinstance(query.poly, NamedPolynomial):
-        self.prover_rust_define_poly_from_vec(
-            query.poly, query.poly.to_vec())
-
+      self.prover_rust_define_poly_from_vec(query.poly, query.poly.to_vec())
       key = latex(query.point)
       if key not in points_poly_dict:
         points_poly_dict[key] = []
