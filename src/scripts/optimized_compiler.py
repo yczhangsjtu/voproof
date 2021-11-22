@@ -1346,7 +1346,7 @@ class PIOPFromVOProtocol(object):
   def _check_hz(self, z0, z, extended_hadamard, size, h, rust_h_inverse_degree):
     # Check that h(z) = sum_i f_i(omega/z) g_i(z) z^{n+maxshift+q}
     lc = rust_linear_combination_base_zero()
-    for had in extended_hadamard:
+    for had in extended_hadamard.items:
       lc.append(rust_eval_vector_expression_i(z0,
                                               VectorCombination._from(had.a).dumpr_at_index(sym_i), size))
       lc.append(rust_eval_vector_expression_i(z,
