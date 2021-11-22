@@ -1768,18 +1768,9 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
 
     return kzginfo
 
-  def process_piopexec(self, piopexec):
-    transcript = [x for x in piopexec.verifier_inputs]
-    self.transcript = transcript
-    self._process_piopexec_indexer(piopexec)
-    self._process_piopexec_interactions(piopexec)
-    self._process_piopexec_computes_query_results(piopexec)
-    self._process_polynomial_combination(piopexec)
-
-    queries = piopexec.eval_queries + piopexec.eval_checks
-
+  def _check_g_evals_to_zero(self, piopexec):
     if piopexec.debug_mode:
-      z = [query.point for query in queries if query.name == 0][0]
+      z = [query.point for query in piopexec.eval_checks if query.name == 0][0]
       naive_g = piopexec.naive_g
       self.prover_rust_define_poly_from_vec(
           naive_g.to_named_vector_poly(), naive_g)
@@ -1789,8 +1780,10 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           rust_zero(),
           "naive g does not evaluate to 0 at z")
 
-    points_poly_dict = self._generate_points_poly_dict(queries)
-    kzginfo = self._parepare_for_kzg_open(points_poly_dict, transcript)
+  def _generate_open_and_verify_computations(self, piopexec):
+    points_poly_dict = self._generate_points_poly_dict(
+        piopexec.eval_queries + piopexec.eval_checks)
+    kzginfo = self._parepare_for_kzg_open(points_poly_dict, self.transcript)
 
     self.proof += [p.proof_symbol for p in kzginfo.points_info]
     open_computation, verify_computation = \
@@ -1800,9 +1793,9 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
 
     compute_rand_xi = RustBuilder()
     compute_rand_xi.append(rust_line_get_randomness_from_hash(
-        "rand_xi", to_field(1), *[rust_vk(x) for x in transcript]))
+        "rand_xi", to_field(1), *[rust_vk(x) for x in self.transcript]))
     compute_rand_xi.append(rust_line_get_randomness_from_hash(
-        "rand_xi_2", to_field(2), *[rust_vk(x) for x in transcript]))
+        "rand_xi_2", to_field(2), *[rust_vk(x) for x in self.transcript]))
 
     self.prover_computes(open_computation, open_computation_rust)
     self.prover_computes_rust(compute_rand_xi)
@@ -1810,3 +1803,13 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     self.verifier_computes_rust(compute_zs)
     self.verifier_computes_rust(compute_rand_xi)
     self.verifier_computes(verify_computation, verify_computation_rust)
+
+  def process_piopexec(self, piopexec):
+    transcript = [x for x in piopexec.verifier_inputs]
+    self.transcript = transcript
+    self._process_piopexec_indexer(piopexec)
+    self._process_piopexec_interactions(piopexec)
+    self._process_piopexec_computes_query_results(piopexec)
+    self._process_polynomial_combination(piopexec)
+    self._check_g_evals_to_zero(piopexec)
+    self._generate_open_and_verify_computations(piopexec)
