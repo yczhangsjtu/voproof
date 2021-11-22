@@ -1661,30 +1661,8 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
         points_poly_dict[key] = []
       points_poly_dict[key].append(query)
     return points_poly_dict
-
-  def process_piopexec(self, piopexec):
-    transcript = [x for x in piopexec.verifier_inputs]
-    self.transcript = transcript
-    self._process_piopexec_indexer(piopexec)
-    self._process_piopexec_interactions(piopexec)
-    self._process_piopexec_computes_query_results(piopexec)
-    self._process_polynomial_combination(piopexec)
-
-    queries = piopexec.eval_queries + piopexec.eval_checks
-
-    if piopexec.debug_mode:
-      z = [query.point for query in queries if query.name == 0][0]
-      naive_g = piopexec.naive_g
-      self.prover_rust_define_poly_from_vec(
-          naive_g.to_named_vector_poly(), naive_g)
-      self.prover_rust_check_poly_eval(
-          naive_g.to_named_vector_poly(),
-          z,
-          rust_zero(),
-          "naive g does not evaluate to 0 at z")
-
-    points_poly_dict = self._generate_points_poly_dict(queries)
-
+    
+  def _parepare_for_kzg_open(self, points_poly_dict, transcript):
     open_proof, open_points, query_tuple_lists, ffs, fcomms, fvals = [
         [] for i in range(6)]
     for point, queries in points_poly_dict.items():
@@ -1714,6 +1692,31 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     fs, gs = ffs
     fcomms, gcomms = fcomms
     fvals, gvals = fvals
+    return open_proof, open_points, query_tuple_lists, fs, gs, fcomms, gcomms, fvals, gvals
+
+  def process_piopexec(self, piopexec):
+    transcript = [x for x in piopexec.verifier_inputs]
+    self.transcript = transcript
+    self._process_piopexec_indexer(piopexec)
+    self._process_piopexec_interactions(piopexec)
+    self._process_piopexec_computes_query_results(piopexec)
+    self._process_polynomial_combination(piopexec)
+
+    queries = piopexec.eval_queries + piopexec.eval_checks
+
+    if piopexec.debug_mode:
+      z = [query.point for query in queries if query.name == 0][0]
+      naive_g = piopexec.naive_g
+      self.prover_rust_define_poly_from_vec(
+          naive_g.to_named_vector_poly(), naive_g)
+      self.prover_rust_check_poly_eval(
+          naive_g.to_named_vector_poly(),
+          z,
+          rust_zero(),
+          "naive g does not evaluate to 0 at z")
+
+    points_poly_dict = self._generate_points_poly_dict(queries)
+    open_proof, open_points, query_tuple_lists, fs, gs, fcomms, gcomms, fvals, gvals = self._parepare_for_kzg_open(points_poly_dict, transcript)
 
     self.proof += open_proof
 
