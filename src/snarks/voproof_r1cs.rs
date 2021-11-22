@@ -96,10 +96,10 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
     define_generator!(gamma, E);
     define_matrix_vectors!(u_vec, w_vec, v_vec, cap_m_mat, gamma);
     define_hadamard_vector!(y_vec, u_vec, w_vec);
-    commit_vector!(cm_u_vec, u_vec, powers_of_g, cap_s_a + cap_s_b + cap_s_c);
-    commit_vector!(cm_w_vec, w_vec, powers_of_g, cap_s_a + cap_s_b + cap_s_c);
-    commit_vector!(cm_v_vec, v_vec, powers_of_g, cap_s_a + cap_s_b + cap_s_c);
-    commit_vector!(cm_y_vec, y_vec, powers_of_g, cap_s_a + cap_s_b + cap_s_c);
+    define_commit_vector!(cm_u_vec, u_vec, powers_of_g, cap_s_a + cap_s_b + cap_s_c);
+    define_commit_vector!(cm_w_vec, w_vec, powers_of_g, cap_s_a + cap_s_b + cap_s_c);
+    define_commit_vector!(cm_v_vec, v_vec, powers_of_g, cap_s_a + cap_s_b + cap_s_c);
+    define_commit_vector!(cm_y_vec, y_vec, powers_of_g, cap_s_a + cap_s_b + cap_s_c);
 
     let verifier_key = R1CSVerifierKey::<E> {
       cm_u_vec: cm_u_vec,
@@ -165,7 +165,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
       cap_k
     );
     redefine_zero_pad_concat_vector!(u_vec_1, n, delta_vec);
-    commit_vector!(cm_u_vec_1, u_vec_1, pk.powers, n + 1);
+    define_commit_vector!(cm_u_vec_1, u_vec_1, pk.powers, n + 1);
     define!(ell_1, cap_s_a + cap_s_b + cap_s_c);
     define_generator!(gamma, E);
     get_randomness_from_hash!(
@@ -187,7 +187,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
     define_left_sparse_mvp_vector!(c_vec, pk.cap_m_mat, r_vec, 3 * cap_h, cap_k);
     define_concat_neg_vector!(s_vec, r_vec, c_vec);
     redefine_zero_pad_concat_vector!(s_vec, n, delta_vec_1);
-    commit_vector!(cm_s_vec, s_vec, pk.powers, n + 1);
+    define_commit_vector!(cm_s_vec, s_vec, pk.powers, n + 1);
     get_randomness_from_hash!(
       nu,
       one!(),
@@ -207,7 +207,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
     );
     define_concat_uwinverse_vector!(h_vec, rnu_vec, mu, pk.u_vec, nu, pk.w_vec);
     redefine_zero_pad_concat_vector!(h_vec, n, delta_vec_2);
-    commit_vector!(cm_h_vec, h_vec, pk.powers, n + 1);
+    define_commit_vector!(cm_h_vec, h_vec, pk.powers, n + 1);
     get_randomness_from_hash!(
       beta,
       one!(),
@@ -243,7 +243,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
       n
     );
     define_concat_vector!(r_vec_tilde, accumulate_vector_plus!(r_vec_1), delta_vec_3);
-    commit_vector!(cm_r_vec_tilde, r_vec_tilde, pk.powers, n + 1);
+    define_commit_vector!(cm_r_vec_tilde, r_vec_tilde, pk.powers, n + 1);
     define!(maxshift, cap_s_a + cap_s_b + cap_s_c);
     get_randomness_from_hash!(
       alpha,
@@ -338,7 +338,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         )
       )
     );
-    commit_vector!(cm_t_vec, t_vec, pk.powers, maxshift + 2);
+    define_commit_vector!(cm_t_vec, t_vec, pk.powers, maxshift + 2);
     get_randomness_from_hash!(
       omega,
       one!(),
@@ -545,8 +545,8 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
       ),
       maxshift + n
     );
-    commit_vector!(cm_h_vec_2, h_vec_2, pk.powers, cap_d);
-    commit_vector!(cm_h_vec_3, h_vec_3, pk.powers, maxshift + n);
+    define_commit_vector!(cm_h_vec_2, h_vec_2, pk.powers, cap_d);
+    define_commit_vector!(cm_h_vec_3, h_vec_3, pk.powers, maxshift + n);
     get_randomness_from_hash!(
       z,
       one!(),

@@ -529,86 +529,80 @@ class CombinationCoeffBuilder(object):
         self.coeff, *self.rust_builder)
 
 
+class CombinePolynomialComputes(object):
+  def __init__(self):
+    self.coefficient_items = []
+    self.coefficient_rust_items = []
+    self.oracle_items = []
+    self.poly_latex_items = []
+    self.poly_rust_items = []
+    self.commit_latex_items = []
+    self.commit_rust_items = []
+
+
 class CombinePolynomial(object):
   def __init__(self, poly, coeff_builders, length):
     self.poly = poly
     self.coeff_builders = coeff_builders
     self.length = length
 
-  def dump_computes(self, has_commit=False, has_poly=False, has_oracle=True):
-    coefficient_items, coefficient_rust_items = [], []
+  def dump_computes(self):
+    computes = CombinePolynomialComputes()
     oracle_sum_items, poly_sum_items, commit_sum_items = [], [], []
     poly_sum_rust_items, commit_sum_rust_items = [], []
     latex_one, rust_const = None, None
+
     for key, coeff_builder in self.coeff_builders.items():
-      latex_items.append(coeff_builder.latex_builder)
-      rust_items.append(coeff_builder.rust_builder)
+      computes.coefficient_items.append(coeff_builder.latex_builder)
+      computes.coefficient_rust_items.append(coeff_builder.rust_builder)
       if key == "one":
         latex_one = latex(coeff_builder.coeff)
         rust_const = rust(coeff_builder.coeff)
-      else:
-        if has_oracle:
-          oracle_sum_items.append(
-              "%s\\cdot [%s]" % (
-                  latex(coeff_builder.coeff),
-                  coeff_builder.poly.dumps()
-              )
-          )
-        if has_commit:
-          commit_sum_items.append(
-              "%s\\cdot %s" % (
-                  latex(coeff_builder.coeff),
-                  coeff_builder.poly.to_comm()
-              )
-          )
-          commit_sum_rust_items.append(
-              rust_vk(coeff_builder.poly.to_comm()))
-          commit_sum_rust_items.append(rust(coeff_builder.coeff))
-        if has_poly:
-          poly_sum_items.append("%s\\cdot %s" % (
-              latex(coeff_builder.coeff),
-              coeff_builder.poly.dumps()
-          ))
-          poly_sum_rust_items.append(rust(coeff_builder.coeff))
-          poly_sum_rust_items.append(
-              coeff_builder.poly.dumpr_at_index(sym_i - coeff_builder.shifts))
+        continue
 
-    if latex_one is not None:
-      if has_oracle:
-        oracle_sum_items.append("%s" % latex_one)
-      if has_poly:
-        poly_sum_items.append("%s" % latex_one)
-      if has_commit:
-        commit_sum_items.append(
-            "%s\\cdot \\mathsf{com}(1)" % latex_one)
+      oracle_sum_items.append("%s\\cdot [%s]" % (
+          latex(coeff_builder.coeff), coeff_builder.poly.dumps()))
+      commit_sum_items.append("%s\\cdot %s" % (
+          latex(coeff_builder.coeff), coeff_builder.poly.to_comm()))
+      commit_sum_rust_items.append(rust_vk(coeff_builder.poly.to_comm()))
+      commit_sum_rust_items.append(rust(coeff_builder.coeff))
+      poly_sum_items.append("%s\\cdot %s" % (
+          latex(coeff_builder.coeff), coeff_builder.poly.dumps()))
+      poly_sum_rust_items.append(rust(coeff_builder.coeff))
+      poly_sum_rust_items.append(
+          coeff_builder.poly.dumpr_at_index(sym_i - coeff_builder.shifts))
 
-    if has_oracle:
-      latex_items.append(Math("[%s]" % self.poly.dumps()).assign(
-          "+".join(oracle_sum_items)))
+    computes.poly_rust_items.append(
+        rust_line_define_vec_mut(self.poly.to_vec(), rust_expression_vector_i(
+            rust_linear_combination_base_zero(poly_sum_rust_items),
+            self.length)))
 
-    if has_poly:
-      latex_items.append(Math("%s" % self.poly.dumps()
-                              ).assign("+".join(poly_sum_items)))
-      rust_items.append(rust_line_define_vec_mut(
-          self.poly.to_vec(),
-          rust_expression_vector_i(
-              rust_linear_combination_base_zero(poly_sum_rust_items),
-              self.length
-          )))
-      if rust_const is not None:
-        rust_items.append(rust_line_add_to_first_item(
-            self.poly.to_vec(), rust_const))
+    if "one" in self.coeff_builders:
+      coeff = self.coeff_builders["one"].coeff
+      latex_one = latex(coeff)
+      oracle_sum_items.append(latex_one)
+      poly_sum_items.append(latex_one)
+      commit_sum_items.append("%s\\cdot \\mathsf{com}(1)" % latex_one)
 
-    if has_commit:
-      latex_items.append(Math("%s" % self.poly.to_comm()).assign(
-          "+".join(commit_sum_items)))
-      if rust_const is not None:
-        rust_items.append(rust_line_define_commitment_linear_combination(
-            self.poly.to_comm(), "vk", rust_const, *commit_sum_rust_items))
-      else:
-        rust_items.append(rust_line_define_commitment_linear_combination_no_one(
-            self.poly.to_comm(), "vk", *commit_sum_rust_items))
-    return latex_items, rust_items
+      rust_const = rust(coeff)
+      computes.poly_rust_items.append(
+          rust_line_add_to_first_item(self.poly.to_vec(), rust_const))
+      computes.commit_rust_items.append(
+          rust_line_define_commitment_linear_combination(
+              self.poly.to_comm(), "vk", rust_const, *commit_sum_rust_items))
+    else:
+      computes.commit_rust_items.append(
+          rust_line_define_commitment_linear_combination_no_one(
+              self.poly.to_comm(), "vk", *commit_sum_rust_items))
+
+    computes.oracle_items.append(
+        Math("[%s]" % self.poly.dumps()).assign("+".join(oracle_sum_items)))
+    computes.poly_latex_items.append(
+        Math("%s" % self.poly.dumps()).assign("+".join(poly_sum_items)))
+    computes.commit_latex_items.append(
+        Math("%s" % self.poly.to_comm()).assign("+".join(commit_sum_items)))
+
+    return computes
 
 
 class PIOPExecution(PublicCoinProtocolExecution):
@@ -715,8 +709,11 @@ class PIOPExecution(PublicCoinProtocolExecution):
     for query in self.eval_queries:
       ret.append(query.dumps())
     for polycom in self.poly_combines:
-      item, rust_items = polycom.dump_computes()
-      ret.append(VerifierComputes(item, RustBuilder()).dumps())
+      computes = polycom.dump_computes()
+      ret.append(VerifierComputes(
+        computes.coefficient_items, RustBuilder()).dumps())
+      ret.append(VerifierComputes(
+        computes.oracle_items, RustBuilder()).dumps())
     for query in self.eval_checks:
       ret.append(query.dumps_check())
     return ret.dumps()
@@ -1557,7 +1554,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
   def _process_indexer_polynomial(self, poly, degree, rust_degree):
     self.preprocess(Math(poly.to_comm()).assign(
         "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)" % poly.dumps()),
-        rust_line_commit_vector(poly.to_comm(), poly.vector, rust_degree))
+        rust_line_define_commit_vector(poly.to_comm(), poly.vector, rust_degree))
     self.preprocess_output_vk(poly.to_comm())
     self.transcript.append(poly.to_comm())
 
@@ -1593,7 +1590,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
       self.prover_computes_latex(Math(poly.to_comm()).assign(
           "\\mathsf{com}\\left(%s, \\mathsf{srs}\\right)"
           % (poly.dumps())))
-      self.prover_rust_commit_vector_with_pk(
+      self.prover_rust_define_commit_vector_with_pk(
           poly.to_comm(), poly.vector, rust_degree)
       self.transcript.append(poly.to_comm())
       self.proof.append(poly.to_comm())
@@ -1622,28 +1619,32 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
 
   def _process_polynomial_combination(self, piopexec):
     for poly_combine in piopexec.poly_combines:
-      prover_items, prover_rust_items = poly_combine.dump_computes(
-          has_oracle=False, has_commit=True, has_poly=True)
-      verifier_items, verifier_rust_items = poly_combine.dump_computes(
-          has_oracle=False, has_commit=True, has_poly=False)
-      for item in prover_items:
+      computes = poly_combine.dump_computes()
+      for item in computes.coefficient_items:
         self.prover_computes_latex(item)
-      for rust_item in prover_rust_items:
-        self.prover_computes_rust(rust_item)
-      for item in verifier_items:
         self.verifier_computes_latex(item)
-      for rust_item in verifier_rust_items:
+      for rust_item in computes.coefficient_rust_items:
+        self.prover_computes_rust(rust_item)
         self.verifier_computes_rust(rust_item)
+      for item in computes.poly_latex_items:
+        self.prover_computes_latex(item)
+      for item in computes.poly_rust_items:
+        self.prover_computes_rust(item)
+      for item in computes.commit_latex_items:
+        self.prover_computes_latex(item)
+        self.verifier_computes_latex(item)
+      for item in computes.commit_rust_items:
+        self.prover_computes_rust(item)
+        self.verifier_computes_rust(item)
+
       self.transcript.append(poly_combine.poly.to_comm())
 
       if piopexec.debug_mode:
         self.prover_rust_assert_eq(
             poly_combine.poly.to_comm(),
-            RustBuilder().func("vector_to_commitment::<E>")
-            .append_to_last("&pk.powers")
-            .append_to_last("&%s" % rust(poly_combine.poly.to_vec()))
-            .append_to_last("(%s) as u64" % rust(poly_combine.length))
-            .invoke_method("unwrap"))
+            rust_commit_vector_with_pk(
+              poly_combine.poly.to_vec(),
+              poly_combine.length))
 
   def process_piopexec(self, piopexec):
     transcript = [x for x in piopexec.verifier_inputs]

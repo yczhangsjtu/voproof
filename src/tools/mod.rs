@@ -708,9 +708,16 @@ macro_rules! define_matrix_vectors {
 }
 
 #[macro_export]
-macro_rules! commit_vector {
+macro_rules! define_commit_vector {
   ($cm:ident, $v:expr, $powers:expr, $deg:expr) => {
-    let $cm = vector_to_commitment::<E>(&$powers, &$v, $deg as u64).unwrap();
+    let $cm = commit_vector!($v, $powers, $deg);
+  };
+}
+
+#[macro_export]
+macro_rules! commit_vector {
+  ($v:expr, $powers:expr, $deg:expr) => {
+    vector_to_commitment::<E>(&$powers, &$v, $deg as u64).unwrap()
   };
 }
 
