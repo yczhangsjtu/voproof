@@ -719,6 +719,50 @@ class PIOPExecution(PublicCoinProtocolExecution):
     return ret.dumps()
 
 
+class ExtendedHadamard(object):
+  def __init__(self, alpha):
+    self.items = []
+    self.alpha = alpha
+    self.alpha_power = 1
+    self.ignore_in_t = set()
+
+  def ignore_index(self, index):
+    self.ignore_in_t.add(index)
+
+  def ignore_last(self):
+    self.ignore_index(len(self.items) - 1)
+
+  def append(self, right):
+    self.items.append(right)
+
+  def add_side(self, side):
+    self.append(self.alpha_power * side)
+
+  def add_side_raw(self, side):
+    self.append(side)
+
+  def add_hadamard_query(self, query):
+    """
+    vec{a} circ vec{b} - vec{c} circ vec{d}
+    the right side might be zero (one sided)
+    """
+    self.add_side(query.left_side)
+    ret = self.items[-1]
+    if not query.one_sided:
+      self.add_side(-query.right_side)
+      ret = (self.items[-1], self.items[-2])
+    elif query.left_side.at_least_one_operand_is_structured():
+      """
+      One sided, and one of the operand is only a structured vector,
+      then no need to include this vector in t, because the structured
+      vector will be all zero outside the n-window
+      """
+      self.ignore_last()
+
+    self.alpha_power = self.alpha_power * self.alpha
+    return ret
+
+
 class PIOPFromVOProtocol(object):
   def __init__(self, vo, vector_size, degree_bound):
     self.vo = vo
@@ -835,7 +879,7 @@ class PIOPFromVOProtocol(object):
       )).end()
 
   def _process_inner_product(self, piopexec, extended_hadamard,
-                             shifts, samples, ignore_in_t, alpha):
+                             shifts, samples, alpha):
     voexec = piopexec.reference_to_voexec
     beta = piopexec.verifier_generate_and_send_rand("beta")
     r = get_named_vector("r")
@@ -843,10 +887,10 @@ class PIOPFromVOProtocol(object):
     n = voexec.vector_size
 
     for i, inner in enumerate(voexec.inner_products):
-      coeff = (beta ** i) * (alpha ** len(voexec.hadamards))
-      extended_hadamard.append(coeff * inner.left_side)
+      beta_power = beta ** i
+      extended_hadamard.add_side(beta_power * inner.left_side)
       if not inner.one_sided:
-        extended_hadamard.append((- coeff) * inner.right_side)
+        extended_hadamard.add_side((- beta_power) * inner.right_side)
       shifts += inner.shifts()
 
     piopexec.prover_computes_latex(
@@ -886,18 +930,17 @@ class PIOPFromVOProtocol(object):
     piopexec.vec_to_poly_dict[rtilde.key()] = fr
 
     alpha_power = alpha ** len(voexec.hadamards)
-    extended_hadamard.append((- alpha_power) *
-                             VOQuerySide(rtilde - rtilde.shift(1),
-                                         PowerVector(1, n, rust_n)))
+    extended_hadamard.add_side(-VOQuerySide(rtilde - rtilde.shift(1),
+                                            PowerVector(1, n, rust_n)))
 
-    extended_hadamard.append((alpha_power * alpha) *
-                             VOQuerySide(rtilde, UnitVector(n, rust_n)))
+    extended_hadamard.alpha_power *= extended_hadamard.alpha
+    extended_hadamard.add_side(VOQuerySide(rtilde, UnitVector(n, rust_n)))
 
     # This last hadamard check involves only a named vector times
     # a unit vector, it does not contributes to t
-    ignore_in_t.add(len(extended_hadamard) - 1)
+    extended_hadamard.ignore_last()
 
-  def _process_vector_t(self, piopexec, samples, extended_hadamard, ignore_in_t):
+  def _process_vector_t(self, piopexec, samples, extended_hadamard):
     rust_n = piopexec.reference_to_voexec.rust_vector_size
     n = piopexec.reference_to_voexec.vector_size
     max_shift = piopexec.max_shift
@@ -910,16 +953,16 @@ class PIOPFromVOProtocol(object):
                                    .sample(self.Ftoq).comma(t).assign(randomizer).double_bar().end_math()
                                    .space("the sum of:").eol().append(Itemize().append([
                                        "$%s$" % side._dumps("circ")
-                                       for i, side in enumerate(extended_hadamard)
-                                       if not i in ignore_in_t])))
+                                       for i, side in enumerate(extended_hadamard.items)
+                                       if not i in extended_hadamard.ignore_in_t])))
 
     piopexec.prover_rust_define_vec(t, rust_vector_concat(randomizer,
                                                           rust_expression_vector_i(rust_linear_combination_base_zero(*[
                                                               operand.dumpr_at_index(
                                                                   simplify(sym_i + rust_n))
-                                                              for i, side in enumerate(extended_hadamard)
+                                                              for i, side in enumerate(extended_hadamard.items)
                                                               for operand in [side.a, side.b]
-                                                              if not i in ignore_in_t
+                                                              if not i in extended_hadamard.ignore_in_t
                                                           ]), 2 * self.q + rust_max_shift)))
 
     tx = t.to_named_vector_poly()
@@ -927,7 +970,7 @@ class PIOPFromVOProtocol(object):
     piopexec.prover_send_polynomial(
         tx, 2 * self.q + max_shift, 2 * self.q + rust_max_shift)
 
-    extended_hadamard.append(VOQuerySide(
+    extended_hadamard.add_side_raw(VOQuerySide(
         -PowerVector(1, max_shift + self.q, rust_max_shift +
                      self.q).shift(n, rust_n),
         t.shift(n - self.q, rust_n - self.q)
@@ -944,7 +987,7 @@ class PIOPFromVOProtocol(object):
     A list of VO query sides, each is of the form vec{a} circ vec{b}
     together they should sum to zero
     """
-    extended_hadamard = []
+    extended_hadamard = ExtendedHadamard(alpha)
     """
     Used to records all the shifts appeared in the vectors,
     and finally compute the maximal shift
@@ -965,45 +1008,21 @@ class PIOPFromVOProtocol(object):
     in t. The hadamard queries that are ignored is stored
     in this set
     """
-    ignore_in_t = set()
     for i, had in enumerate(voexec.hadamards):
-      alpha_power = alpha ** i
-
-      """
-      vec{a} circ vec{b} - vec{c} circ vec{d}
-      the right side might be zero (one sided)
-      """
-      extended_hadamard.append(alpha_power * had.left_side)
-      if not had.one_sided:
-        extended_hadamard.append((-alpha_power) * had.right_side)
-      elif had.left_side.at_least_one_operand_is_structured():
-        """
-        One sided, and one of the operand is only a structured vector,
-        then no need to include this vector in t, because the structured
-        vector will be all zero outside the n-window
-        """
-        ignore_in_t.add(len(extended_hadamard) - 1)
-
-      shifts += had.shifts()
-
+      sides = extended_hadamard.add_hadamard_query(had)
       if self.debug_mode:
         if had.one_sided:
-          self._check_hadamard_sides(
-              check_individual_hadmard,
-              extended_hadamard[-1])
+          self._check_hadamard_sides(check_individual_hadmard, sides)
         else:
-          self._check_hadamard_sides(
-              check_individual_hadmard,
-              extended_hadamard[-1],
-              extended_hadamard[-2])
+          self._check_hadamard_sides(check_individual_hadmard, *sides)
+      shifts += had.shifts()
 
     if self.debug_mode:
       piopexec.prover_computes_rust(check_individual_hadmard)
 
     self.debug("Process inner products")
     if len(voexec.inner_products) > 0:
-      self._process_inner_product(piopexec, extended_hadamard,
-                                  shifts, samples, ignore_in_t, alpha)
+      self._process_inner_product(piopexec, extended_hadamard, shifts, samples, alpha)
 
     max_shift = voexec.simplify_max(Max(*shifts))
     rust_max_shift = piopexec.prover_redefine_symbol_rust(
@@ -1013,8 +1032,7 @@ class PIOPFromVOProtocol(object):
     piopexec.rust_max_shift = rust_max_shift
 
     self.debug("Process vector t")
-    self._process_vector_t(
-        piopexec, samples, extended_hadamard, ignore_in_t)
+    self._process_vector_t(piopexec, samples, extended_hadamard)
 
     return extended_hadamard, max_shift, rust_max_shift
 
@@ -1112,7 +1130,7 @@ class PIOPFromVOProtocol(object):
       piopexec.prover_rust_define_mut(hcheck_vec,
                                       rust_vec_size(rust_zero(), (rust_n + rust_max_shift + self.q) * 2 - 1))
 
-    for i, side in enumerate(extended_hadamard):
+    for i, side in enumerate(extended_hadamard.items):
       self.debug("  Extended Hadamard %d" % (i + 1))
       a = VectorCombination._from(side.a)
       b = VectorCombination._from(side.b)
@@ -1213,7 +1231,7 @@ class PIOPFromVOProtocol(object):
 
   def _collect_named_vec_in_left_operands(self, extended_hadamard):
     ret = {}
-    for had in extended_hadamard:
+    for had in extended_hadamard.items:
       if isinstance(had.a, NamedVector):
         ret[had.a.key()] = had.a
       elif isinstance(had.a, VectorCombination):
@@ -1344,7 +1362,7 @@ class PIOPFromVOProtocol(object):
     # map: key -> (poly, Symbol(coeff), latex_builder, rust_builder)
     coeff_builders = {}
     # 1. The part contributed by the extended hadamard query
-    for i, side in enumerate(extended_hadamard):
+    for i, side in enumerate(extended_hadamard.items):
       self.debug("  Extended Hadamard %d" % (i + 1))
       self._populate_coeff_builder_by_hadamard_query(
           piopexec, side, coeff_builders, z0, z, query_results, size)
@@ -1768,7 +1786,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
 
     return kzginfo
 
-  def _check_g_evals_to_zero(self, piopexec):
+  def _check_naive_g_evals_to_zero(self, piopexec):
     if piopexec.debug_mode:
       z = [query.point for query in piopexec.eval_checks if query.name == 0][0]
       naive_g = piopexec.naive_g
@@ -1811,5 +1829,5 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     self._process_piopexec_interactions(piopexec)
     self._process_piopexec_computes_query_results(piopexec)
     self._process_polynomial_combination(piopexec)
-    self._check_g_evals_to_zero(piopexec)
+    self._check_naive_g_evals_to_zero(piopexec)
     self._generate_open_and_verify_computations(piopexec)
