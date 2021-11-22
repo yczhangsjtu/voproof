@@ -1825,8 +1825,7 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
     self.verifier_computes(verify_computation, verify_computation_rust)
 
   def process_piopexec(self, piopexec):
-    transcript = [x for x in piopexec.verifier_inputs]
-    self.transcript = transcript
+    self.transcript = [x for x in piopexec.verifier_inputs]
     self._process_piopexec_indexer(piopexec)
     self._process_piopexec_interactions(piopexec)
     self._process_piopexec_computes_query_results(piopexec)
