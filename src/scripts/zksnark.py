@@ -1,17 +1,11 @@
-from vector_symbol import NamedVectorPolynomial, \
-    get_name, get_named_vector, \
-    PolynomialCombination, simplify_max_with_hints, \
-    get_named_polynomial, PolynomialCommitment, Matrix, \
-    rust_pk_vk, rust_vk, convolution, NamedVectorPairCombination, \
-    get_rust_type
-from latex_builder import tex, LaTeXBuilder, AccumulationVector, \
-    ExpressionVector, Math, Enumerate, Itemize, \
-    add_paren_if_add, Algorithm
+from vector_symbol import NamedVectorPolynomial, get_name, \
+    rust_pk_vk, rust_vk, get_rust_type
+from latex_builder import tex, LaTeXBuilder, Math, Enumerate, Itemize
 import rust_builder
 from rust_builder import *
 from sympy import Symbol
-from optimized_compiler import IndexerComputes, ProverComputes, VerifierComputes, \
-    ProverSendPolynomials, VerifierSendRandomnesses, PolynomialCommitment
+from optimized_compiler import IndexerComputes, ProverComputes, \
+    VerifierComputes, ProverSendPolynomials, VerifierSendRandomnesses
 
 
 class ZKSNARK(object):
