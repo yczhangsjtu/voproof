@@ -640,6 +640,13 @@ class PowerVector(object):
       return rust(rust_range_index(1, self.rust_size, index))
 
   def _dump_symbol_rust_at_index(self, index):
+    """
+    In case the index is always larger than the size, then directly return zero
+    """
+    if isinstance(index, Expr) and \
+            simplify(Max(self.rust_size - 1, index) - index) == 0:
+      return Integer(0)
+
     code = self.dumpr_at_index(index)
     symbol = _rust_symbol_dictionary.add(code)
     return Symbol(symbol)
