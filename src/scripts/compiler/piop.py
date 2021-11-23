@@ -61,7 +61,7 @@ class CombinationCoeffBuilder(object):
     self.rust_builder = rust_builder
     self.shifts = shifts
 
-  def transform_lists_to_builders(self):
+  def transform_lists_to_builders(self, alpha):
     """
     Assume that the latex builder and rust builder are currently lists
     Transform them into Itemize() and rust_define_sum respectively
@@ -73,7 +73,7 @@ class CombinationCoeffBuilder(object):
         Math(self.coeff).assign(self.latex_builder[0])
 
     self.rust_builder = rust_line_define(
-        self.coeff, list_sum_to_rust_map(self.rust_builder))
+        self.coeff, list_sum_to_rust_map(self.rust_builder, collect_symbols=alpha))
 
 
 class CombinePolynomialComputes(object):

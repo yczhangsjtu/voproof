@@ -733,7 +733,7 @@ class PIOPFromVOProtocol(object):
 
     # Transform the lists into latex and rust builders
     for key, coeff_builder in coeff_builders.items():
-      coeff_builder.transform_lists_to_builders()
+      coeff_builder.transform_lists_to_builders(extended_hadamard.alpha)
 
     gx = get_named_polynomial("g")
     piopexec.combine_polynomial(gx, coeff_builders, self.degree_bound)
