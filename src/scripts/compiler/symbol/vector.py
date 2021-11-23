@@ -1,4 +1,4 @@
-from sympy import Symbol, sympify, Expr, simplify, Add, Integer
+from sympy import Symbol, sympify, Expr, simplify, Add, Integer, collect
 from sympy.core.numbers import Infinity
 from .names import _NamedBasic, get_name
 from .util import rust_pk
@@ -761,6 +761,14 @@ class StructuredVector(CoeffMap):
                           ((vector.alpha * omega) ** (vector.size - 1)))
                             .shift(-vector.size + 1))
     return ret
+
+
+def vec_lists_dump_at_index_then_inner_product(vec_pairs, index):
+  ret = Integer(0)
+  for vec1, vec2 in vec_pairs:
+    ret += vec1._dump_symbol_rust_at_index(index) * vec2._dump_symbol_rust_at_index(index)
+  ret = collect(simplify(ret), [Symbol("alpha"), Symbol("beta")])
+  return _rust_symbol_dictionary.dumpr(ret)
 
 
 class NamedVectorPair(object):

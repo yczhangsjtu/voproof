@@ -3,7 +3,8 @@ from .pc_protocol import ProverComputes, VerifierComputes, \
 from .vo_protocol import VOProtocolExecution, ProverSubmitVectors, VOQuerySide
 from .piop import CombinationCoeffBuilder
 from .symbol.vector import NamedVector, PowerVector, UnitVector, \
-    get_named_vector, VectorCombination, convolution, NamedVectorPairCombination
+    get_named_vector, VectorCombination, convolution, NamedVectorPairCombination, \
+    vec_lists_dump_at_index_then_inner_product
 from .symbol.names import get_name
 from .symbol.poly import get_named_polynomial
 from .builder.latex import LaTeXBuilder, AccumulationVector, Math, Itemize, \
@@ -97,12 +98,20 @@ class ExtendedHadamard(object):
     Because the first n elements of t should be zero, we only
     care about the vector starting from n+1
     """
-    return rust_linear_combination_base_zero(*[
+    return vec_lists_dump_at_index_then_inner_product([
+        (side.a, side.b)
+        for i, side in enumerate(self.items)
+        if not self.ignored(i)
+    ], simplify(sym_i + vector_size))
+
+    """
+    rust_linear_combination_base_zero(*[
         operand.dumpr_at_index(simplify(sym_i + vector_size))
         for i, side in enumerate(self.items)
         for operand in [side.a, side.b]
         if not self.ignored(i)
     ])
+    """
 
   def dump_product_items(self, omega, vec_to_poly_dict):
     hx_items = Itemize()
