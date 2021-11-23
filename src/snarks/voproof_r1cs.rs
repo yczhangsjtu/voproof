@@ -50,14 +50,7 @@ impl<E: PairingEngine> SNARKProof<E> for R1CSProof<E> {}
 
 impl VOProofR1CS {
   pub fn get_max_degree(size: R1CSSize) -> usize {
-    let cap_h = size.nrows as i64;
-    let cap_k = size.ncols as i64;
-    let cap_s_a = size.adensity as i64;
-    let cap_s_b = size.bdensity as i64;
-    let cap_s_c = size.cdensity as i64;
-    let ell = size.input_size as i64;
-
-    (cap_k + 2 * cap_s_a + 2 * cap_s_b + 2 * cap_s_c) as usize
+    (size.ncols + 2 * size.adensity + 2 * size.bdensity + 2 * size.cdensity) as usize
   }
 }
 

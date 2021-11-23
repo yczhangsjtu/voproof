@@ -72,9 +72,6 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, set_pa
   piop.debug_mode = debug_mode
   debug("Start preprocessing...")
   piopexec = PIOPExecution()
-  size_init = RustBuilder()
-  for size, value in size_map:
-    size_init.let(size).assign("size.%s as i64" % value).end()
 
   piop.preprocess(piopexec, *ppargs)
   piopexec.reference_to_voexec._simplify_max_hints = simplify_hints
@@ -82,6 +79,10 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, set_pa
   piop.execute(piopexec, *execargs)
   piopexec.max_degree = piopexec.reference_to_voexec.simplify_max(
       piopexec.max_degree)
+
+  size_init = rust(piopexec.max_degree)
+  for size, value in size_map:
+    size_init = size_init.replace(rust(size), "size.{}".format(value))
 
   debug("Start compiling to zkSNARK...")
   zkSNARK = ZKSNARKFromPIOPExecKZG(piopexec)
@@ -93,7 +94,7 @@ def analyzeProtocol(protocol, ppargs, execargs, simplify_hints, size_map, set_pa
       temp = template.readlines()
     mark_content_map = [("__NAME__", name),
                         ("/*{size}*/",
-                         "%s\n        (%s) as usize" % (rust(size_init), rust(piopexec.max_degree))),
+                         "(%s) as usize" % size_init),
                         ("/*{VerifierKey}*/", zkSNARK.dump_vk_definition()),
                         ("/*{index verifier key}*/",
                          zkSNARK.dump_vk_construction()),
