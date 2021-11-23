@@ -1,6 +1,6 @@
 from sympy import Symbol, latex, sympify, Integer, Expr,\
                   simplify, Max, Add, Mul, Pow, srepr
-from rust import rust_code, rust_code_to_field, force_lowercase
+from .rust_sympy import rust_code, rust_code_to_field, force_lowercase
 
 
 sym_i = Symbol("i")
@@ -395,7 +395,7 @@ def _rust_builder_macro(name, argnames, outargs, *args):
   return RustBuilder(_rust_macro(name, argnames, outargs, *args))
 
 
-current_module = __import__(__name__)
+current_module = __import__(__name__, fromlist=[None])
 for macro_name, funcname, argnames, outargs in rust_macro_list:
   if funcname == None:
     funcname = macro_name

@@ -1,11 +1,12 @@
-from vector_symbol import NamedVectorPolynomial, get_name, \
-    rust_pk_vk, rust_vk, get_rust_type
-from latex_builder import tex, LaTeXBuilder, Math, Enumerate, Itemize
-import rust_builder
-from rust_builder import *
+from .symbol.names import get_name
+from .symbol.poly import NamedVectorPolynomial
+from .symbol.util import rust_pk_vk, rust_vk, get_rust_type
+from .builder.latex import tex, LaTeXBuilder, Math, Enumerate, Itemize
+from .builder.rust import *
+from .piop import ProverSendPolynomials
+from .pc_protocol import IndexerComputes, ProverComputes, \
+    VerifierComputes, VerifierSendRandomnesses
 from sympy import Symbol
-from optimized_compiler import IndexerComputes, ProverComputes, \
-    VerifierComputes, ProverSendPolynomials, VerifierSendRandomnesses
 
 
 class ZKSNARK(object):

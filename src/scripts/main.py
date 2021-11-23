@@ -1,16 +1,15 @@
 from sympy import Symbol, latex, sympify, Integer, simplify
 from os.path import basename
 from sympy.abc import alpha, beta, gamma, X, D, S
-from optimized_compiler import VOProtocol, PIOPExecution, PIOPFromVOProtocol, \
-    VOProtocolExecution, ProverComputes, VerifierComputes
-from zksnark import ZKSNARKFromPIOPExecKZG
-from vector_symbol import get_named_vector, reset_name_counters, get_name
-from smvp_protocols import SparseMVP, SparseMVPProverEfficient, \
-    R1CS, R1CSProverEfficient, \
-    HPR, HPRProverEfficient
+from compiler.vo_protocol import VOProtocol, VOProtocolExecution
+from compiler.piop import PIOPExecution
+from compiler.vo2piop import PIOPFromVOProtocol
+from compiler.zksnark import ZKSNARKFromPIOPExecKZG
+from compiler.symbol.vector import get_named_vector
+from compiler.symbol.names import reset_name_counters, get_name
+from compiler.builder.rust import RustBuilder, rust, RustMacro
+from smvp_protocols import R1CS, R1CSProverEfficient, HPR, HPRProverEfficient
 from pov_protocols import POV, POVProverEfficient
-from rust_builder import RustBuilder, rust, RustMacro
-from latex_builder import LaTeXBuilder
 
 ell = Symbol("ell", positive=True)
 m = Symbol("m", positive=True)
