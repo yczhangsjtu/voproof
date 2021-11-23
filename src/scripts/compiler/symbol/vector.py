@@ -1,4 +1,4 @@
-from sympy import Symbol, sympify, Expr, simplify, Add
+from sympy import Symbol, sympify, Expr, simplify, Add, Integer
 from sympy.core.numbers import Infinity
 from .names import _NamedBasic, get_name
 from .util import rust_pk
@@ -66,6 +66,11 @@ class NamedVector(_NamedBasic):
 
   def dumpr_at_index(self, index):
     return rust(RustMacro("vector_index").append([rust_pk(self), rust(index)]))
+
+  def _dump_symbol_rust_at_index(self, index):
+    code = self.dumpr_at_index(index)
+    symbol = _rust_symbol_dictionary.add(code)
+    return Symbol(symbol)
 
 
 def get_named_vector(name, modifier=None, has_prime=False):
@@ -158,6 +163,11 @@ class UnitVector(object):
   
   def dumpr_at_index(self, index):
     return rust(RustMacro("delta").append([rust(index), rust(self.rust_position)]))
+
+  def _dump_symbol_rust_at_index(self, index):
+    code = self.dumpr_at_index(index)
+    symbol = _rust_symbol_dictionary.add(code)
+    return Symbol(symbol)
   
   def reverse_omega(self, omega):
     return SparseVector._from(self).reverse_omega(omega)
@@ -305,10 +315,15 @@ class SparseVector(CoeffMap):
 
   def dumpr_at_index(self, index):
     ret = RustMacro("multi_delta").append(rust(index))
-    for key, uv_coeff in self.items():
-      unit_vector, coeff = uv_coeff
+    for unit_vector, coeff in self.values():
       ret.append([to_field(coeff), unit_vector.rust_position])
     return rust(ret)
+
+  def _dump_symbol_rust_at_index(self, index):
+    ret = Integer(0)
+    for unit_vector, coeff in self.values():
+      ret += coeff * unit_vector._dump_symbol_rust_at_index(index)
+    return ret
 
   def reverse_omega(self, omega):
     # f_v(X) => f_v(omega X^{-1})
@@ -375,14 +390,13 @@ def _dumpr_at_index_for_sparse_coefficient(v, index):
   ret = rust_linear_combination(v._dict["one"][1].dumpr_at_index(index)) \
       if has_one else rust_linear_combination_base_zero()
 
-  for key, vec_value in v.items():
+  for key, vec, value in v.key_keyed_coeffs():
     if key == "one":
       continue
-    vec, value = vec_value
-    for key2, uv_coeff in value.items():
-      unit_vector, coeff = uv_coeff
+    for key2, unit_vector, coeff in value.key_keyed_coeffs():
       ret.append(to_field(coeff))
-      ret.append(vec.dumpr_at_index(rust_minus_i64(index, unit_vector.rust_position)))
+      ret.append(vec.dumpr_at_index(rust_minus_i64(
+        index, unit_vector.rust_position)))
 
   if len(ret) == 2 and not has_one:
     if ret[0] == to_field(1):
@@ -396,6 +410,55 @@ def _dumpr_at_index_for_sparse_coefficient(v, index):
     return rust(rust_mul(ret[0], ret[1]))
 
   return rust(ret)
+
+
+class _RustSymbolDictionary(object):
+  def __init__(self):
+    self.rust_to_symbol = {}
+    self.symbol_to_rust = {}
+    self.counter = 0
+
+    self.one = self.add("one!()")
+
+  def get_rust(self, symbol):
+    return self.symbol_to_rust[symbol]
+
+  def get_symbol(self, code):
+    return self.rust_to_symbol[code]
+
+  def add(self, code):
+    if code in self.rust_to_symbol:
+      return self.rust_to_symbol[code]
+
+    name = "rustsymboldict_{}_".format(self.counter)
+    self.counter += 1
+    self.rust_to_symbol[code] = name
+    self.symbol_to_rust[name] = code
+    return name
+
+  def dumpr(self, expr):
+    code = rust(expr)
+    for symbol, r in self.symbol_to_rust.items():
+      code = code.replace(symbol, r)
+    return code
+
+_rust_symbol_dictionary = _RustSymbolDictionary()
+
+def _dump_symbol_rust_at_index_for_sparse_coefficient(v, index):
+  ret = Integer(0)
+  for key, vec, value in v.key_keyed_coeffs():
+    if key == "one":
+      ret += value._dump_symbol_rust_at_index(index)
+      continue
+    for key2, uv_coeff in value.items():
+      unit_vector, coeff = uv_coeff
+      ret += coeff * vec._dump_symbol_rust_at_index(rust_minus_i64(
+        index, unit_vector.rust_position))
+
+  #  print(_dumpr_at_index_for_sparse_coefficient(v, index))
+
+  return ret
+
 
 class VectorCombination(CoeffMap):
   def __init__(self):
@@ -483,7 +546,15 @@ class VectorCombination(CoeffMap):
     return _dump_coeff_map_with_sparse_coeff(self)
 
   def dumpr_at_index(self, index):
+    """
+    Old version: dump a linear combination rust macro
+
     return _dumpr_at_index_for_sparse_coefficient(self, index)
+    """
+    return _rust_symbol_dictionary.dumpr(self._dump_symbol_rust_at_index(index))
+
+  def _dump_symbol_rust_at_index(self, index):
+    return _dump_symbol_rust_at_index_for_sparse_coefficient(self, index)
   
   def dump_named_vectors(self, result):
     for key, vec_value in self.items():
@@ -555,6 +626,11 @@ class PowerVector(object):
           rust(self.alpha, to_field=True), self.rust_size, index]))
     else:
       return rust(RustMacro("range_index").append([1, self.rust_size, index]))
+
+  def _dump_symbol_rust_at_index(self, index):
+    code = self.dumpr_at_index(index)
+    symbol = _rust_symbol_dictionary.add(code)
+    return Symbol(symbol)
 
   def reverse_omega(self, omega):
     return StructuredVector._from(self).reverse_omega(omega)
@@ -660,6 +736,9 @@ class StructuredVector(CoeffMap):
 
   def dumpr_at_index(self, index):
     return _dumpr_at_index_for_sparse_coefficient(self, index)
+
+  def _dump_symbol_rust_at_index(self, index):
+    return _dump_symbol_rust_at_index_for_sparse_coefficient(self, index)
 
   def reverse_omega(self, omega):
     ret = StructuredVector()
@@ -969,17 +1048,4 @@ def convolution(left, right, omega):
      return StructuredVectorPair(left.reverse_omega(omega), right)
 
   return left.reverse_omega(omega) * right
-
-
-if __name__ == "__main__":
-  H = Symbol("H")
-  ell = Symbol("ell")
-  omega = Symbol("omega")
-  vpc = NamedVectorPairCombination._from(
-          convolution(StructuredVector._from(PowerVector(1, H)),
-                      StructuredVector._from(PowerVector(1, H)), omega)) \
-          .generate_vector_combination(omega)
-
-  conv = convolution(PowerVector(1, ell).shift(H), UnitVector(H), omega)
-  print(conv.dumps())
 

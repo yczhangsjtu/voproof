@@ -5,7 +5,7 @@ from compiler.vo_protocol import VOProtocol, VOProtocolExecution
 from compiler.piop import PIOPExecution
 from compiler.vo2piop import PIOPFromVOProtocol
 from compiler.zksnark import ZKSNARKFromPIOPExecKZG
-from compiler.symbol.vector import get_named_vector
+from compiler.symbol.vector import get_named_vector, UnitVector
 from compiler.symbol.names import reset_name_counters, get_name
 from compiler.builder.rust import RustBuilder, rust, RustMacro
 from smvp_protocols import R1CS, R1CSProverEfficient, HPR, HPRProverEfficient
@@ -260,3 +260,4 @@ if __name__ == '__main__':
   analyzeR1CS()
   # analyzeHPR()
   # analyzePOV()
+
