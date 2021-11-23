@@ -461,11 +461,6 @@ class PIOPFromVOProtocol(object):
       for vec in chain(a.keyeds(), b.keyeds()):
         self._fix_missing_vector_key(vec, piopexec)
 
-      """
-      Cross term multiplication
-      """
-      hx_items = side.dump_product_items(omega, piopexec.vec_to_poly_dict)
-
       if self.debug_mode:
         size = rust_n + rust_max_shift + self.q
         self._increment_h_omega_sum(
@@ -482,10 +477,12 @@ class PIOPFromVOProtocol(object):
     h = get_named_vector("h")
     hxcomputes_rust, h_vec_combination = \
         hx_vector_combination.generate_vector_combination(omega)
-    piopexec.prover_computes(LaTeXBuilder()
-                             .start_math().append(hx).assign().end_math()
-                             .space("the sum of:").eol().append(hx_items),
-                             hxcomputes_rust)
+    piopexec.prover_computes(
+        LaTeXBuilder()
+        .start_math().append(hx).assign().end_math()
+        .space("the sum of:").eol()
+        .append(side.dump_product_items(omega, piopexec.vec_to_poly_dict)),
+        hxcomputes_rust)
 
     h_degree, h_inverse_degree = n + max_shift + self.q, n + max_shift + self.q
     rust_h_degree = rust_n + rust_max_shift + self.q
