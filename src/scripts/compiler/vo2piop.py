@@ -16,7 +16,7 @@ from itertools import chain
 
 F = Symbol("\\mathbb{F}")
 Fstar = Symbol("\\mathbb{F}^*")
-sym_i = Symbol("i")
+sym_i = Symbol("i", positive=True)
 
 
 class ExtendedHadamard(object):

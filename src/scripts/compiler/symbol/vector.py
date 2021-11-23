@@ -1,4 +1,4 @@
-from sympy import Symbol, sympify, Expr, simplify, Add, Integer, collect
+from sympy import Symbol, sympify, Expr, simplify, Add, Integer, collect, Max
 from sympy.core.numbers import Infinity
 from .names import _NamedBasic, get_name
 from .util import rust_pk
@@ -62,7 +62,7 @@ class NamedVector(_NamedBasic):
 
   def shift(self, length, rust_length=None):
     return self.__mul__(UnitVector(length + 1,
-      rust_length + 1 if rust_length is not None else None))
+                                   rust_length + 1 if rust_length is not None else None))
 
   def dumpr_at_index(self, index):
     return rust(RustMacro("vector_index").append([rust_pk(self), rust(index)]))
@@ -113,11 +113,11 @@ class UnitVector(object):
     # position can be Symbol, Expr or Integer
     self.position = simplify(sympify(position))
     self.rust_position = self.position if rust_position is None \
-                                       else simplify(sympify(rust_position))
+        else simplify(sympify(rust_position))
 
   def dumps(self):
     return "\\vec{e}_{%s}" % (tex(self.position))
-  
+
   def key(self):
     return "unit_vector:%s" % (tex(self.position))
 
@@ -126,10 +126,10 @@ class UnitVector(object):
 
   def shifts(self):
     return []
-  
+
   def to_poly_expr(self, var):
     return var ** (self.position - 1)
-  
+
   def to_poly_expr_rust(self, var):
     return var ** (self.rust_position - 1)
 
@@ -160,7 +160,7 @@ class UnitVector(object):
 
   def __div__(self, other):
     return SparseVector._from(self).__div__(other)
-  
+
   def dumpr_at_index(self, index):
     return rust(RustMacro("delta").append([rust(index), rust(self.rust_position)]))
 
@@ -168,7 +168,7 @@ class UnitVector(object):
     code = self.dumpr_at_index(index)
     symbol = _rust_symbol_dictionary.add(code)
     return Symbol(symbol)
-  
+
   def reverse_omega(self, omega):
     return SparseVector._from(self).reverse_omega(omega)
 
@@ -196,7 +196,7 @@ class SparseVector(CoeffMap):
     if not self.has(unit_vector):
       return sympify(0)
     return super(SparseVector, self).get(unit_vector)
-  
+
   def copy(self):
     return SparseVector._from(self)
 
@@ -297,7 +297,7 @@ class SparseVector(CoeffMap):
 
   def shift(self, length, rust_length=None):
     return self.__mul__(UnitVector(length + 1,
-      rust_length + 1 if rust_length is not None else None))
+                                   rust_length + 1 if rust_length is not None else None))
 
   def to_poly_expr(self, var):
     items = []
@@ -396,7 +396,7 @@ def _dumpr_at_index_for_sparse_coefficient(v, index):
     for key2, unit_vector, coeff in value.key_keyed_coeffs():
       ret.append(to_field(coeff))
       ret.append(vec.dumpr_at_index(rust_minus_i64(
-        index, unit_vector.rust_position)))
+          index, unit_vector.rust_position)))
 
   if len(ret) == 2 and not has_one:
     if ret[0] == to_field(1):
@@ -442,7 +442,9 @@ class _RustSymbolDictionary(object):
       code = code.replace(symbol, r)
     return code
 
+
 _rust_symbol_dictionary = _RustSymbolDictionary()
+
 
 def _dump_symbol_rust_at_index_for_sparse_coefficient(v, index):
   ret = Integer(0)
@@ -453,7 +455,7 @@ def _dump_symbol_rust_at_index_for_sparse_coefficient(v, index):
     for key2, uv_coeff in value.items():
       unit_vector, coeff = uv_coeff
       ret += coeff * vec._dump_symbol_rust_at_index(rust_minus_i64(
-        index, unit_vector.rust_position))
+          index, unit_vector.rust_position))
 
   #  print(_dumpr_at_index_for_sparse_coefficient(v, index))
 
@@ -507,7 +509,8 @@ class VectorCombination(CoeffMap):
     if isinstance(other, VectorCombination):
       raise Exception("VectorCombinations should not be multiplied together")
     if isinstance(other, StructuredVector):
-      raise Exception("VectorCombination should not be multiplied with StructuredVector")
+      raise Exception(
+          "VectorCombination should not be multiplied with StructuredVector")
     return VectorCombination._from(super(VectorCombination, self).__mul__(other))
 
   def __rmul__(self, other):
@@ -529,7 +532,7 @@ class VectorCombination(CoeffMap):
 
   def shift(self, length, rust_length=None):
     return self.__mul__(UnitVector(length + 1,
-      rust_length + 1 if rust_length is not None else None))
+                                   rust_length + 1 if rust_length is not None else None))
 
   def shifts(self):
     lengths = []
@@ -555,7 +558,7 @@ class VectorCombination(CoeffMap):
 
   def _dump_symbol_rust_at_index(self, index):
     return _dump_symbol_rust_at_index_for_sparse_coefficient(self, index)
-  
+
   def dump_named_vectors(self, result):
     for key, vec_value in self.items():
       if key != "one" and key not in result:
@@ -568,7 +571,8 @@ class PowerVector(object):
     # alpha and size can be Symbol or Integer
     self.alpha = simplify(sympify(alpha))
     self.size = simplify(sympify(size))
-    self.rust_size = self.size if rust_size is None else simplify(sympify(rust_size))
+    self.rust_size = self.size if rust_size is None else simplify(
+        sympify(rust_size))
 
   def key(self):
     return "power_vector:%s:%s" % (tex(self.alpha), tex(self.size))
@@ -599,7 +603,8 @@ class PowerVector(object):
 
   def __mul__(self, other):
     if isinstance(other, StructuredVector):
-      raise Exception("StructuredVector cannot be multiplied with power vector")
+      raise Exception(
+          "StructuredVector cannot be multiplied with power vector")
     if isinstance(other, PowerVector):
       raise Exception("PowerVectors cannot be multiplied together")
     return StructuredVector._from(self).__mul__(other)
@@ -612,20 +617,27 @@ class PowerVector(object):
 
   def shift(self, length, rust_length=None):
     return self.__mul__(UnitVector(length + 1,
-      rust_length + 1 if rust_length is not None else None))
+                                   rust_length + 1 if rust_length is not None else None))
 
   def to_poly_expr(self, var):
     return ((self.alpha * var) ** self.size - Symbol("one!()")) / (self.alpha * var - Symbol("one!()"))
 
   def to_poly_expr_rust(self, var):
     return ((self.alpha * var) ** self.rust_size - Symbol("one!()")) / (self.alpha * var - Symbol("one!()"))
-  
+
   def dumpr_at_index(self, index):
+    """
+    In case the index is always larger than the size, then directly return zero
+    """
+    if isinstance(index, Expr) and \
+            simplify(Max(self.rust_size - 1, index) - index) == 0:
+      return rust(rust_zero())
+
     if self.alpha != 1:
       return rust(RustMacro("power_vector_index").append([
           rust(self.alpha, to_field=True), self.rust_size, index]))
     else:
-      return rust(RustMacro("range_index").append([1, self.rust_size, index]))
+      return rust(rust_range_index(1, self.rust_size, index))
 
   def _dump_symbol_rust_at_index(self, index):
     code = self.dumpr_at_index(index)
@@ -634,6 +646,7 @@ class PowerVector(object):
 
   def reverse_omega(self, omega):
     return StructuredVector._from(self).reverse_omega(omega)
+
 
 class StructuredVector(CoeffMap):
   def __init__(self):
@@ -684,7 +697,8 @@ class StructuredVector(CoeffMap):
     if isinstance(other, StructuredVector):
       raise Exception("Structured vectors cannot be multiplied together")
     if isinstance(other, PowerVector):
-      raise Exception("Structured vector cannot be multiplied with a PowerVector")
+      raise Exception(
+          "Structured vector cannot be multiplied with a PowerVector")
     return StructuredVector._from(super(StructuredVector, self).__mul__(other))
 
   def __rmul__(self, other):
@@ -695,7 +709,7 @@ class StructuredVector(CoeffMap):
 
   def dumps(self):
     return _dump_coeff_map_with_sparse_coeff(self)
-  
+
   def is_atom(self):
     if len(self._dict) > 1:
       return False
@@ -712,7 +726,7 @@ class StructuredVector(CoeffMap):
 
   def shift(self, length, rust_length=None):
     return self.__mul__(UnitVector(length + 1,
-      rust_length + 1 if rust_length is not None else None))
+                                   rust_length + 1 if rust_length is not None else None))
 
   def to_poly_expr(self, var):
     items = []
@@ -731,7 +745,8 @@ class StructuredVector(CoeffMap):
       if key == "one":
         items.append(value.to_poly_expr_rust(var))
       else:
-        items.append(vector.to_poly_expr_rust(var) * value.to_poly_expr_rust(var))
+        items.append(vector.to_poly_expr_rust(
+            var) * value.to_poly_expr_rust(var))
     return sum(items)
 
   def dumpr_at_index(self, index):
@@ -759,14 +774,15 @@ class StructuredVector(CoeffMap):
         ret._dict[key] = (PowerVector(1/(vector.alpha * omega), vector.size),
                           (value.reverse_omega(omega) *
                           ((vector.alpha * omega) ** (vector.size - 1)))
-                            .shift(-vector.size + 1))
+                          .shift(-vector.size + 1))
     return ret
 
 
 def vec_lists_dump_at_index_then_inner_product(vec_pairs, index):
   ret = Integer(0)
   for vec1, vec2 in vec_pairs:
-    ret += vec1._dump_symbol_rust_at_index(index) * vec2._dump_symbol_rust_at_index(index)
+    ret += vec1._dump_symbol_rust_at_index(index) * \
+        vec2._dump_symbol_rust_at_index(index)
   ret = collect(simplify(ret), [Symbol("alpha"), Symbol("beta")])
   return _rust_symbol_dictionary.dumpr(ret)
 
@@ -858,7 +874,8 @@ class StructuredVectorPairCombination(object):
       v.pairs = [pair for pair in other.pairs]
       v.one = other.one
       return v
-    raise Exception("Cannot convert %s to StructuredVectorPairCombination" % (type(other)))
+    raise Exception(
+        "Cannot convert %s to StructuredVectorPairCombination" % (type(other)))
 
   def __add__(self, other):
     if not isinstance(other, StructuredVectorPairCombination):
@@ -867,8 +884,8 @@ class StructuredVectorPairCombination(object):
     ret = StructuredVectorPairCombination()
     ret.pairs = self.pairs + other.pairs
     ret.one = None if self.one is None and other.one is None \
-                   else (StructuredVector._from(0) if self.one is None else self.one) + \
-                        (StructuredVector._from(0) if other.one is None else other.one)
+        else (StructuredVector._from(0) if self.one is None else self.one) + \
+        (StructuredVector._from(0) if other.one is None else other.one)
     return ret
 
   def __radd__(self, other):
@@ -918,7 +935,8 @@ class NamedVectorPairCombination(CoeffMap):
       for key, value in other.items():
         v._dict[key] = value
       return v
-    raise Exception("Cannot convert %s to NamedVectorPairCombination" % (str(other)))
+    raise Exception(
+        "Cannot convert %s to NamedVectorPairCombination" % (str(other)))
 
   def __add__(self, other):
     if not isinstance(other, NamedVectorPairCombination):
@@ -951,14 +969,14 @@ class NamedVectorPairCombination(CoeffMap):
         v = get_named_vector("v")
         to_shift = Symbol(get_name("shiftlength"))
         ret.append(rust_define_vector_poly_mul_shift(
-          v, rust_pk(vector_pair.u), rust_pk(vector_pair.v), omega, to_shift
+            v, rust_pk(vector_pair.u), rust_pk(vector_pair.v), omega, to_shift
         )).end()
         named_vector_structure_pairs.append((v, coeff.shift(-to_shift)))
       elif vector_pair.u is not None:
         v = get_named_vector("v")
         to_shift = Symbol(get_name("shiftlength"))
         ret.append(rust_define_vector_reverse_omega_shift(
-          v, vector_pair.u, omega, to_shift
+            v, vector_pair.u, omega, to_shift
         )).end()
         named_vector_structure_pairs.append((v, coeff.shift(-to_shift)))
       elif vector_pair.v is not None:
@@ -988,26 +1006,30 @@ class NamedVectorPairCombination(CoeffMap):
             for right_key, right_p_coeff in structured_vector_pair.v.items():
               right_p, right_coeff = right_p_coeff
               if left_key != "one" and right_key != "one":
-                coeff = left_coeff * right_coeff # convolution(left_coeff, right_coeff, omega)
+                # convolution(left_coeff, right_coeff, omega)
+                coeff = left_coeff * right_coeff
                 power_power_sparse_tuples.append((left_p, right_p, coeff))
               elif left_key != "one":
-                vector_combination += left_p * left_coeff * right_coeff # convolution(left_p * left_coeff, right_coeff, omega)
+                # convolution(left_p * left_coeff, right_coeff, omega)
+                vector_combination += left_p * left_coeff * right_coeff
               elif right_key != "one":
-                vector_combination += left_coeff * right_coeff * right_p # convolution(left_coeff, right_coeff * right_p, omega)
+                # convolution(left_coeff, right_coeff * right_p, omega)
+                vector_combination += left_coeff * right_coeff * right_p
               else:
-                vector_combination += left_coeff * right_coeff # convolution(left_coeff, right_coeff, omega)
+                # convolution(left_coeff, right_coeff, omega)
+                vector_combination += left_coeff * right_coeff
 
     for v, p, s in named_power_sparse_tuples:
       vec = get_named_vector("v")
       ret.append(rust_define_vector_power_mul(
-        vec, rust_pk(v), rust(p.alpha, to_field=True), p.size
+          vec, rust_pk(v), rust(p.alpha, to_field=True), p.size
       )).end()
       vector_combination += vec * s
 
     for p1, p2, s in power_power_sparse_tuples:
       v = get_named_vector("v")
       ret.append(rust_define_power_power_mul(
-        v, rust(p1.alpha, to_field=True), p1.size, rust(p2.alpha, to_field=True), p2.size)
+          v, rust(p1.alpha, to_field=True), p1.size, rust(p2.alpha, to_field=True), p2.size)
       ).end()
       vector_combination += v * s
 
@@ -1058,7 +1080,6 @@ def convolution(left, right, omega):
     return ret
 
   if isinstance(left, StructuredVector) and isinstance(right, StructuredVector):
-     return StructuredVectorPair(left.reverse_omega(omega), right)
+    return StructuredVectorPair(left.reverse_omega(omega), right)
 
   return left.reverse_omega(omega) * right
-

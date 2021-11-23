@@ -224,7 +224,7 @@ class VOProtocolExecution(PublicCoinProtocolExecution):
     if self.rust_vector_size is None:
       executor = self if piopexec is None else piopexec
       self.rust_vector_size = executor.verifier_redefine_symbol_rust(
-          value, name)
+          value, name, positive=True)
 
   def _update_vector_size_bound(self, size):
     self.vector_size_bound = self.simplify_max(

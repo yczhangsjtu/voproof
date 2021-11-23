@@ -126,8 +126,11 @@ class PublicCoinProtocolExecution(object):
   def verifier_computes_rust(self, rust_builder):
     self.verifier_computes(LaTeXBuilder(), rust_builder)
 
-  def verifier_redefine_symbol_rust(self, s, name):
-    new_s = Symbol(get_name(name))
+  def verifier_redefine_symbol_rust(self, s, name, positive=False):
+    if positive:
+      new_s = Symbol(get_name(name))
+    else:
+      new_s = Symbol(get_name(name), positive=True)
     self.verifier_computes_rust(rust_line_define(new_s, s))
     return new_s
 

@@ -1,4 +1,4 @@
-from sympy import Symbol, latex, sympify, Integer, simplify
+from sympy import Symbol, latex, sympify, Integer, simplify, Max
 from os.path import basename
 from sympy.abc import alpha, beta, gamma, X, D, S
 from compiler.vo_protocol import VOProtocol, VOProtocolExecution
