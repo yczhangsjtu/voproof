@@ -23,6 +23,8 @@ class ExtendedHadamard(object):
     self.alpha = alpha
     self.alpha_power = 1
     self.ignore_in_t = set()
+    self.beta = None
+    self.beta_power = None
 
   def ignore_index(self, index):
     self.ignore_in_t.add(index)
@@ -37,16 +39,37 @@ class ExtendedHadamard(object):
     self.items.append(right)
 
   def add_side(self, side):
-    self.append(self.alpha_power * side)
+    if self.beta_power is None:
+      self.append(self.alpha_power * side)
+    else:
+      self.append(self.alpha_power * self.beta_power * side)
 
   def add_side_raw(self, side):
     self.append(side)
+
+  def start_adding_sides(self, beta=None):
+    self.beta = beta
+    self.beta_power = 1 if beta is not None else None
+
+  def end_adding_sides(self):
+    self.alpha_power = self.alpha_power * self.alpha
+    self.beta = None
+    self.beta_power = None
+
+  def clear_beta(self):
+    self.beta = None
+    self.beta_power = None
+
+  def next_beta(self):
+    self.beta_power = self.beta_power * self.beta
 
   def add_hadamard_query(self, query):
     """
     vec{a} circ vec{b} - vec{c} circ vec{d}
     the right side might be zero (one sided)
     """
+    self.start_adding_sides()
+
     self.add_side(query.left_side)
     ret = self.items[-1]
     if not query.one_sided:
@@ -60,7 +83,7 @@ class ExtendedHadamard(object):
       """
       self.ignore_last()
 
-    self.alpha_power = self.alpha_power * self.alpha
+    self.end_adding_sides()
     return ret
 
 
@@ -187,12 +210,13 @@ class PIOPFromVOProtocol(object):
     rust_n = voexec.rust_vector_size
     n = voexec.vector_size
 
+    extended_hadamard.start_adding_sides(beta)
     for i, inner in enumerate(voexec.inner_products):
-      beta_power = beta ** i
-      extended_hadamard.add_side(beta_power * inner.left_side)
+      extended_hadamard.add_side(inner.left_side)
       if not inner.one_sided:
-        extended_hadamard.add_side((- beta_power) * inner.right_side)
+        extended_hadamard.add_side(-inner.right_side)
       shifts += inner.shifts()
+      extended_hadamard.next_beta()
 
     piopexec.prover_computes_latex(
         LaTeXBuilder().start_math().append(r).assign().end_math()
@@ -231,11 +255,11 @@ class PIOPFromVOProtocol(object):
     piopexec.prover_send_polynomial(fr, n + self.q, rust_n + self.q)
     piopexec.vec_to_poly_dict[rtilde.key()] = fr
 
-    alpha_power = alpha ** len(voexec.hadamards)
+    extended_hadamard.clear_beta()
     extended_hadamard.add_side(-VOQuerySide(rtilde - rtilde.shift(1),
                                             PowerVector(1, n, rust_n)))
+    extended_hadamard.end_adding_sides()
 
-    extended_hadamard.alpha_power *= extended_hadamard.alpha
     extended_hadamard.add_side(VOQuerySide(rtilde, UnitVector(n, rust_n)))
 
     # This last hadamard check involves only a named vector times
