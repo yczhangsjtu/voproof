@@ -91,6 +91,18 @@ class ExtendedHadamard(object):
                              for i, side in enumerate(self.items)
                              if not self.ignored(i)])
 
+  def dump_linear_combination_at_i(self, vector_size):
+    """
+    Because the first n elements of t should be zero, we only
+    care about the vector starting from n+1
+    """
+    return rust_linear_combination_base_zero(*[
+        operand.dumpr_at_index(simplify(sym_i + vector_size))
+        for i, side in enumerate(self.items)
+        for operand in [side.a, side.b]
+        if not self.ignored(i)
+    ])
+
 
 class PIOPFromVOProtocol(object):
   def __init__(self, vo, vector_size, degree_bound):
@@ -291,13 +303,9 @@ class PIOPFromVOProtocol(object):
     piopexec.prover_rust_define_vec(
         t, rust_vector_concat(
             randomizer,
-            rust_expression_vector_i(rust_linear_combination_base_zero(*[
-                operand.dumpr_at_index(
-                    simplify(sym_i + rust_n))
-                for i, side in enumerate(extended_hadamard.items)
-                for operand in [side.a, side.b]
-                if not extended_hadamard.ignored(i)
-            ]), 2 * self.q + rust_max_shift)))
+            rust_expression_vector_i(
+                extended_hadamard.dump_linear_combination_at_i(rust_n),
+                2 * self.q + rust_max_shift)))
 
     tx = t.to_named_vector_poly()
     piopexec.vec_to_poly_dict[t.key()] = tx
@@ -383,26 +391,26 @@ class PIOPFromVOProtocol(object):
                         % vec.dumps())
       piopexec.vec_to_poly_dict[vec.key()] = vec.to_named_vector_poly()
 
-  def _pick_the_non_constant(self, key1, key2, vec1, vec2, omega):
+  def _pick_the_non_constant(self, key1, key2, vec1, vec2, poly1, poly2, omega):
     if key2 == "one":
-      return vec1, omega / X
-    return vec2, X
+      return vec1, poly1, omega / X
+    return vec2, poly2, X
 
   def _named_vector_constant_product_omega(
-          self, piopexec, coeff, key1, key2, vec1, vec2, omega):
+          self, coeff, key1, key2, vec1, vec2, poly1, poly2, omega):
     if key1 == "one" and key2 == "one":  # Constant-Constant
       return "$%s$" % tex(coeff)
     elif key1 == "one" or key2 == "one":  # Named-Constant
-      named, named_var = self._pick_the_non_constant(
-          key1, key2, vec1, vec2, omega)
+      named, named_poly, named_var = self._pick_the_non_constant(
+          key1, key2, vec1, vec2, poly1, poly2, omega)
       return "$%s\\cdot %s$" % (
           add_paren_if_add(coeff),
-          piopexec.vec_to_poly_dict[named.key()].dumps_var(named_var))
+          named_poly.dumps_var(named_var))
     else:  # Named-Named
       return "$%s\\cdot %s\\cdot %s$" % (
           add_paren_if_add(coeff),
-          piopexec.vec_to_poly_dict[vec1.key()].dumps_var(omega / X),
-          piopexec.vec_to_poly_dict[vec2.key()].dumps_var(X))
+          poly1.dumps_var(omega / X),
+          poly2.dumps_var(X))
 
   def _increment_h_omega_sum(self, h_omega_sum_check, h_omega_sum, omega, a, b, size):
     h_omega_sum_check.append(h_omega_sum).plus_assign(
@@ -479,13 +487,14 @@ class PIOPFromVOProtocol(object):
         vec1, value1 = vec_value1
         for key2, vec_value2 in b.items():
           vec2, value2 = vec_value2
-
           self._fix_missing_vector_key(vec1, piopexec)
           self._fix_missing_vector_key(vec2, piopexec)
-          hx_items.append(self._named_vector_constant_product_omega(piopexec,
-                                                                    simplify(value1.to_poly_expr(
-                                                                        omega / X) * value2.to_poly_expr(X)),
-                                                                    key1, key2, vec1, vec2, omega))
+          poly1 = "one" if key1 == "one" else piopexec.vec_to_poly_dict[vec1.key()]
+          poly2 = "one" if key2 == "one" else piopexec.vec_to_poly_dict[vec2.key()]
+          hx_items.append(self._named_vector_constant_product_omega(
+              simplify(value1.to_poly_expr(
+                  omega / X) * value2.to_poly_expr(X)),
+              key1, key2, vec1, vec2, poly1, poly2, omega))
 
       if self.debug_mode:
         size = rust_n + rust_max_shift + self.q
