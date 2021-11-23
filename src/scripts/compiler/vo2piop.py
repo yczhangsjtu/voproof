@@ -104,6 +104,15 @@ class ExtendedHadamard(object):
         if not self.ignored(i)
     ])
 
+  def named_vecs_in_left_operands(self):
+    ret = {}
+    for had in self.items:
+      if isinstance(had.a, NamedVector):
+        ret[had.a.key()] = had.a
+      elif isinstance(had.a, VectorCombination):
+        had.a.dump_named_vectors(ret)
+    return ret
+
 
 class PIOPFromVOProtocol(object):
   def __init__(self, vo, vector_size, degree_bound):
@@ -444,11 +453,13 @@ class PIOPFromVOProtocol(object):
       h_omega_sum_check = rust_builder_define_mut(
           h_omega_sum, rust_zero()).end()
       vecsum = get_named_vector("sum")
-      piopexec.prover_rust_define_mut(vecsum,
-                                      rust_vec_size(rust_zero(), rust_n + rust_max_shift + self.q))
+      piopexec.prover_rust_define_mut(
+          vecsum,
+          rust_vec_size(rust_zero(), rust_n + rust_max_shift + self.q))
       hcheck_vec = get_named_vector("hcheck")
-      piopexec.prover_rust_define_mut(hcheck_vec,
-                                      rust_vec_size(rust_zero(), (rust_n + rust_max_shift + self.q) * 2 - 1))
+      piopexec.prover_rust_define_mut(
+          hcheck_vec,
+          rust_vec_size(rust_zero(), (rust_n + rust_max_shift + self.q) * 2 - 1))
 
     for i, side in enumerate(extended_hadamard.items):
       self.debug("  Extended Hadamard %d" % (i + 1))
@@ -534,15 +545,6 @@ class PIOPFromVOProtocol(object):
 
     return h1, h2, h1x, h2x
 
-  def _collect_named_vec_in_left_operands(self, extended_hadamard):
-    ret = {}
-    for had in extended_hadamard.items:
-      if isinstance(had.a, NamedVector):
-        ret[had.a.key()] = had.a
-      elif isinstance(had.a, VectorCombination):
-        had.a.dump_named_vectors(ret)
-    return ret
-
   def _homomorphic_check(self, piopexec, extended_hadamard, h1, h2, h1x, h2x, omega,
                          rust_h_inverse_degree, h_degree, rust_max_shift):
     z = piopexec.verifier_generate_and_send_rand("z")
@@ -551,8 +553,7 @@ class PIOPFromVOProtocol(object):
     rust_max_shift = piopexec.rust_max_shift
 
     self.debug("Collect named vectors inside left operands")
-    left_named_vectors = self._collect_named_vec_in_left_operands(
-        extended_hadamard)
+    left_named_vectors = extended_hadamard.named_vecs_in_left_operands()
 
     self.debug("Make evaluation queries")
     query_results = {}
@@ -727,8 +728,9 @@ class PIOPFromVOProtocol(object):
     Split h into two halves
     """
     self.debug("Compute h1 and h2")
-    h1, h2, h1x, h2x = self._split_h(piopexec, h, hx, h_vec_combination,
-                                     h_degree, h_inverse_degree, rust_h_degree, rust_h_inverse_degree)
+    h1, h2, h1x, h2x = self._split_h(
+        piopexec, h, hx, h_vec_combination,
+        h_degree, h_inverse_degree, rust_h_degree, rust_h_inverse_degree)
 
     """
     Here we assume that the underlying polynomial commitment scheme is
