@@ -98,7 +98,7 @@ class VOQuerySide(object):
           poly2.dumps_var(X))
 
   def dump_product_items(self, omega, vec_to_poly_dict):
-    hx_items = Itemize()
+    hx_items = []
     a = VectorCombination._from(self.a)
     b = VectorCombination._from(self.b)
     for key1, vec1, value1 in a.key_keyed_coeffs():

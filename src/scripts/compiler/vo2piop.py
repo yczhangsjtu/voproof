@@ -104,6 +104,12 @@ class ExtendedHadamard(object):
         if not self.ignored(i)
     ])
 
+  def dump_product_items(self, omega, vec_to_poly_dict):
+    hx_items = Itemize()
+    for side in self.items:
+      hx_items.append(side.dump_product_items(omega, vec_to_poly_dict))
+    return hx_items
+
   def named_vecs_in_left_operands(self):
     ret = {}
     for had in self.items:
@@ -122,6 +128,19 @@ class ExtendedHadamard(object):
         if isinstance(vec, NamedVector):
           ret[vec.key()] = vec
     return list(ret.values())
+
+  def generate_hx_vector_pair_combination(self, omega):
+    hx_vector_combination = NamedVectorPairCombination()
+    for i, side in enumerate(self.items):
+      a = VectorCombination._from(side.a)
+      b = VectorCombination._from(side.b)
+      atimesb = convolution(a, b, omega)
+      hx_vector_combination += atimesb
+    return hx_vector_combination
+
+  def generate_hx_vector_combination(self, omega):
+    return self.generate_hx_vector_pair_combination(omega) \
+        .generate_vector_combination(omega)
 
 
 class PIOPFromVOProtocol(object):
@@ -456,7 +475,6 @@ class PIOPFromVOProtocol(object):
     rust_max_shift = piopexec.rust_max_shift
 
     hx = get_named_polynomial("h")
-    hx_vector_combination = NamedVectorPairCombination()
 
     if self.debug_mode:
       h_omega_sum = Symbol(get_name('h_osum'))
@@ -473,13 +491,6 @@ class PIOPFromVOProtocol(object):
 
     for vec in extended_hadamard.dump_named_vectors():
       self._fix_missing_vector_key(vec, piopexec)
-
-    for i, side in enumerate(extended_hadamard.items):
-      self.debug("  Extended Hadamard %d" % (i + 1))
-      a = VectorCombination._from(side.a)
-      b = VectorCombination._from(side.b)
-      atimesb = convolution(a, b, omega)
-      hx_vector_combination += atimesb
 
     if self.debug_mode:
       for i, side in enumerate(extended_hadamard.items):
@@ -499,11 +510,11 @@ class PIOPFromVOProtocol(object):
 
     h = get_named_vector("h")
     hxcomputes_rust, h_vec_combination = \
-        hx_vector_combination.generate_vector_combination(omega)
+        extended_hadamard.generate_hx_vector_combination(omega)
     piopexec.prover_computes(
         LaTeXBuilder()
         .start_math().append(hx).assign().end_math().space("the sum of:").eol()
-        .append(side.dump_product_items(omega, piopexec.vec_to_poly_dict)),
+        .append(extended_hadamard.dump_product_items(omega, piopexec.vec_to_poly_dict)),
         hxcomputes_rust)
 
     h_degree, h_inverse_degree = n + max_shift + self.q, n + max_shift + self.q
