@@ -204,36 +204,6 @@ pub fn power_iter<F: Field>(
   }
 }
 
-pub struct FixedLengthVectorIterator<'a, F: Field> {
-  v: &'a Vec<F>,
-  i: usize,
-  n: usize,
-}
-
-impl<'a, F: Field> Iterator for FixedLengthVectorIterator<'a, F> {
-  type Item = F;
-  fn next(&mut self) -> Option<F> {
-    let ret = match self.i {
-      i if i >= 0 && i < self.v.len() => Some(self.v[i]),
-      i if i >= self.v.len() && i < self.n => Some(F::zero()),
-      _ => None,
-    };
-    self.i += 1;
-    ret
-  }
-}
-
-pub fn fixed_length_vector_iter<'a, F: Field>(
-  v: &'a Vec<F>,
-  n: i64,
-) -> FixedLengthVectorIterator<'a, F> {
-  FixedLengthVectorIterator {
-    v,
-    i: 0,
-    n: n as usize,
-  }
-}
-
 #[macro_export]
 macro_rules! to_int {
   ( $v: expr) => {
@@ -487,10 +457,10 @@ macro_rules! power_linear_combination {
     ( $alpha: expr, $( $a:expr ),+ ) => {
         {
             let mut s = E::Fr::zero();
-            let mut c = E::Fr::one();
+            let mut _c = E::Fr::one();
             $(
-                s = s + c * $a;
-                c = c * $alpha;
+                s = s + _c * $a;
+                _c = _c * $alpha;
             )+
             s
         }
