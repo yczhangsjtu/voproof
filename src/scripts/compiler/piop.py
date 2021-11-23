@@ -1,5 +1,6 @@
 from .pc_protocol import PublicCoinProtocolExecution
 from .symbol.util import rust_vk
+from .symbol.vector import list_sum_to_rust_map
 from .builder.latex import tex, LaTeXBuilder, Enumerate, Itemize, Math
 from .builder.rust import *
 
@@ -71,8 +72,8 @@ class CombinationCoeffBuilder(object):
         if len(self.latex_builder) > 1 else \
         Math(self.coeff).assign(self.latex_builder[0])
 
-    self.rust_builder = rust_line_define_sum(
-        self.coeff, *self.rust_builder)
+    self.rust_builder = rust_line_define(
+        self.coeff, list_sum_to_rust_map(self.rust_builder))
 
 
 class CombinePolynomialComputes(object):

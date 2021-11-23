@@ -72,6 +72,11 @@ class NamedVector(_NamedBasic):
     symbol = _rust_symbol_dictionary.add(code)
     return Symbol(symbol)
 
+  def dump_symbol_hint_computation(self, z):
+    code = rust(self.hint_computation(z))
+    symbol = _rust_symbol_dictionary.add(code)
+    return Symbol(symbol)
+
 
 def get_named_vector(name, modifier=None, has_prime=False):
   name = get_name(name, modifier=modifier, has_prime=has_prime, _type="vec")
@@ -427,6 +432,8 @@ class _RustSymbolDictionary(object):
     return self.rust_to_symbol[code]
 
   def add(self, code):
+    if not isinstance(code, str):
+      raise TypeError("code must be str, got {}".format(type(code)))
     if code in self.rust_to_symbol:
       return self.rust_to_symbol[code]
 
@@ -798,7 +805,15 @@ def vec_lists_dump_at_index_then_inner_product(vec_pairs, index, collect_symbols
   for vec1, vec2 in vec_pairs:
     ret += vec1._dump_symbol_rust_at_index(index, collect_symbols) * \
         vec2._dump_symbol_rust_at_index(index, collect_symbols)
-  ret = collect(ret, collect_symbols)
+  if collect_symbols is not None:
+    ret = collect(ret, collect_symbols)
+  return _rust_symbol_dictionary.dumpr(ret)
+
+
+def list_sum_to_rust_map(values, collect_symbols=None):
+  ret = sum(values)
+  if collect_symbols is not None:
+    ret = collect(ret, collect_symbols)
   return _rust_symbol_dictionary.dumpr(ret)
 
 

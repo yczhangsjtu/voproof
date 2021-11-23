@@ -674,7 +674,7 @@ class PIOPFromVOProtocol(object):
         # locally evaluate this polynomial at z
         key, value, poly = "one", "%s\\cdot %s" % (
             value, poly.dumps_var(z)), "one"
-        rust_value = rust_mul(rust_value, vec.hint_computation(z))
+        rust_value = rust_value * vec.dump_symbol_hint_computation(z)
 
       # If this polynomial (or constant) has not been handled before, initialize
       # it with empty list and a new symbol for the coefficient

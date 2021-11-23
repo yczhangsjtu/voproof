@@ -518,51 +518,51 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
     define_eval_vector_expression!(y, omega / z, i, vector_index!(h_vec, i), n + 1);
     define_eval_vector_expression!(y_1, omega / z, i, vector_index!(u_vec_1, i), n + 1);
     define_eval_vector_expression!(y_2, omega / z, i, vector_index!(r_vec_tilde, i), n + 1);
-    define_sum!(
+    define!(
       c,
-      -z * (mu * (one!() - power(omega / z, 3 * cap_h)) * (gamma * omega - one!() * z)
-        - (omega - one!() * z) * (one!() - power(gamma * omega / z, 3 * cap_h)))
-        / ((omega - one!() * z) * (gamma * omega - one!() * z)),
-      power(alpha, 5)
-        * y_1
-        * power(z, -3 * cap_h - cap_k + n)
-        * power(omega / z, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c),
       -power(alpha, 5)
         * beta
         * y
         * power(z, -3 * cap_h - cap_k + n)
         * power(omega / z, cap_s_a + cap_s_b + cap_s_c)
+        + power(alpha, 5)
+          * y_1
+          * power(z, -3 * cap_h - cap_k + n)
+          * power(omega / z, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c)
+        - z
+          * (mu * (one!() - power(omega / z, 3 * cap_h)) * (gamma * omega - one!() * z)
+            - (omega - one!() * z) * (one!() - power(gamma * omega / z, 3 * cap_h)))
+          / ((omega - one!() * z) * (gamma * omega - one!() * z))
     );
-    define_sum!(
+    define!(
       c_1,
-      z * (one!() - power(z, 3 * cap_h)) * (one!() - power(omega / z, 3 * cap_h))
-        / ((omega - one!() * z) * (one!() - z)),
-      alpha * z * (one!() - power(z, cap_k)) * (one!() - power(omega / z, cap_k))
-        / ((omega - one!() * z) * (one!() - z)),
-      power(alpha, 2) * mu * nu * y * power(z, cap_k) * (one!() - power(z, ell_1)) / (one!() - z),
-      power(alpha, 2)
-        * power(z, cap_k + 1)
-        * power(omega / z, cap_k)
-        * (one!() - power(z, ell_1))
-        * (one!() - power(omega / z, cap_s_a + cap_s_b + cap_s_c))
-        / ((omega - one!() * z) * (one!() - z)),
-      mul!(
-        power(alpha, 4)
+      power(alpha, 6) * y_2 * power(z, n - 1)
+        + power(alpha, 5) * y_2 * (omega - z) * (one!() - power(z, n)) / (z * (one!() - z))
+        + power(alpha, 4)
+          * eval_vector_expression!(z, i, vector_index!(x_vec, i), ell)
           * power(z, 3 * cap_h + 1)
           * power(omega / z, 3 * cap_h)
           * (-omega * power(omega / z, ell) + one!() * z)
-          / (omega - one!() * z),
-        eval_vector_expression!(z, i, vector_index!(x_vec, i), ell)
-      ),
-      power(alpha, 4)
-        * power(z, 3 * cap_h)
-        * power(omega / z, 3 * cap_h)
-        * (-omega * power(omega / z, ell) + one!() * z)
-        / (omega - one!() * z),
-      power(alpha, 5) * y_2 * (omega - z) * (one!() - power(z, n)) / (z * (one!() - z)),
-      power(alpha, 6) * y_2 * power(z, n - 1)
+          / (omega - one!() * z)
+        + power(alpha, 4)
+          * power(z, 3 * cap_h)
+          * power(omega / z, 3 * cap_h)
+          * (-omega * power(omega / z, ell) + one!() * z)
+          / (omega - one!() * z)
+        + power(alpha, 2) * mu * nu * y * power(z, cap_k) * (one!() - power(z, ell_1))
+          / (one!() - z)
+        + power(alpha, 2)
+          * power(z, cap_k + 1)
+          * power(omega / z, cap_k)
+          * (one!() - power(z, ell_1))
+          * (one!() - power(omega / z, cap_s_a + cap_s_b + cap_s_c))
+          / ((omega - one!() * z) * (one!() - z))
+        + alpha * z * (one!() - power(z, cap_k)) * (one!() - power(omega / z, cap_k))
+          / ((omega - one!() * z) * (one!() - z))
+        + z * (one!() - power(z, 3 * cap_h)) * (one!() - power(omega / z, 3 * cap_h))
+          / ((omega - one!() * z) * (one!() - z))
     );
-    define_sum!(
+    define!(
       c_2,
       -alpha
         * z
@@ -570,33 +570,33 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
           - (omega - one!() * z) * (one!() - power(gamma * omega / z, cap_k)))
         / ((omega - one!() * z) * (gamma * omega - one!() * z))
     );
-    define_sum!(c_3, -power(alpha, 2) * mu * y * power(z, cap_k));
-    define_sum!(c_4, -power(alpha, 2) * nu * y * power(z, cap_k));
-    define_sum!(c_5, power(alpha, 2) * y * power(z, cap_k));
-    define_sum!(
+    define!(c_3, -power(alpha, 2) * mu * y * power(z, cap_k));
+    define!(c_4, -power(alpha, 2) * nu * y * power(z, cap_k));
+    define!(c_5, power(alpha, 2) * y * power(z, cap_k));
+    define!(
       c_6,
-      power(alpha, 3)
-        * y_1
-        * power(z, -2 * cap_h + n)
-        * power(omega / z, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c),
-      power(alpha, 3)
-        * power(z, -3 * cap_h + n + 1)
-        * power(omega / z, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
-        * (one!() - power(omega / z, cap_h))
-        / (omega - one!() * z),
       power(alpha, 4) * power(omega / z, 3 * cap_h) * (omega * power(omega / z, ell) - one!() * z)
         / (omega - one!() * z)
+        + power(alpha, 3)
+          * y_1
+          * power(z, -2 * cap_h + n)
+          * power(omega / z, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
+        + power(alpha, 3)
+          * power(z, -3 * cap_h + n + 1)
+          * power(omega / z, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
+          * (one!() - power(omega / z, cap_h))
+          / (omega - one!() * z)
     );
-    define_sum!(c_7, -power(alpha, 5) * beta * y * power(z, -ell_1 + n));
-    define_sum!(
+    define!(c_7, -power(alpha, 5) * beta * y * power(z, -ell_1 + n));
+    define!(
       c_8,
       power(z, n)
         * power(omega / z, cap_k + cap_s_a + cap_s_b + cap_s_c)
         * (one!() - power(omega / z, cap_s_a + cap_s_b + cap_s_c + 1))
         / (omega - one!() * z)
     );
-    define_sum!(c_9, -power(z, -cap_d));
-    define_sum!(c_10, -z);
+    define!(c_9, -power(z, -cap_d));
+    define!(c_10, -z);
     define_vec_mut!(
       g_vec,
       expression_vector!(
@@ -824,51 +824,51 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
       cm_h_vec_2,
       cm_h_vec_3
     );
-    define_sum!(
+    define!(
       c,
-      -z * (mu * (one!() - power(omega / z, 3 * cap_h)) * (gamma * omega - one!() * z)
-        - (omega - one!() * z) * (one!() - power(gamma * omega / z, 3 * cap_h)))
-        / ((omega - one!() * z) * (gamma * omega - one!() * z)),
-      power(alpha, 5)
-        * y_1
-        * power(z, -3 * cap_h - cap_k + n)
-        * power(omega / z, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c),
       -power(alpha, 5)
         * beta
         * y
         * power(z, -3 * cap_h - cap_k + n)
         * power(omega / z, cap_s_a + cap_s_b + cap_s_c)
+        + power(alpha, 5)
+          * y_1
+          * power(z, -3 * cap_h - cap_k + n)
+          * power(omega / z, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c)
+        - z
+          * (mu * (one!() - power(omega / z, 3 * cap_h)) * (gamma * omega - one!() * z)
+            - (omega - one!() * z) * (one!() - power(gamma * omega / z, 3 * cap_h)))
+          / ((omega - one!() * z) * (gamma * omega - one!() * z))
     );
-    define_sum!(
+    define!(
       c_1,
-      z * (one!() - power(z, 3 * cap_h)) * (one!() - power(omega / z, 3 * cap_h))
-        / ((omega - one!() * z) * (one!() - z)),
-      alpha * z * (one!() - power(z, cap_k)) * (one!() - power(omega / z, cap_k))
-        / ((omega - one!() * z) * (one!() - z)),
-      power(alpha, 2) * mu * nu * y * power(z, cap_k) * (one!() - power(z, ell_1)) / (one!() - z),
-      power(alpha, 2)
-        * power(z, cap_k + 1)
-        * power(omega / z, cap_k)
-        * (one!() - power(z, ell_1))
-        * (one!() - power(omega / z, cap_s_a + cap_s_b + cap_s_c))
-        / ((omega - one!() * z) * (one!() - z)),
-      mul!(
-        power(alpha, 4)
+      power(alpha, 6) * y_2 * power(z, n - 1)
+        + power(alpha, 5) * y_2 * (omega - z) * (one!() - power(z, n)) / (z * (one!() - z))
+        + power(alpha, 4)
+          * eval_vector_expression!(z, i, vector_index!(x_vec, i), ell)
           * power(z, 3 * cap_h + 1)
           * power(omega / z, 3 * cap_h)
           * (-omega * power(omega / z, ell) + one!() * z)
-          / (omega - one!() * z),
-        eval_vector_expression!(z, i, vector_index!(x_vec, i), ell)
-      ),
-      power(alpha, 4)
-        * power(z, 3 * cap_h)
-        * power(omega / z, 3 * cap_h)
-        * (-omega * power(omega / z, ell) + one!() * z)
-        / (omega - one!() * z),
-      power(alpha, 5) * y_2 * (omega - z) * (one!() - power(z, n)) / (z * (one!() - z)),
-      power(alpha, 6) * y_2 * power(z, n - 1)
+          / (omega - one!() * z)
+        + power(alpha, 4)
+          * power(z, 3 * cap_h)
+          * power(omega / z, 3 * cap_h)
+          * (-omega * power(omega / z, ell) + one!() * z)
+          / (omega - one!() * z)
+        + power(alpha, 2) * mu * nu * y * power(z, cap_k) * (one!() - power(z, ell_1))
+          / (one!() - z)
+        + power(alpha, 2)
+          * power(z, cap_k + 1)
+          * power(omega / z, cap_k)
+          * (one!() - power(z, ell_1))
+          * (one!() - power(omega / z, cap_s_a + cap_s_b + cap_s_c))
+          / ((omega - one!() * z) * (one!() - z))
+        + alpha * z * (one!() - power(z, cap_k)) * (one!() - power(omega / z, cap_k))
+          / ((omega - one!() * z) * (one!() - z))
+        + z * (one!() - power(z, 3 * cap_h)) * (one!() - power(omega / z, 3 * cap_h))
+          / ((omega - one!() * z) * (one!() - z))
     );
-    define_sum!(
+    define!(
       c_2,
       -alpha
         * z
@@ -876,33 +876,33 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
           - (omega - one!() * z) * (one!() - power(gamma * omega / z, cap_k)))
         / ((omega - one!() * z) * (gamma * omega - one!() * z))
     );
-    define_sum!(c_3, -power(alpha, 2) * mu * y * power(z, cap_k));
-    define_sum!(c_4, -power(alpha, 2) * nu * y * power(z, cap_k));
-    define_sum!(c_5, power(alpha, 2) * y * power(z, cap_k));
-    define_sum!(
+    define!(c_3, -power(alpha, 2) * mu * y * power(z, cap_k));
+    define!(c_4, -power(alpha, 2) * nu * y * power(z, cap_k));
+    define!(c_5, power(alpha, 2) * y * power(z, cap_k));
+    define!(
       c_6,
-      power(alpha, 3)
-        * y_1
-        * power(z, -2 * cap_h + n)
-        * power(omega / z, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c),
-      power(alpha, 3)
-        * power(z, -3 * cap_h + n + 1)
-        * power(omega / z, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
-        * (one!() - power(omega / z, cap_h))
-        / (omega - one!() * z),
       power(alpha, 4) * power(omega / z, 3 * cap_h) * (omega * power(omega / z, ell) - one!() * z)
         / (omega - one!() * z)
+        + power(alpha, 3)
+          * y_1
+          * power(z, -2 * cap_h + n)
+          * power(omega / z, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
+        + power(alpha, 3)
+          * power(z, -3 * cap_h + n + 1)
+          * power(omega / z, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
+          * (one!() - power(omega / z, cap_h))
+          / (omega - one!() * z)
     );
-    define_sum!(c_7, -power(alpha, 5) * beta * y * power(z, -ell_1 + n));
-    define_sum!(
+    define!(c_7, -power(alpha, 5) * beta * y * power(z, -ell_1 + n));
+    define!(
       c_8,
       power(z, n)
         * power(omega / z, cap_k + cap_s_a + cap_s_b + cap_s_c)
         * (one!() - power(omega / z, cap_s_a + cap_s_b + cap_s_c + 1))
         / (omega - one!() * z)
     );
-    define_sum!(c_9, -power(z, -cap_d));
-    define_sum!(c_10, -z);
+    define!(c_9, -power(z, -cap_d));
+    define!(c_10, -z);
     define_commitment_linear_combination!(
       cm_g,
       vk,
