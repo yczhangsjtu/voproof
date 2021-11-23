@@ -265,40 +265,26 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
         expression_vector!(
           i,
           linear_combination_base_zero!(
-            linear_combination_base_zero!(
-              mu,
-              range_index!(1, 3 * cap_h, minus_i64!(i + n, 1)),
-              -one!(),
-              power_vector_index!(gamma, 3 * cap_h, minus_i64!(i + n, 1))
-            ),
+            mu * range_index!(1, 3 * cap_h, minus_i64!(i + n, 1))
+              - power_vector_index!(gamma, 3 * cap_h, minus_i64!(i + n, 1)),
             vector_index!(s_vec, i + n),
-            neg!(range_index!(1, 3 * cap_h, minus_i64!(i + n, 1))),
+            -range_index!(1, 3 * cap_h, minus_i64!(i + n, 1)),
             range_index!(1, 3 * cap_h, i + n),
-            linear_combination_base_zero!(
-              alpha * nu,
-              range_index!(1, cap_k, minus_i64!(i + n, 1)),
-              -alpha,
-              power_vector_index!(gamma, cap_k, minus_i64!(i + n, 1))
-            ),
+            alpha * nu * range_index!(1, cap_k, minus_i64!(i + n, 1))
+              - alpha * power_vector_index!(gamma, cap_k, minus_i64!(i + n, 1)),
             vector_index!(h_vec, i + n),
-            mul!(-alpha, range_index!(1, cap_k, minus_i64!(i + n, 1))),
+            -alpha * range_index!(1, cap_k, minus_i64!(i + n, 1)),
             range_index!(1, cap_k, i + n),
             power(alpha, 2) * vector_index!(h_vec, minus_i64!(i + n, 1)),
             mu * nu * range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1))
               - mu * vector_index!(pk.w_vec, minus_i64!(i + n, cap_k + 1))
               - nu * vector_index!(pk.u_vec, minus_i64!(i + n, cap_k + 1))
               + vector_index!(pk.y_vec, minus_i64!(i + n, cap_k + 1)),
-            mul!(
-              -power(alpha, 2),
-              range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1))
-            ),
+            -power(alpha, 2) * range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1)),
             range_index!(1, ell_1, minus_i64!(i + n, cap_k + 1)),
             power(alpha, 3) * vector_index!(u_vec_1, minus_i64!(i + n, -cap_h + n + 1)),
             vector_index!(u_vec_1, minus_i64!(i + n, -2 * cap_h + n + 1)),
-            mul!(
-              -power(alpha, 3),
-              range_index!(1, cap_h, minus_i64!(i + n, -cap_h + n + 1))
-            ),
+            -power(alpha, 3) * range_index!(1, cap_h, minus_i64!(i + n, -cap_h + n + 1)),
             vector_index!(u_vec_1, minus_i64!(i + n, -3 * cap_h + n + 1)),
             power(alpha, 5) * vector_index!(u_vec_1, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1)),
             vector_index!(s_vec, minus_i64!(i + n, -3 * cap_h - cap_k + n + 1)),

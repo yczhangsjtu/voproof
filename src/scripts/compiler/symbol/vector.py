@@ -735,7 +735,12 @@ class StructuredVector(CoeffMap):
     return sum(items)
 
   def dumpr_at_index(self, index):
+    """
+    Old version: dump a linear combination rust macro
+
     return _dumpr_at_index_for_sparse_coefficient(self, index)
+    """
+    return _rust_symbol_dictionary.dumpr(self._dump_symbol_rust_at_index(index))
 
   def _dump_symbol_rust_at_index(self, index):
     return _dump_symbol_rust_at_index_for_sparse_coefficient(self, index)
