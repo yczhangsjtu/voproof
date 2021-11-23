@@ -142,6 +142,15 @@ class ExtendedHadamard(object):
     return self.generate_hx_vector_pair_combination(omega) \
         .generate_vector_combination(omega)
 
+  def dump_hz_rust(self, z0, z):
+    lc = rust_linear_combination_base_zero()
+    for had in self.items:
+      lc.append(rust_eval_vector_expression_i(
+          z0, VectorCombination._from(had.a).dumpr_at_index(sym_i), size))
+      lc.append(rust_eval_vector_expression_i(
+          z, VectorCombination._from(had.b).dumpr_at_index(sym_i), size))
+    return lc
+
 
 class PIOPFromVOProtocol(object):
   def __init__(self, vo, vector_size, degree_bound):
@@ -612,9 +621,8 @@ class PIOPFromVOProtocol(object):
     a = VectorCombination._from(side.a)
     # now multiplier should equal f_i(omega/z). if zero, then ignore this term
     multiplier = simplify(sum([
-        vec_value[1].to_poly_expr(
-            z0) * (1 if key == "one" else query_results[key])
-        for key, vec_value in a.items()]))
+        value.to_poly_expr(z0) * (1 if key == "one" else query_results[key])
+        for key, vec, value in a.key_keyed_coeffs()]))
 
     # check that multiplier = f_i(omega/z)
     if self.debug_mode:
@@ -636,8 +644,7 @@ class PIOPFromVOProtocol(object):
     # Now decompose g_i(X), i.e., the right side of this Extended Hadamard query
     # multiply every coefficient by the multiplier f_i(omega/z)
     # then evaluate the coefficient at z
-    for key, vec_value in b.items():
-      vec, value = vec_value
+    for key, vec, value in b.key_keyed_coeffs():
       rust_value = simplify(value.to_poly_expr_rust(z))
       value = simplify(value.to_poly_expr(z))
       if value == 0 or rust_value == 0:
@@ -669,13 +676,7 @@ class PIOPFromVOProtocol(object):
 
   def _check_hz(self, z0, z, extended_hadamard, size, h, rust_h_inverse_degree):
     # Check that h(z) = sum_i f_i(omega/z) g_i(z) z^{n+maxshift+q}
-    lc = rust_linear_combination_base_zero()
-    for had in extended_hadamard.items:
-      lc.append(rust_eval_vector_expression_i(z0,
-                                              VectorCombination._from(had.a).dumpr_at_index(sym_i), size))
-      lc.append(rust_eval_vector_expression_i(z,
-                                              VectorCombination._from(had.b).dumpr_at_index(sym_i), size))
-    piopexec.prover_rust_assert_eq(lc,
+    piopexec.prover_rust_assert_eq(extended_hadamard.dump_hz_rust(z0, z),
                                    rust_mul(rust_eval_vector_as_poly(h, z),
                                             z**(-(rust_h_inverse_degree-1))))
 
@@ -695,7 +696,6 @@ class PIOPFromVOProtocol(object):
     coeff_builders = {}
     # 1. The part contributed by the extended hadamard query
     for i, side in enumerate(extended_hadamard.items):
-      self.debug("  Extended Hadamard %d" % (i + 1))
       self._populate_coeff_builder_by_hadamard_query(
           piopexec, side, coeff_builders, z0, z, query_results, size)
 
