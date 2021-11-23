@@ -86,6 +86,11 @@ class ExtendedHadamard(object):
     self.end_adding_sides()
     return ret
 
+  def dump_itemize(self):
+    return Itemize().append([Math(side._dumps("circ"))
+                             for i, side in enumerate(self.items)
+                             if not self.ignored(i)])
+
 
 class PIOPFromVOProtocol(object):
   def __init__(self, vo, vector_size, degree_bound):
@@ -278,11 +283,10 @@ class PIOPFromVOProtocol(object):
     piopexec.prover_computes_latex(
         LaTeXBuilder().start_math()
         .append(randomizer)
-        .sample(self.Ftoq).comma(t).assign(randomizer).double_bar().end_math()
-                                   .space("the sum of:").eol().append(Itemize().append([
-                                       Math(side._dumps("circ"))
-                                       for i, side in enumerate(extended_hadamard.items)
-                                       if not extended_hadamard.ignored(i)])))
+        .sample(self.Ftoq).comma(t)
+        .assign(randomizer).double_bar().end_math()
+        .space("the sum of:").eol()
+        .append(extended_hadamard.dump_itemize()))
 
     piopexec.prover_rust_define_vec(
         t, rust_vector_concat(
