@@ -491,6 +491,7 @@ class VectorCombination(CoeffMap):
         vec, value = vec_value
         result[key] = vec
 
+
 class PowerVector(object):
   def __init__(self, alpha, size, rust_size=None):
     # alpha and size can be Symbol or Integer

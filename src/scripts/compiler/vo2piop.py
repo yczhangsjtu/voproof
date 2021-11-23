@@ -392,27 +392,6 @@ class PIOPFromVOProtocol(object):
                         % vec.dumps())
       piopexec.vec_to_poly_dict[vec.key()] = vec.to_named_vector_poly()
 
-  def _pick_the_non_constant(self, key1, key2, vec1, vec2, poly1, poly2, omega):
-    if key2 == "one":
-      return vec1, poly1, omega / X
-    return vec2, poly2, X
-
-  def _named_vector_constant_product_omega(
-          self, coeff, key1, key2, vec1, vec2, poly1, poly2, omega):
-    if key1 == "one" and key2 == "one":  # Constant-Constant
-      return "$%s$" % tex(coeff)
-    elif key1 == "one" or key2 == "one":  # Named-Constant
-      named, named_poly, named_var = self._pick_the_non_constant(
-          key1, key2, vec1, vec2, poly1, poly2, omega)
-      return "$%s\\cdot %s$" % (
-          add_paren_if_add(coeff),
-          named_poly.dumps_var(named_var))
-    else:  # Named-Named
-      return "$%s\\cdot %s\\cdot %s$" % (
-          add_paren_if_add(coeff),
-          poly1.dumps_var(omega / X),
-          poly2.dumps_var(X))
-
   def _increment_h_omega_sum(self, h_omega_sum_check, h_omega_sum, omega, a, b, size):
     h_omega_sum_check.append(h_omega_sum).plus_assign(
         rust_eval_vector_expression_i(omega,
@@ -460,7 +439,6 @@ class PIOPFromVOProtocol(object):
     rust_max_shift = piopexec.rust_max_shift
 
     hx = get_named_polynomial("h")
-    hx_items = Itemize()
     hx_vector_combination = NamedVectorPairCombination()
 
     if self.debug_mode:
@@ -480,24 +458,13 @@ class PIOPFromVOProtocol(object):
       b = VectorCombination._from(side.b)
       atimesb = convolution(a, b, omega)
       hx_vector_combination += atimesb
+      for vec in chain(a.keyeds(), b.keyeds()):
+        self._fix_missing_vector_key(vec, piopexec)
 
       """
       Cross term multiplication
       """
-      for vec in chain(a.keyeds(), b.keyeds()):
-        self._fix_missing_vector_key(vec, piopexec)
-
-      for key1, vec_value1 in a.items():
-        vec1, value1 = vec_value1
-        for key2, vec_value2 in b.items():
-          vec2, value2 = vec_value2
-          hx_items.append(self._named_vector_constant_product_omega(
-              simplify(value1.to_poly_expr(omega / X)
-                       * value2.to_poly_expr(X)),
-              key1, key2, vec1, vec2,
-              "one" if key1 == "one" else piopexec.vec_to_poly_dict[vec1.key(
-              )],
-              "one" if key2 == "one" else piopexec.vec_to_poly_dict[vec2.key()], omega))
+      hx_items = side.dump_product_items(omega, piopexec.vec_to_poly_dict)
 
       if self.debug_mode:
         size = rust_n + rust_max_shift + self.q

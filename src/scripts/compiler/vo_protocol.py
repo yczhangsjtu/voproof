@@ -1,9 +1,10 @@
 from .pc_protocol import PublicCoinProtocolExecution
 from .symbol.util import simplify_max_with_hints
 from .symbol.vector import NamedVector, VectorCombination
-from .builder.latex import tex
+from .builder.latex import tex, Itemize, add_paren_if_add
 from .builder.rust import *
 from sympy import Integer, Max
+from sympy.abc import X
 
 
 class SubmitVectors(object):
@@ -74,6 +75,41 @@ class VOQuerySide(object):
             not isinstance(self.a, VectorCombination)) or \
            (not isinstance(self.b, NamedVector) and
             not isinstance(self.b, VectorCombination))
+
+  def _pick_the_non_constant(self, key1, key2, vec1, vec2, poly1, poly2, omega):
+    if key2 == "one":
+      return vec1, poly1, omega / X
+    return vec2, poly2, X
+
+  def _named_vector_constant_product_omega(
+          self, coeff, key1, key2, vec1, vec2, poly1, poly2, omega):
+    if key1 == "one" and key2 == "one":  # Constant-Constant
+      return "$%s$" % tex(coeff)
+    elif key1 == "one" or key2 == "one":  # Named-Constant
+      named, named_poly, named_var = self._pick_the_non_constant(
+          key1, key2, vec1, vec2, poly1, poly2, omega)
+      return "$%s\\cdot %s$" % (
+          add_paren_if_add(coeff),
+          named_poly.dumps_var(named_var))
+    else:  # Named-Named
+      return "$%s\\cdot %s\\cdot %s$" % (
+          add_paren_if_add(coeff),
+          poly1.dumps_var(omega / X),
+          poly2.dumps_var(X))
+
+  def dump_product_items(self, omega, vec_to_poly_dict):
+    hx_items = Itemize()
+    a = VectorCombination._from(self.a)
+    b = VectorCombination._from(self.b)
+    for key1, vec1, value1 in a.key_keyed_coeffs():
+      for key2, vec2, value2 in b.key_keyed_coeffs():
+        hx_items.append(self._named_vector_constant_product_omega(
+            simplify(value1.to_poly_expr(omega / X)
+                     * value2.to_poly_expr(X)),
+            key1, key2, vec1, vec2,
+            "one" if key1 == "one" else vec_to_poly_dict[vec1.key()],
+            "one" if key2 == "one" else vec_to_poly_dict[vec2.key()], omega))
+    return hx_items
 
 
 class VOQuery(object):
@@ -265,4 +301,3 @@ class VOProtocol(object):
 
   def execute(self, vopexec, *args):
     raise Exception("Should not call VOProtocol.execute directly")
-
