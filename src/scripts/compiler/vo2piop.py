@@ -102,7 +102,7 @@ class ExtendedHadamard(object):
         (side.a, side.b)
         for i, side in enumerate(self.items)
         if not self.ignored(i)
-    ], simplify(sym_i + vector_size))
+    ], simplify(sym_i + vector_size), collect_symbols=self.alpha)
 
     """
     rust_linear_combination_base_zero(*[
@@ -555,18 +555,20 @@ class PIOPFromVOProtocol(object):
     return h, hx, h_vec_combination, h_degree, h_inverse_degree, \
         rust_h_degree, rust_h_inverse_degree, omega
 
-  def _split_h(self, piopexec, h, hx, h_vec_combination,
+  def _split_h(self, piopexec, h, hx, h_vec_combination, extended_hadamard,
                h_degree, h_inverse_degree, rust_h_degree, rust_h_inverse_degree):
     h1 = get_named_vector("h")
     h2 = get_named_vector("h")
 
     piopexec.prover_rust_define_expression_vector_i(
         h1,
-        h_vec_combination.dumpr_at_index(sym_i - rust_h_inverse_degree + 1),
+        h_vec_combination.dumpr_at_index(
+          sym_i - rust_h_inverse_degree + 1, collect_symbols=extended_hadamard.alpha),
         rust_h_inverse_degree - 1)
     piopexec.prover_rust_define_expression_vector_i(
         h2,
-        h_vec_combination.dumpr_at_index(sym_i + 1), rust_h_degree - 1)
+        h_vec_combination.dumpr_at_index(sym_i + 1, collect_symbols=extended_hadamard.alpha),
+        rust_h_degree - 1)
 
     if self.debug_mode:
       piopexec.prover_rust_check_vector_eq(
@@ -768,7 +770,7 @@ class PIOPFromVOProtocol(object):
     """
     self.debug("Compute h1 and h2")
     h1, h2, h1x, h2x = self._split_h(
-        piopexec, h, hx, h_vec_combination,
+        piopexec, h, hx, h_vec_combination, extended_hadamard,
         h_degree, h_inverse_degree, rust_h_degree, rust_h_inverse_degree)
 
     """

@@ -361,89 +361,75 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
       h_vec_2,
       i,
       power(alpha, 6) * vector_index!(v_vec_9, minus_i64!(i - maxshift - n, n - shiftlength_8))
-        - power(alpha, 5)
-          * beta
-          * power(omega, cap_s_a + cap_s_b + cap_s_c)
-          * vector_index!(
-            v_vec_7,
-            minus_i64!(i - maxshift - n, -3 * cap_h - shiftlength_6 + 1)
-          )
-        - power(alpha, 5)
-          * beta
-          * vector_index!(
-            v_vec_8,
-            minus_i64!(i - maxshift - n, cap_k - shiftlength_7 + 1)
-          )
         + power(alpha, 5)
-          * omega
-          * vector_index!(v_vec_18, minus_i64!(i - maxshift - n, -shiftlength_8))
-        + power(alpha, 5)
-          * power(omega, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c)
-          * vector_index!(v_vec_6, minus_i64!(i - maxshift - n, 1 - shiftlength_5))
-        - power(alpha, 5)
-          * vector_index!(v_vec_18, minus_i64!(i - maxshift - n, 1 - shiftlength_8))
-        - power(alpha, 4)
-          * power(omega, 3 * cap_h + ell)
-          * power_vector_index!(
-            omega.inverse().unwrap(),
-            ell + 1,
-            minus_i64!(i - maxshift - n, 1 - ell)
-          )
+          * (-beta
+            * power(omega, cap_s_a + cap_s_b + cap_s_c)
+            * vector_index!(
+              v_vec_7,
+              minus_i64!(i - maxshift - n, -3 * cap_h - shiftlength_6 + 1)
+            )
+            - beta
+              * vector_index!(
+                v_vec_8,
+                minus_i64!(i - maxshift - n, cap_k - shiftlength_7 + 1)
+              )
+            + omega * vector_index!(v_vec_18, minus_i64!(i - maxshift - n, -shiftlength_8))
+            + power(omega, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c)
+              * vector_index!(v_vec_6, minus_i64!(i - maxshift - n, 1 - shiftlength_5))
+            - vector_index!(v_vec_18, minus_i64!(i - maxshift - n, 1 - shiftlength_8)))
         + power(alpha, 4)
-          * power(omega, 3 * cap_h + ell)
-          * vector_index!(v_vec_16, minus_i64!(i - maxshift - n, -3 * cap_h - ell + 1))
-        - power(alpha, 4)
-          * power(omega, 3 * cap_h + ell)
-          * vector_index!(v_vec_17, minus_i64!(i - maxshift - n, 2 - ell))
+          * (-power(omega, 3 * cap_h + ell)
+            * power_vector_index!(
+              omega.inverse().unwrap(),
+              ell + 1,
+              minus_i64!(i - maxshift - n, 1 - ell)
+            )
+            + power(omega, 3 * cap_h + ell)
+              * vector_index!(v_vec_16, minus_i64!(i - maxshift - n, -3 * cap_h - ell + 1))
+            - power(omega, 3 * cap_h + ell)
+              * vector_index!(v_vec_17, minus_i64!(i - maxshift - n, 2 - ell)))
         + power(alpha, 3)
-          * power(omega, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
-          * vector_index!(
-            v_vec_5,
-            minus_i64!(i - maxshift - n, -cap_h - shiftlength_4 + 1)
-          )
-        - power(alpha, 3)
-          * power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1)
-          * vector_index!(v_vec_15, minus_i64!(i - maxshift - n, 2 - 3 * cap_h))
+          * (power(omega, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
+            * vector_index!(
+              v_vec_5,
+              minus_i64!(i - maxshift - n, -cap_h - shiftlength_4 + 1)
+            )
+            - power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1)
+              * vector_index!(v_vec_15, minus_i64!(i - maxshift - n, 2 - 3 * cap_h)))
         + power(alpha, 2)
-          * mu
-          * nu
-          * vector_index!(
-            v_vec_14,
-            minus_i64!(i - maxshift - n, cap_k - shiftlength_1 + 1)
-          )
-        - power(alpha, 2)
-          * mu
-          * vector_index!(
-            v_vec_1,
-            minus_i64!(i - maxshift - n, cap_k - shiftlength + 1)
-          )
-        - power(alpha, 2)
-          * nu
-          * vector_index!(
-            v_vec_3,
-            minus_i64!(i - maxshift - n, cap_k - shiftlength_2 + 1)
-          )
-        - power(alpha, 2)
-          * power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1)
-          * vector_index!(
-            v_vec_22,
-            minus_i64!(i - maxshift - n, -cap_s_a - cap_s_b - cap_s_c + 2)
-          )
-        + power(alpha, 2)
-          * vector_index!(
-            v_vec_4,
-            minus_i64!(i - maxshift - n, cap_k - shiftlength_3 + 1)
-          )
+          * (mu
+            * nu
+            * vector_index!(
+              v_vec_14,
+              minus_i64!(i - maxshift - n, cap_k - shiftlength_1 + 1)
+            )
+            - mu
+              * vector_index!(
+                v_vec_1,
+                minus_i64!(i - maxshift - n, cap_k - shiftlength + 1)
+              )
+            - nu
+              * vector_index!(
+                v_vec_3,
+                minus_i64!(i - maxshift - n, cap_k - shiftlength_2 + 1)
+              )
+            - power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1)
+              * vector_index!(
+                v_vec_22,
+                minus_i64!(i - maxshift - n, -cap_s_a - cap_s_b - cap_s_c + 2)
+              )
+            + vector_index!(
+              v_vec_4,
+              minus_i64!(i - maxshift - n, cap_k - shiftlength_3 + 1)
+            ))
         + alpha
-          * nu
-          * power(omega, cap_k - 1)
-          * vector_index!(v_vec_12, minus_i64!(i - maxshift - n, 2 - cap_k))
-        - alpha
-          * power(omega, cap_k - 1)
-          * vector_index!(v_vec_21, minus_i64!(i - maxshift - n, 2 - cap_k))
-        - alpha
-          * vector_index!(v_vec_13, minus_i64!(i - maxshift - n, 2 - cap_k))
-          * power(gamma * omega, cap_k - 1)
+          * (nu
+            * power(omega, cap_k - 1)
+            * vector_index!(v_vec_12, minus_i64!(i - maxshift - n, 2 - cap_k))
+            - power(omega, cap_k - 1)
+              * vector_index!(v_vec_21, minus_i64!(i - maxshift - n, 2 - cap_k))
+            - vector_index!(v_vec_13, minus_i64!(i - maxshift - n, 2 - cap_k))
+              * power(gamma * omega, cap_k - 1))
         + mu
           * power(omega, 3 * cap_h - 1)
           * vector_index!(v_vec_10, minus_i64!(i - maxshift - n, 2 - 3 * cap_h))
@@ -462,60 +448,45 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
       h_vec_3,
       i,
       power(alpha, 6) * vector_index!(v_vec_9, minus_i64!(i + 1, n - shiftlength_8))
-        - power(alpha, 5)
-          * beta
-          * power(omega, cap_s_a + cap_s_b + cap_s_c)
-          * vector_index!(v_vec_7, minus_i64!(i + 1, -3 * cap_h - shiftlength_6 + 1))
-        - power(alpha, 5)
-          * beta
-          * vector_index!(v_vec_8, minus_i64!(i + 1, cap_k - shiftlength_7 + 1))
-        + power(alpha, 5) * omega * vector_index!(v_vec_18, minus_i64!(i + 1, -shiftlength_8))
         + power(alpha, 5)
-          * power(omega, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c)
-          * vector_index!(v_vec_6, minus_i64!(i + 1, 1 - shiftlength_5))
-        - power(alpha, 5) * vector_index!(v_vec_18, minus_i64!(i + 1, 1 - shiftlength_8))
-        - power(alpha, 4)
-          * power(omega, 3 * cap_h + ell)
-          * power_vector_index!(
-            omega.inverse().unwrap(),
-            ell + 1,
-            minus_i64!(i + 1, 1 - ell)
-          )
+          * (-beta
+            * power(omega, cap_s_a + cap_s_b + cap_s_c)
+            * vector_index!(v_vec_7, minus_i64!(i + 1, -3 * cap_h - shiftlength_6 + 1))
+            - beta * vector_index!(v_vec_8, minus_i64!(i + 1, cap_k - shiftlength_7 + 1))
+            + omega * vector_index!(v_vec_18, minus_i64!(i + 1, -shiftlength_8))
+            + power(omega, -3 * cap_h + cap_s_a + cap_s_b + cap_s_c)
+              * vector_index!(v_vec_6, minus_i64!(i + 1, 1 - shiftlength_5))
+            - vector_index!(v_vec_18, minus_i64!(i + 1, 1 - shiftlength_8)))
         + power(alpha, 4)
-          * power(omega, 3 * cap_h + ell)
-          * vector_index!(v_vec_16, minus_i64!(i + 1, -3 * cap_h - ell + 1))
-        - power(alpha, 4)
-          * power(omega, 3 * cap_h + ell)
-          * vector_index!(v_vec_17, minus_i64!(i + 1, 2 - ell))
+          * (-power(omega, 3 * cap_h + ell)
+            * power_vector_index!(
+              omega.inverse().unwrap(),
+              ell + 1,
+              minus_i64!(i + 1, 1 - ell)
+            )
+            + power(omega, 3 * cap_h + ell)
+              * vector_index!(v_vec_16, minus_i64!(i + 1, -3 * cap_h - ell + 1))
+            - power(omega, 3 * cap_h + ell) * vector_index!(v_vec_17, minus_i64!(i + 1, 2 - ell)))
         + power(alpha, 3)
-          * power(omega, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
-          * vector_index!(v_vec_5, minus_i64!(i + 1, -cap_h - shiftlength_4 + 1))
-        - power(alpha, 3)
-          * power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1)
-          * vector_index!(v_vec_15, minus_i64!(i + 1, 2 - 3 * cap_h))
+          * (power(omega, -cap_h + cap_k + cap_s_a + cap_s_b + cap_s_c)
+            * vector_index!(v_vec_5, minus_i64!(i + 1, -cap_h - shiftlength_4 + 1))
+            - power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1)
+              * vector_index!(v_vec_15, minus_i64!(i + 1, 2 - 3 * cap_h)))
         + power(alpha, 2)
-          * mu
-          * nu
-          * vector_index!(v_vec_14, minus_i64!(i + 1, cap_k - shiftlength_1 + 1))
-        - power(alpha, 2) * mu * vector_index!(v_vec_1, minus_i64!(i + 1, cap_k - shiftlength + 1))
-        - power(alpha, 2)
-          * nu
-          * vector_index!(v_vec_3, minus_i64!(i + 1, cap_k - shiftlength_2 + 1))
-        - power(alpha, 2)
-          * power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1)
-          * vector_index!(
-            v_vec_22,
-            minus_i64!(i + 1, -cap_s_a - cap_s_b - cap_s_c + 2)
-          )
-        + power(alpha, 2) * vector_index!(v_vec_4, minus_i64!(i + 1, cap_k - shiftlength_3 + 1))
+          * (mu * nu * vector_index!(v_vec_14, minus_i64!(i + 1, cap_k - shiftlength_1 + 1))
+            - mu * vector_index!(v_vec_1, minus_i64!(i + 1, cap_k - shiftlength + 1))
+            - nu * vector_index!(v_vec_3, minus_i64!(i + 1, cap_k - shiftlength_2 + 1))
+            - power(omega, cap_k + cap_s_a + cap_s_b + cap_s_c - 1)
+              * vector_index!(
+                v_vec_22,
+                minus_i64!(i + 1, -cap_s_a - cap_s_b - cap_s_c + 2)
+              )
+            + vector_index!(v_vec_4, minus_i64!(i + 1, cap_k - shiftlength_3 + 1)))
         + alpha
-          * nu
-          * power(omega, cap_k - 1)
-          * vector_index!(v_vec_12, minus_i64!(i + 1, 2 - cap_k))
-        - alpha * power(omega, cap_k - 1) * vector_index!(v_vec_21, minus_i64!(i + 1, 2 - cap_k))
-        - alpha
-          * vector_index!(v_vec_13, minus_i64!(i + 1, 2 - cap_k))
-          * power(gamma * omega, cap_k - 1)
+          * (nu * power(omega, cap_k - 1) * vector_index!(v_vec_12, minus_i64!(i + 1, 2 - cap_k))
+            - power(omega, cap_k - 1) * vector_index!(v_vec_21, minus_i64!(i + 1, 2 - cap_k))
+            - vector_index!(v_vec_13, minus_i64!(i + 1, 2 - cap_k))
+              * power(gamma * omega, cap_k - 1))
         + mu
           * power(omega, 3 * cap_h - 1)
           * vector_index!(v_vec_10, minus_i64!(i + 1, 2 - 3 * cap_h))

@@ -67,7 +67,7 @@ class NamedVector(_NamedBasic):
   def dumpr_at_index(self, index):
     return rust(RustMacro("vector_index").append([rust_pk(self), rust(index)]))
 
-  def _dump_symbol_rust_at_index(self, index):
+  def _dump_symbol_rust_at_index(self, index, collect_symbols=None):
     code = self.dumpr_at_index(index)
     symbol = _rust_symbol_dictionary.add(code)
     return Symbol(symbol)
@@ -164,7 +164,7 @@ class UnitVector(object):
   def dumpr_at_index(self, index):
     return rust(RustMacro("delta").append([rust(index), rust(self.rust_position)]))
 
-  def _dump_symbol_rust_at_index(self, index):
+  def _dump_symbol_rust_at_index(self, index, collect_symbols=None):
     code = self.dumpr_at_index(index)
     symbol = _rust_symbol_dictionary.add(code)
     return Symbol(symbol)
@@ -319,7 +319,7 @@ class SparseVector(CoeffMap):
       ret.append([to_field(coeff), unit_vector.rust_position])
     return rust(ret)
 
-  def _dump_symbol_rust_at_index(self, index):
+  def _dump_symbol_rust_at_index(self, index, collect_symbols=None):
     ret = Integer(0)
     for unit_vector, coeff in self.values():
       ret += coeff * unit_vector._dump_symbol_rust_at_index(index)
@@ -446,7 +446,7 @@ class _RustSymbolDictionary(object):
 _rust_symbol_dictionary = _RustSymbolDictionary()
 
 
-def _dump_symbol_rust_at_index_for_sparse_coefficient(v, index):
+def _dump_symbol_rust_at_index_for_sparse_coefficient(v, index, collect_symbols=None):
   ret = Integer(0)
   for key, vec, value in v.key_keyed_coeffs():
     if key == "one":
@@ -456,6 +456,10 @@ def _dump_symbol_rust_at_index_for_sparse_coefficient(v, index):
       unit_vector, coeff = uv_coeff
       ret += coeff * vec._dump_symbol_rust_at_index(rust_minus_i64(
           index, unit_vector.rust_position))
+
+  ret = simplify(ret)
+  if collect_symbols is not None:
+    ret = collect(ret, collect_symbols)
 
   #  print(_dumpr_at_index_for_sparse_coefficient(v, index))
 
@@ -548,16 +552,18 @@ class VectorCombination(CoeffMap):
   def dumps(self):
     return _dump_coeff_map_with_sparse_coeff(self)
 
-  def dumpr_at_index(self, index):
+  def dumpr_at_index(self, index, collect_symbols=None):
     """
     Old version: dump a linear combination rust macro
 
     return _dumpr_at_index_for_sparse_coefficient(self, index)
     """
-    return _rust_symbol_dictionary.dumpr(self._dump_symbol_rust_at_index(index))
+    return _rust_symbol_dictionary.dumpr(
+        self._dump_symbol_rust_at_index(index, collect_symbols=collect_symbols))
 
-  def _dump_symbol_rust_at_index(self, index):
-    return _dump_symbol_rust_at_index_for_sparse_coefficient(self, index)
+  def _dump_symbol_rust_at_index(self, index, collect_symbols=None):
+    return _dump_symbol_rust_at_index_for_sparse_coefficient(
+        self, index, collect_symbols=collect_symbols)
 
   def dump_named_vectors(self, result):
     for key, vec_value in self.items():
@@ -639,7 +645,7 @@ class PowerVector(object):
     else:
       return rust(rust_range_index(1, self.rust_size, index))
 
-  def _dump_symbol_rust_at_index(self, index):
+  def _dump_symbol_rust_at_index(self, index, collect_symbols=None):
     """
     In case the index is always larger than the size, then directly return zero
     """
@@ -756,16 +762,18 @@ class StructuredVector(CoeffMap):
             var) * value.to_poly_expr_rust(var))
     return sum(items)
 
-  def dumpr_at_index(self, index):
+  def dumpr_at_index(self, index, collect_symbols=None):
     """
     Old version: dump a linear combination rust macro
 
     return _dumpr_at_index_for_sparse_coefficient(self, index)
     """
-    return _rust_symbol_dictionary.dumpr(self._dump_symbol_rust_at_index(index))
+    return _rust_symbol_dictionary.dumpr(
+        self._dump_symbol_rust_at_index(index, collect_symbols=collect_symbols))
 
-  def _dump_symbol_rust_at_index(self, index):
-    return _dump_symbol_rust_at_index_for_sparse_coefficient(self, index)
+  def _dump_symbol_rust_at_index(self, index, collect_symbols=None):
+    return _dump_symbol_rust_at_index_for_sparse_coefficient(
+        self, index, collect_symbols=collect_symbols)
 
   def reverse_omega(self, omega):
     ret = StructuredVector()
@@ -785,12 +793,12 @@ class StructuredVector(CoeffMap):
     return ret
 
 
-def vec_lists_dump_at_index_then_inner_product(vec_pairs, index):
+def vec_lists_dump_at_index_then_inner_product(vec_pairs, index, collect_symbols=None):
   ret = Integer(0)
   for vec1, vec2 in vec_pairs:
-    ret += vec1._dump_symbol_rust_at_index(index) * \
-        vec2._dump_symbol_rust_at_index(index)
-  ret = collect(simplify(ret), [Symbol("alpha"), Symbol("beta")])
+    ret += vec1._dump_symbol_rust_at_index(index, collect_symbols) * \
+        vec2._dump_symbol_rust_at_index(index, collect_symbols)
+  ret = collect(ret, collect_symbols)
   return _rust_symbol_dictionary.dumpr(ret)
 
 
