@@ -280,7 +280,7 @@ class PIOPFromVOProtocol(object):
         .append(randomizer)
         .sample(self.Ftoq).comma(t).assign(randomizer).double_bar().end_math()
                                    .space("the sum of:").eol().append(Itemize().append([
-                                       "$%s$" % side._dumps("circ")
+                                       Math(side._dumps("circ"))
                                        for i, side in enumerate(extended_hadamard.items)
                                        if not extended_hadamard.ignored(i)])))
 
