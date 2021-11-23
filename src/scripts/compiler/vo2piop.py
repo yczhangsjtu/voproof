@@ -113,6 +113,16 @@ class ExtendedHadamard(object):
         had.a.dump_named_vectors(ret)
     return ret
 
+  def dump_named_vectors(self):
+    ret = {}
+    for i, side in enumerate(self.items):
+      a = VectorCombination._from(side.a)
+      b = VectorCombination._from(side.b)
+      for vec in chain(a.keyeds(), b.keyeds()):
+        if isinstance(vec, NamedVector):
+          ret[vec.key()] = vec
+    return list(ret.values())
+
 
 class PIOPFromVOProtocol(object):
   def __init__(self, vo, vector_size, degree_bound):
@@ -461,16 +471,21 @@ class PIOPFromVOProtocol(object):
           hcheck_vec,
           rust_vec_size(rust_zero(), (rust_n + rust_max_shift + self.q) * 2 - 1))
 
+    for vec in extended_hadamard.dump_named_vectors():
+      self._fix_missing_vector_key(vec, piopexec)
+
     for i, side in enumerate(extended_hadamard.items):
       self.debug("  Extended Hadamard %d" % (i + 1))
       a = VectorCombination._from(side.a)
       b = VectorCombination._from(side.b)
       atimesb = convolution(a, b, omega)
       hx_vector_combination += atimesb
-      for vec in chain(a.keyeds(), b.keyeds()):
-        self._fix_missing_vector_key(vec, piopexec)
 
-      if self.debug_mode:
+    if self.debug_mode:
+      for i, side in enumerate(extended_hadamard.items):
+        a = VectorCombination._from(side.a)
+        b = VectorCombination._from(side.b)
+        atimesb = convolution(a, b, omega)
         size = rust_n + rust_max_shift + self.q
         self._increment_h_omega_sum(
             h_omega_sum_check, h_omega_sum, omega, a, b, size)
