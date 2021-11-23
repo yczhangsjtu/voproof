@@ -1,4 +1,4 @@
-from sympy import Symbol, sympify, Expr, simplify, Add, Integer, collect, Max
+from sympy import Symbol, sympify, Expr, simplify, Add, Integer, collect, Max, count_ops, S
 from sympy.core.numbers import Infinity
 from .names import _NamedBasic, get_name
 from .util import rust_pk
@@ -453,6 +453,24 @@ class _RustSymbolDictionary(object):
 _rust_symbol_dictionary = _RustSymbolDictionary()
 
 
+def custom_measure(expr):
+  POW = Symbol("POW")
+  MUL = Symbol("MUL")
+  """
+  Discourage the use of power and mul operator in simplification
+  """
+  count = count_ops(expr, visual=True).subs(POW, 20)
+  count = count_ops(expr, visual=True).subs(MUL, 10)
+  count = count.replace(Symbol, type(S.One))
+
+  symbols = expr.atoms(Symbol)
+  nsymbols = len([s for s in symbols if str(s).startswith("rustsymboldict")])
+  count += nsymbols * 100
+
+  return count
+  # return len(_rust_symbol_dictionary.dumpr(expr))
+
+
 def _dump_symbol_rust_at_index_for_sparse_coefficient(v, index, collect_symbols=None):
   ret = Integer(0)
   for key, vec, value in v.key_keyed_coeffs():
@@ -464,11 +482,9 @@ def _dump_symbol_rust_at_index_for_sparse_coefficient(v, index, collect_symbols=
       ret += coeff * vec._dump_symbol_rust_at_index(rust_minus_i64(
           index, unit_vector.rust_position))
 
-  ret = simplify(ret)
+  ret = simplify(ret, measure=custom_measure)
   if collect_symbols is not None:
     ret = collect(ret, collect_symbols)
-
-  #  print(_dumpr_at_index_for_sparse_coefficient(v, index))
 
   return ret
 
@@ -805,6 +821,8 @@ def vec_lists_dump_at_index_then_inner_product(vec_pairs, index, collect_symbols
   for vec1, vec2 in vec_pairs:
     ret += vec1._dump_symbol_rust_at_index(index, collect_symbols) * \
         vec2._dump_symbol_rust_at_index(index, collect_symbols)
+
+  ret = simplify(ret, measure=custom_measure)
   if collect_symbols is not None:
     ret = collect(ret, collect_symbols)
   return _rust_symbol_dictionary.dumpr(ret)
@@ -812,6 +830,7 @@ def vec_lists_dump_at_index_then_inner_product(vec_pairs, index, collect_symbols
 
 def list_sum_to_rust_map(values, collect_symbols=None):
   ret = sum(values)
+  ret = simplify(ret, measure=custom_measure)
   if collect_symbols is not None:
     ret = collect(ret, collect_symbols)
   return _rust_symbol_dictionary.dumpr(ret)
