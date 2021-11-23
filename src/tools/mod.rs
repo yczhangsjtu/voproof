@@ -1052,10 +1052,11 @@ macro_rules! check_vector_eq {
 
 #[macro_export]
 macro_rules! check_expression_vector_eq {
-  ($u:expr, $v:expr, $len:expr, $info:literal) => {
+  ($i:ident, $u:expr, $v:expr, $len:expr, $info:literal) => {
     check_vector_eq!(
-      expressio_vector!(i, $u, $len),
-      expressio_vector!(i, $v, $len)
+      expression_vector!($i, $u, $len),
+      expression_vector!($i, $v, $len),
+      $info
     );
   };
 }
