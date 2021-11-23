@@ -320,13 +320,13 @@ class SparseVector(CoeffMap):
 
   def dumpr_at_index(self, index):
     ret = RustMacro("multi_delta").append(rust(index))
-    for unit_vector, coeff in self.values():
+    for unit_vector, coeff in self.keyed_coeffs():
       ret.append([to_field(coeff), unit_vector.rust_position])
     return rust(ret)
 
   def _dump_symbol_rust_at_index(self, index, collect_symbols=None):
     ret = Integer(0)
-    for unit_vector, coeff in self.values():
+    for unit_vector, coeff in self.keyed_coeffs():
       ret += coeff * unit_vector._dump_symbol_rust_at_index(index)
     return ret
 
