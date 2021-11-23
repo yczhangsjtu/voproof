@@ -36,6 +36,22 @@ class CoeffMap(object):
   def items(self):
     return self._dict.items()
 
+  def key_keyed_coeffs(self):
+    for key, keyed_coeff in self.items():
+      keyed, coeff = keyed_coeff
+      yield key, keyed, coeff
+
+  def keyed_coeffs(self):
+    return self._dict.values()
+
+  def keyeds(self):
+    for keyed, coeff in self._dict.values():
+      yield keyed
+
+  def coeffs(self):
+    for keyed, coeff in self._dict.values():
+      yield coeff
+
   def copy(self):
     ret = CoeffMap()
     for key, value in self._dict.items():

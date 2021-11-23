@@ -11,6 +11,7 @@ from .builder.latex import LaTeXBuilder, AccumulationVector, Math, Itemize, \
 from .builder.rust import *
 from sympy import Symbol, Integer, UnevaluatedExpr, Max, simplify
 from sympy.abc import X
+from itertools import chain
 
 F = Symbol("\\mathbb{F}")
 Fstar = Symbol("\\mathbb{F}^*")
@@ -483,18 +484,20 @@ class PIOPFromVOProtocol(object):
       """
       Cross term multiplication
       """
+      for vec in chain(a.keyeds(), b.keyeds()):
+        self._fix_missing_vector_key(vec, piopexec)
+
       for key1, vec_value1 in a.items():
         vec1, value1 = vec_value1
         for key2, vec_value2 in b.items():
           vec2, value2 = vec_value2
-          self._fix_missing_vector_key(vec1, piopexec)
-          self._fix_missing_vector_key(vec2, piopexec)
-          poly1 = "one" if key1 == "one" else piopexec.vec_to_poly_dict[vec1.key()]
-          poly2 = "one" if key2 == "one" else piopexec.vec_to_poly_dict[vec2.key()]
           hx_items.append(self._named_vector_constant_product_omega(
-              simplify(value1.to_poly_expr(
-                  omega / X) * value2.to_poly_expr(X)),
-              key1, key2, vec1, vec2, poly1, poly2, omega))
+              simplify(value1.to_poly_expr(omega / X)
+                       * value2.to_poly_expr(X)),
+              key1, key2, vec1, vec2,
+              "one" if key1 == "one" else piopexec.vec_to_poly_dict[vec1.key(
+              )],
+              "one" if key2 == "one" else piopexec.vec_to_poly_dict[vec2.key()], omega))
 
       if self.debug_mode:
         size = rust_n + rust_max_shift + self.q
