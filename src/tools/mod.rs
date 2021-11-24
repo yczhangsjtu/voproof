@@ -359,6 +359,38 @@ macro_rules! concat_matrix_vertically {
 }
 
 #[macro_export]
+macro_rules! concat_matrix_horizontally {
+  ($result:ident, $k:expr,
+   $arows:expr, $brows:expr, $crows:expr,
+   $acols:expr, $bcols:expr, $ccols:expr,
+   $avals:expr, $bvals:expr, $cvals:expr,
+   $drows:expr, $dvals:expr) => {
+    let $result = (
+      $arows
+        .iter()
+        .chain($brows.iter())
+        .chain($crows.iter())
+        .chain($drows.iter())
+        .map(|a| *a)
+        .collect::<Vec<u64>>(),
+      $acols
+        .iter().map(|&i| i + 1)
+        .chain($bcols.iter().map(|&i| i + $k as u64 + 1))
+        .chain($ccols.iter().map(|&i| i + $k as u64 * 2 + 1))
+        .chain((0..$dvals.len()).map(|_| 0))
+        .collect::<Vec<u64>>(),
+      $avals
+        .iter()
+        .chain($bvals.iter())
+        .chain($cvals.iter())
+        .chain($dvals.iter())
+        .map(|a| *a)
+        .collect::<Vec<E::Fr>>(),
+    );
+  };
+}
+
+#[macro_export]
 macro_rules! delta {
   ( $i: expr, $j: expr ) => {{
     if $i == $j {

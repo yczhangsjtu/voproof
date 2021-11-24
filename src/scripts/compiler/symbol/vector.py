@@ -803,7 +803,7 @@ class StructuredVector(CoeffMap):
     for key, power_value in self.items():
       vector, value = power_value
       if key == "one":
-        ret._dict[key] = value.reverse_omega(omega)
+        ret._dict[key] = (key, value.reverse_omega(omega))
       else:
         # f(X) => f(omega X^{-1}) transforms the power vector to the coefficients of
         # (X^{-(k-1)}(alpha omega)^{k-1}) * (1 + (alpha omega)^{-1} X + ...)
@@ -1010,8 +1010,7 @@ class NamedVectorPairCombination(CoeffMap):
     named_vector_structure_pairs = []
     structured_vector_pair_combination = None
     ret = RustBuilder()
-    for key, vector_coeff in self.items():
-      vector_pair, coeff = vector_coeff
+    for key, vector_pair, coeff in self.key_keyed_coeffs():
       if key == "one":
         structured_vector_pair_combination = coeff
       elif vector_pair.u is not None and vector_pair.v is not None:
@@ -1037,8 +1036,7 @@ class NamedVectorPairCombination(CoeffMap):
     vector_combination = VectorCombination()
     power_power_sparse_tuples = []
     for v, st in named_vector_structure_pairs:
-      for key, p_coeff in st.items():
-        p, coeff = p_coeff
+      for key, p, coeff in st.key_keyed_coeffs():
         if key == "one":
           vector_combination += v * coeff
         else:

@@ -38,6 +38,8 @@ class CoeffMap(object):
 
   def key_keyed_coeffs(self):
     for key, keyed_coeff in self.items():
+      if not isinstance(keyed_coeff, tuple):
+        raise TypeError(f"keyed_coeff must be a tuple, got {type(keyed_coeff)} {keyed_coeff}")
       keyed, coeff = keyed_coeff
       yield key, keyed, coeff
 
@@ -56,9 +58,9 @@ class CoeffMap(object):
     ret = CoeffMap()
     for key, value in self._dict.items():
       if hasattr(value, 'copy'):
-        ret._dict[key] = value.copy()
+        ret._dict[key] = (key, value.copy())
       else:
-        ret._dict[key] = value
+        ret._dict[key] = (key, value)
     return ret
 
   def __add__(self, other):
@@ -78,8 +80,7 @@ class CoeffMap(object):
 
   def __neg__(self):
     ret = CoeffMap()
-    for key, keyed_value in self._dict.items():
-      keyed, value = keyed_value
+    for key, keyed, value in self.key_keyed_coeffs():
       ret._dict[key] = (keyed, -value)
     return ret
 
@@ -94,8 +95,7 @@ class CoeffMap(object):
   
   def __mul__(self, other):
     ret = CoeffMap()
-    for key, keyed_value in self._dict.items():
-      keyed, value = keyed_value
+    for key, keyed, value in self.key_keyed_coeffs():
       if value is None:
         for _key, _keyed_value in self._dict.items():
           _keyed, _value = _keyed_value

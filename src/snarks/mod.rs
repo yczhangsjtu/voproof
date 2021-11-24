@@ -2,6 +2,7 @@
 
 use crate::cs::{
   r1cs::{R1CSInstance, R1CSSize, R1CSWitness, R1CS},
+  hpr::{HPRInstance, HPRSize, HPRWitness, HPR},
   CSSize, ConstraintSystem, Instance, Witness,
 };
 use crate::error::Error;

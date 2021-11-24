@@ -173,22 +173,26 @@ def analyzeR1CSProverEfficient():
 def set_hpr_parameters():
   H = Symbol(get_name("H"), positive=True)
   K = Symbol(get_name("K"), positive=True)
-  S = Symbol(get_name("S"), positive=True)
-  ell = Symbol(get_name("ell"), positive=True)
-  Sp = Symbol(get_name("S'"), positive=True)
-  return H, K, S, ell, Sp
+  Sa = Symbol(get_name("S_a"), positive=True)
+  Sb = Symbol(get_name("S_b"), positive=True)
+  Sc = Symbol(get_name("S_c"), positive=True)
+  Sd = Symbol(get_name("S_d"), positive=True)
+  return H, K, Sa, Sb, Sc, Sd
 
 
 def analyzeHPR():
-  H, K, S, ell, Sp = set_hpr_parameters()
+  H, K, Sa, Sb, Sc, Sd = set_hpr_parameters()
 
-  hints = [(S, H + 1), (S, K + 1), (H, Sp), (K, ell), (H, ell), (S, ell + 1)]
-  size_map = [(H, "nrows"), (K, "ncols"), (S, "density"), (Sp, "d_density")]
+  hints = [(Sa, H + 1), (Sa, K + 1), (Sb, H + 1), (Sb, K + 1),
+      (Sc, H + 1), (Sc, K + 1), (H, Sd)]
+  size_map = [(H, "nrows"), (K, "ncols"), (Sa, "adensity"), (Sb, "bdensity"),
+      (Sc, "cdensity"), (Sd, "ddensity")]
   x = get_named_vector("x")
   x.local_evaluate = True
-  ppargs = (H, K, S*3+Sp)
+  x.hint_computation = lambda z: RustMacro("eval_vector_as_poly").append([x, z])
+  ppargs = (H, K, Sa, Sb, Sc, Sd)
   execargs = (x, get_named_vector("w"), get_named_vector(
-      "w"), get_named_vector("w"), ell)
+      "w"), get_named_vector("w"))
   analyzeProtocol(HPR(), ppargs, execargs, hints, size_map, set_hpr_parameters,
                   filename="voproof_hpr")
 
@@ -258,7 +262,7 @@ if __name__ == '__main__':
   # analyzeR1CSProverEfficient()
   # analyzeHPRProverEfficient()
   # analyzePOVProverEfficient()
-  analyzeR1CS()
-  # analyzeHPR()
+  # analyzeR1CS()
+  analyzeHPR()
   # analyzePOV()
 

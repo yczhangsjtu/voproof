@@ -123,6 +123,9 @@ class PublicCoinProtocolExecution(object):
   def verifier_computes(self, latex_builder, rust_builder):
     self.interactions.append(VerifierComputes(latex_builder, rust_builder))
 
+  def verifier_computes_latex(self, latex_builder):
+    self.verifier_computes(latex_builder, RustBuilder())
+
   def verifier_computes_rust(self, rust_builder):
     self.verifier_computes(LaTeXBuilder(), rust_builder)
 

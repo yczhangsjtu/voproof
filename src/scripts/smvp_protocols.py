@@ -2,7 +2,7 @@ from sympy import Symbol, latex, sympify, Integer, simplify
 from sympy.abc import alpha, beta, gamma
 from compiler.vo_protocol import VOProtocol
 from compiler.symbol.vector import get_named_vector, PowerVector, UnitVector
-from compiler.symbol.names import  reset_name_counters, get_name
+from compiler.symbol.names import reset_name_counters, get_name
 from compiler.symbol.matrix import Matrix
 from compiler.symbol.util import rust_pk, rust_vk
 from compiler.builder.latex import Math, AccumulationVector, ExpressionVector, \
@@ -71,14 +71,12 @@ class SparseMVP(VOProtocol):
         rust_line_define_expression_vector_inverse_i(
             r,
             rust_minus(mu, PowerVector(gamma, H).dumpr_at_index(sym_i)),
-            H
-        ))
+            H))
     c = get_named_vector("c")
     voexec.prover_computes(Math(c).assign()
                            .transpose(r, paren=False).append("\\boldsymbol{M}"),
                            rust_line_define_left_sparse_mvp_vector(
-        c, rust_pk(M), r, H, K
-    ))
+        c, rust_pk(M), r, H, K))
     s = get_named_vector("s")
     voexec.prover_computes(
         Math(s).assign(r).double_bar().paren(-c),
@@ -89,24 +87,20 @@ class SparseMVP(VOProtocol):
         mu * PowerVector(1, H) - PowerVector(gamma, H),
         s,
         PowerVector(1, H),
-        PowerVector(1, H),
-    )
+        PowerVector(1, H))
     voexec.inner_product_query(
         a.shift(n - H - K, rust_n - H - K),
-        s.shift(n - H - K, rust_n - H - K),
-    )
+        s.shift(n - H - K, rust_n - H - K))
 
     nu = Symbol(get_name("nu"))
     voexec.verifier_send_randomness(nu)
 
     h = get_named_vector("h")
     rnu = get_named_vector("rnu")
-    voexec.prover_computes(LaTeXBuilder(),
-                           rust_line_define_expression_vector_inverse_i(
+    voexec.prover_rust_define_expression_vector_inverse_i(
         rnu,
         rust_minus(nu, PowerVector(gamma, K).dumpr_at_index(sym_i)),
-        K
-    ))
+        K)
     voexec.prover_computes(Math(h).assign(
         ExpressionVector("\\frac{1}{%s-\\gamma^i}" % tex(nu), K)
     ).double_bar(
@@ -360,33 +354,76 @@ class HPR(VOProtocol):
   def __init__(self):
     super(HPR, self).__init__("HPR")
 
-  def preprocess(self, voexec, H, K, s):
-    SparseMVP().preprocess(voexec, H, K * 3 + 1, s)
+  def preprocess(self, voexec, H, K, sa, sb, sc, sd):
+    M = Matrix("M")
+    d = get_named_vector("d")
+    # voexec.preprocess_rust(rust_line_init_size(H, "nrows"))
+    voexec.preprocess_rust(rust_line_init_size(K, "ncols"))
+    voexec.preprocess_rust(rust_line_init_size(sa, "adensity"))
+    voexec.preprocess_rust(rust_line_init_size(sb, "bdensity"))
+    voexec.preprocess_rust(rust_line_init_size(sc, "cdensity"))
+    voexec.preprocess_rust(rust_line_init_size(sd, "ddensity"))
+
+    voexec.preprocess_rust(
+        rust_line_concat_matrix_horizontally(
+            M, K,
+            "cs.arows", "cs.brows", "cs.crows",
+            "cs.acols", "cs.bcols", "cs.ccols",
+            "cs.avals", "cs.bvals", "cs.cvals",
+            "cs.drows", "cs.dvals"))
+
+    voexec.preprocess_output_pk(M)
+    voexec.M = M
+    M._is_preprocessed = True
+
+    SparseMVP().preprocess(voexec, H, K * 3 + 1, sa + sb + sc + sd)
     voexec.hpr_H = H
     voexec.hpr_K = K
-    voexec.s = s
+    voexec.sa = sa
+    voexec.sb = sb
+    voexec.sc = sc
+    voexec.sd = sd
+    voexec.d = d
+
     return voexec
 
-  def execute(self, voexec, x, w1, w2, w3, ell):
+  def execute(self, voexec, x, w1, w2, w3):
     voexec.input_instance(x)
     voexec.input_witness(w1)
     voexec.input_witness(w2)
     voexec.input_witness(w3)
 
-    H, K, s, n = voexec.hpr_H, voexec.hpr_K, voexec.s, voexec.vector_size
+    H, K, sa, sb, sc, sd, n = voexec.hpr_H, voexec.hpr_K, \
+        voexec.sa, voexec.sb, voexec.sc, voexec.sd, voexec.vector_size
+
+    voexec.verifier_rust_define_vec(x, "x.instance.clone()")
+    voexec.prover_rust_define_vec(w1, "w.witness.0.clone()")
+    voexec.prover_rust_define_vec(w2, "w.witness.1.clone()")
+    voexec.prover_rust_define_vec(w3, "w.witness.2.clone()")
+
+    voexec.verifier_rust_init_size(H, "nrows")
+    voexec.verifier_rust_init_size(K, "ncols")
+    voexec.verifier_rust_init_size(sa, "adensity")
+    voexec.verifier_rust_init_size(sb, "bdensity")
+    voexec.verifier_rust_init_size(sc, "cdensity")
+    voexec.verifier_rust_init_size(sd, "ddensity")
+
+    voexec.try_verifier_redefine_vector_size_rust("n", n)
+    rust_n = voexec.rust_vector_size
+
     w = get_named_vector("w")
-    voexec.prover_computes(Math(w).assign(
-        w1).double_bar(w2).double_bar(w3), RustBuilder())
+    voexec.prover_computes_latex(Math(w).assign(
+        w1).double_bar(w2).double_bar(w3))
+    voexec.prover_rust_define_concat_vector(w, w1, w2, w3)
     voexec.prover_submit_vector(w, 3 * K)
     voexec.run_subprotocol(SparseMVP(),
-                           x + w.shift(ell + 1) +
-                           UnitVector(ell + 1))
+                           x + w.shift(H + 1) +
+                           UnitVector(H + 1))
     voexec.hadamard_query(
-        w.shift(n-K),
-        w.shift(n-K*2),
-        PowerVector(1, K).shift(n-K),
-        w.shift(n-K*3),
-    )
+        w.shift(n-K, rust_n-K),
+        w.shift(n-K*2, rust_n-K*2),
+        PowerVector(1, K).shift(n-K, rust_n-K),
+        w.shift(n-K*3, rust_n-K*3))
 
 
 class HPRProverEfficient(VOProtocol):

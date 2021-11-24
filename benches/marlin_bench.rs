@@ -154,3 +154,4 @@ fn bench_marlin_verifier_test_circuit_scale_1000(b: &mut Bencher) {
     Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::verify(&vk, &x, &proof, rng).unwrap();
   });
 }
+

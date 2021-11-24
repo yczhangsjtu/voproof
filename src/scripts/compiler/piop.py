@@ -198,7 +198,7 @@ class PIOPExecution(PublicCoinProtocolExecution):
       self.prover_rust_define_eval_vector_expression_i(
           name, point, vec.dumpr_at_index(sym_i), size)
     else:
-      self.verifier_computes_latex(Math(y).assign(poly.dumps_var(point)))
+      self.verifier_computes_latex(Math(name).assign(poly.dumps_var(point)))
       self.verifier_rust_define(name, vec.hint_computation(point))
 
   def combine_polynomial(self, poly, coeff_latex_builders, length):
