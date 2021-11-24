@@ -1,6 +1,7 @@
 from sympy import Symbol, latex, sympify, Integer, simplify
 from sympy.abc import alpha, beta, gamma  # , X, D, S
 from compiler.vo_protocol import VOProtocol
+from compiler.symbol.util import rust_pk
 from compiler.symbol.vector import get_named_vector, PowerVector, UnitVector
 from compiler.symbol.names import reset_name_counters, get_name
 from compiler.builder.latex import Math, AccumulationVector, ExpressionVector, \
@@ -20,6 +21,8 @@ from compiler.builder.rust import *
 # Cc = Symbol("C_c", positive=True)
 # k = Symbol("k", positive=True)
 
+sym_i = Symbol("i")
+
 
 class ProductEq(VOProtocol):
   def __init__(self):
@@ -29,17 +32,25 @@ class ProductEq(VOProtocol):
     named_u = self.get_named_vector_for_latex(u, "u", voexec)
     named_v = self.get_named_vector_for_latex(v, "v", voexec)
     n = voexec.vector_size
+    voexec.try_verifier_redefine_vector_size_rust("n", n)
+    rust_n = voexec.rust_vector_size
 
     r = get_named_vector("r")
     voexec.prover_computes_latex(Math(r).assign(ProductAccumulationDivideVector(
         named_u, named_v, ell)))
+    voexec.prover_rust_define_accumulate_vector_mul(
+        r,
+        rust_mul(u.dumpr_at_index(sym_i),
+                 rust_inverse(v.dumpr_at_index(sym_i))),
+        ell)
 
     voexec.prover_submit_vector(r, ell)
     voexec.hadamard_query(
-        r.shift(n - ell + 1) + UnitVector(n - ell + 1),
-        u.shift(n - ell),
-        r.shift(n - ell),
-        v.shift(n - ell),
+        r.shift(n - ell + 1, rust_n - ell + 1) +
+        UnitVector(n - ell + 1, rust_n - ell + 1),
+        u.shift(n - ell, rust_n - ell),
+        r.shift(n - ell, rust_n - ell),
+        v.shift(n - ell, rust_n - ell),
     )
     voexec.hadamard_query(
         r - UnitVector(ell),
@@ -56,12 +67,12 @@ class TripleProductEq(VOProtocol):
 
     u = get_named_vector("u")
     voexec.prover_computes_latex(Math(u).assign(add_paren_if_not_atom(u1))
-                                  .circ(add_paren_if_not_atom(u2))
-                                  .circ(add_paren_if_not_atom(u3)))
+                                 .circ(add_paren_if_not_atom(u2))
+                                 .circ(add_paren_if_not_atom(u3)))
     v = get_named_vector("v")
     voexec.prover_computes_latex(Math(v).assign(add_paren_if_not_atom(v1))
-                                  .circ(add_paren_if_not_atom(v2))
-                                  .circ(add_paren_if_not_atom(v3)))
+                                 .circ(add_paren_if_not_atom(v2))
+                                 .circ(add_paren_if_not_atom(v3)))
 
     r = get_named_vector("r")
     voexec.prover_computes_latex(Math(r).assign(ProductAccumulationDivideVector(
@@ -70,14 +81,14 @@ class TripleProductEq(VOProtocol):
 
     s = get_named_vector("s")
     voexec.prover_computes_latex(Math(s).assign(r)
-                                  .slash(add_paren_if_not_atom(v1))
-                                  .circ(add_paren_if_not_atom(u1)))
+                                 .slash(add_paren_if_not_atom(v1))
+                                 .circ(add_paren_if_not_atom(u1)))
 
     t = get_named_vector("s")
     voexec.prover_computes_latex(Math(s).assign()
-                           .paren(r.shift(1) + UnitVector(1) - UnitVector(ell + 1))
-                           .slash(add_paren_if_not_atom(u2))
-                           .circ(add_paren_if_not_atom(v2)))
+                                 .paren(r.shift(1) + UnitVector(1) - UnitVector(ell + 1))
+                                 .slash(add_paren_if_not_atom(u2))
+                                 .circ(add_paren_if_not_atom(v2)))
 
     voexec.prover_submit_vector(r, ell)
     voexec.prover_submit_vector(s, ell)
@@ -124,9 +135,12 @@ class CopyCheck(VOProtocol):
 
   def preprocess(self, voexec, ell):
     vsigma = get_named_vector("sigma")
+    vsigma._is_preprocessed = True
     voexec.preprocess_latex(Math(vsigma).assign(
-        ExpressionVector(gamma ** (Symbol("\\sigma(i)")-1), ell)
-    ))
+        ExpressionVector(gamma ** (Symbol("\\sigma(i)")-1), ell)))
+    voexec.pp_rust_define_generator()
+    voexec.pp_rust_define_permutation_vector_from_wires(
+        vsigma, "cs.wires", ell)
     voexec.preprocess_vector(vsigma, ell)
     voexec.preprocess_output_pk(vsigma)
     voexec.vsigma = vsigma
@@ -134,8 +148,10 @@ class CopyCheck(VOProtocol):
 
   def execute(self, voexec, v):
     n, ell = voexec.vector_size, voexec.ell
+    voexec.verifier_rust_define_generator()
     zeta = Symbol(get_name("zeta"))
     voexec.verifier_send_randomness(zeta)
+    #  voexec.prover_rust_define(voexec.vsigma, rust_pk(voexec.vsigma))
     voexec.run_subprotocol(Permute(), v + zeta * PowerVector(gamma, ell),
                            v + zeta * voexec.vsigma, ell)
 
@@ -188,7 +204,13 @@ class POV(VOProtocol):
 
   def preprocess(self, voexec, d, Cc, Ca, Cm):
     C = Cc + Ca + Cm
+    voexec.pp_rust_init_size(Ca, "nadd")
+    voexec.pp_rust_init_size(Cm, "nmul")
+    voexec.pp_rust_init_size(C, "n")
+
     CopyCheck().preprocess(voexec, 3 * C)
+
+    voexec.pp_rust_define(d, "cs.consts.clone()")
     voexec.preprocess_vector(d, Cc)
     voexec.preprocess_output_pk(d)
     voexec.Ca = Ca
@@ -203,20 +225,42 @@ class POV(VOProtocol):
     voexec.input_witness(b)
     voexec.input_witness(c)
 
-    C, Cc, Ca, Cm, d, n = voexec.C, voexec.Cc, voexec.Ca, voexec.Cm, voexec.d, voexec.vector_size
+    C, Cc, Ca, Cm, d, n = \
+        voexec.C, voexec.Cc, voexec.Ca, voexec.Cm, voexec.d, voexec.vector_size
+    voexec.verifier_rust_init_size(Ca, "nadd")
+    voexec.verifier_rust_init_size(Cm, "nmul")
+    voexec.verifier_rust_init_size(C, "n")
+
+    voexec.prover_rust_define_sparse_vector(
+        x, "x.instance.0", "x.instance.1", 3 * C)
+    voexec.prover_rust_define_vec(a, "w.witness.0.clone()")
+    voexec.prover_rust_define_vec(b, "w.witness.1.clone()")
+    voexec.prover_rust_define_vec(c, "w.witness.2.clone()")
+    voexec.try_verifier_redefine_vector_size_rust("n", n)
+    rust_n = voexec.rust_vector_size
+    #  voexec.prover_rust_define(voexec.d, rust_pk(voexec.d))
+
     w = get_named_vector("w")
-    voexec.prover_computes_latex(Math(w).assign(a.slice(Cc+1, C)).double_bar(b)
-                           .double_bar(c))
+    voexec.prover_computes_latex(
+        Math(w).assign(a.slice(Cc+1, C)).double_bar(b)
+        .double_bar(c))
+    voexec.prover_rust_define_concat_vector_skip(w, Cc, a, b, c)
     voexec.prover_submit_vector(w, 3 * C - Cc)
+
     t = get_named_vector("t")
     t.local_evaluate = True
-    voexec.verifier_computes(Math(t).assign("\\sum_{i\\in\\cI_x}%s"
-                                            % UnitVector(Symbol("i")).dumps()))
+    t.hint_computation = lambda z: RustMacro(
+        "eval_sparse_zero_one_vector").append([z, "x.instance.0"])
+    voexec.verifier_computes_latex(
+        Math(t).assign("\\sum_{i\\in\\cI_x}%s"
+                       % UnitVector(Symbol("i")).dumps()))
+    voexec.prover_rust_define_sparse_zero_one_vector(t, "x.instance.0", 3 * C)
+
     voexec.hadamard_query(
-        w.shift(n-Cm),
-        w.shift(n-Cm-C),
-        PowerVector(1, Cm).shift(n-Cm),
-        w.shift(n-Cm-2*C),
+        w.shift(n-Cm, rust_n-Cm),
+        w.shift(n-Cm-C, rust_n-Cm-C),
+        PowerVector(1, Cm).shift(n-Cm, rust_n-Cm),
+        w.shift(n-Cm-2*C, rust_n-Cm-2*C),
     )
     voexec.hadamard_query(
         PowerVector(1, Ca).shift(2*C+Cm),

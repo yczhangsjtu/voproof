@@ -582,7 +582,7 @@ macro_rules! accumulate_vector {
     };
 
     ( $i: ident, $v: expr, $n: expr, $op: tt ) => {
-        accumulate_vector!($i, F::zero(), $v, $n, $op)
+        accumulate_vector!($i, E::Fr::zero(), $v, $n, $op)
     };
 
     ( $v: expr, $init: expr, $op: tt ) => {
@@ -614,9 +614,56 @@ macro_rules! accumulate_vector_plus {
 }
 
 #[macro_export]
+macro_rules! accumulate_vector_mul {
+    ( $i: ident, $init: expr, $v: expr, $n: expr) => {
+        accumulate_vector!($i, $init, $v, $n, *)
+    };
+
+    ( $i: ident, $v: expr, $n: expr) => {
+        accumulate_vector!($i, E::Fr::one(), $v, $n, *)
+    };
+
+    ( $v: expr, $init: expr) => {
+        accumulate_vector!(i, $init, $v[i-1], $v.len(), *)
+    };
+
+    ( $v: expr) => {
+        accumulate_vector!(i, E::Fr::one(), $v[i-1], $v.len(), *)
+    };
+}
+
+#[macro_export]
+macro_rules! define_accumulate_vector_mul {
+    ( $name: ident, $i: ident, $init: expr, $v: expr, $n: expr) => {
+        let $name = accumulate_vector_mul!($i, $init, $v, $n);
+    };
+
+    ( $name: ident, $i: ident, $v: expr, $n: expr) => {
+        let $name = accumulate_vector_mul!($i, $v, $n);
+    };
+
+    ( $name: ident, $v: expr, $init: expr) => {
+        let $name = accumulate_vector_mul!($v, $init);
+    };
+
+    ( $name: ident, $v: expr) => {
+        let $name = accumulate_vector_mul!($v);
+    };
+}
+
+#[macro_export]
 macro_rules! vector_concat {
     ( $u: expr, $( $v: expr ),+ ) => {
         (&$u).iter().map(|a| *a)$(.chain((&$v).iter().map(|a| *a)))+.collect::<Vec<_>>()
+    }
+}
+
+#[macro_export]
+macro_rules! vector_concat_skip {
+    ( $m:expr, $u: expr, $( $v: expr ),+ ) => {
+        (&$u).iter()
+          .skip($m as usize)
+          .map(|a| *a)$(.chain((&$v).iter().map(|a| *a)))+.collect::<Vec<_>>()
     }
 }
 
@@ -743,6 +790,16 @@ macro_rules! define_concat_vector {
         define_vec!(
             $name,
             vector_concat!( $($u),+ )
+        );
+    };
+}
+
+#[macro_export]
+macro_rules! define_concat_vector_skip {
+    ($name:ident, $m:expr, $( $u:expr ),+ ) => {
+        define_vec!(
+            $name,
+            vector_concat_skip!( $m, $($u),+ )
         );
     };
 }
@@ -1064,6 +1121,73 @@ macro_rules! check_expression_vector_eq {
   };
 }
 
+#[macro_export]
+macro_rules! eval_sparse_vector {
+  ($z:expr, $indices:expr, $vals:expr) => {
+    $indices
+      .iter()
+      .zip($vals.iter())
+      .map(|(i, a)| power($z, *i as i64) * *a)
+      .sum::<E::Fr>()
+  };
+}
+
+#[macro_export]
+macro_rules! eval_sparse_zero_one_vector {
+  ($z:expr, $indices:expr) => {
+    $indices.iter().map(|i| power($z, *i as i64)).sum::<E::Fr>()
+  };
+}
+
+#[macro_export]
+macro_rules! define_sparse_vector {
+  ($v:ident, $indices:expr, $vals:expr, $n:expr) => {
+    let $v = {
+      let mut $v = vec![E::Fr::zero(); $n as usize];
+      for (i, a) in $indices.iter().zip($vals.iter()) {
+        $v[*i as usize] = *a;
+      }
+      $v
+    };
+  };
+}
+
+#[macro_export]
+macro_rules! define_sparse_zero_one_vector {
+  ($v:ident, $indices:expr, $n:expr) => {
+    let $v = {
+      let mut $v = vec![E::Fr::zero(); $n as usize];
+      for i in $indices.iter() {
+        $v[*i as usize] = E::Fr::one();
+      }
+      $v
+    };
+  };
+}
+
+#[macro_export]
+macro_rules! define_permutation_vector_from_wires {
+  ($v:ident, $gamma:expr, $index_pairs:expr, $n:expr) => {
+    let $v = {
+      // Initial value is gamma^{-1}, so the vector will start from one
+      let mut $v = accumulate_vector!(_i, $gamma.inverse().unwrap(), $gamma, $n, * );
+      for (i, j) in $index_pairs.iter() {
+        let t = $v[*i as usize];
+        $v[*i as usize] = $v[*j as usize];
+        $v[*j as usize] = t;
+      }
+      $v
+    };
+  }
+}
+
+#[macro_export]
+macro_rules! inverse {
+  ($a:expr) => {
+    $a.inverse().unwrap()
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -1071,6 +1195,7 @@ mod tests {
   use ark_bls12_381::Fr as F;
   use ark_poly::univariate::DensePolynomial as DensePoly;
   use ark_poly_commit::UVPolynomial;
+  use ark_ff::{Field, PrimeField};
   use ark_std::{
     ops::{Add, Mul, Sub},
     One, Zero,
@@ -1252,6 +1377,18 @@ mod tests {
   }
 
   #[test]
+  fn test_vector_concat_skip() {
+    assert_eq!(
+      vector_concat_skip!(2, vec![1, 2, 3u64], vec![4, 5, 6u64]),
+      vec![3, 4, 5, 6u64]
+    );
+    assert_eq!(
+      vector_concat_skip!(1, vec![1, 2, 3u64], vec![4, 5, 6u64], vec![7, 8, 9]),
+      vec![2, 3, 4, 5, 6, 7, 8, 9]
+    );
+  }
+
+  #[test]
   fn test_vector_reverse_omega() {
     let omega = to_field::<F>(2);
     let v = to_field!(vec![1, 2, 3, 1]);
@@ -1378,5 +1515,36 @@ mod tests {
       )),
       vec![1, 2, 3, 0, 0, 4, 5, 6, 7, 8, 9]
     );
+  }
+
+  #[test]
+  fn test_eval_sparse_vector() {
+    assert_eq!(
+      to_int(eval_sparse_vector!(
+        to_field::<F>(2),
+        vec![0, 2, 5],
+        to_field!(vec![1, 2, 3])
+      )),
+      105
+    );
+  }
+
+  #[test]
+  fn test_eval_sparse_zero_one_vector() {
+    assert_eq!(
+      to_int(eval_sparse_zero_one_vector!(
+        to_field::<F>(3),
+        vec![0, 2, 5]
+      )),
+      253
+    );
+  }
+
+  #[test]
+  fn test_define_permutation_vector_from_wires() {
+    let gamma = to_field::<F>(2);
+    let index_pairs = vec![(0,1),(2,3),(3,4)];
+    define_permutation_vector_from_wires!(v, gamma, index_pairs, 5);
+    assert_eq!(to_int!(v), vec![2, 1, 8, 16, 4]);
   }
 }

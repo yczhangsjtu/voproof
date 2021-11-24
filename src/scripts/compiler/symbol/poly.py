@@ -40,6 +40,7 @@ class PolynomialCommitment(object):
     # Must be named polynomial or named vector polynomial
     self.polynomial = polynomial
     self._is_preprocessed = polynomial._is_preprocessed
+    self._rust_to_bytes_replacement = None
 
   def dumps(self):
     if isinstance(self.polynomial, NamedPolynomial):

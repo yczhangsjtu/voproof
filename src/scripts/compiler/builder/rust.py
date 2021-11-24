@@ -1,9 +1,10 @@
 from sympy import Symbol, latex, sympify, Integer, Expr,\
-                  simplify, Max, Add, Mul, Pow, srepr
+    simplify, Max, Add, Mul, Pow, srepr
 from .rust_sympy import rust_code, rust_code_to_field, force_lowercase
 
 
 sym_i = Symbol("i")
+
 
 def keep_alpha_number(s):
   return "".join([c for c in s if c.isalnum()])
@@ -66,7 +67,7 @@ class RustList(object):
     else:
       self.items.append(item)
     return self
-  
+
   def __len__(self):
     return len(self.items)
 
@@ -226,7 +227,8 @@ class RustBuilder(object):
 
   def end_env(self, name, marker):
     if not self.stack[-1] == name:
-      raise Exception("Cannot end %s. Last time is %s" % (name, self.stack[-1]))
+      raise Exception("Cannot end %s. Last time is %s" %
+                      (name, self.stack[-1]))
     self.stack.pop()
     self.append(marker)
     return self
@@ -245,7 +247,7 @@ class RustBuilder(object):
 
   def eol(self):
     return self.append("\n" + " " * 12)
-  
+
   def end(self):
     return self.append(";\n" + " " * 8)
 
@@ -275,20 +277,23 @@ rust_macro_list = [
     ("zero", None, (), ()),
     ("commit_scalar", None, ("c"), ("vk", _ArgName("c"))),
     ("expression_vector_to_vector", "expression_vector_to_vector_i", ("v", "expr"),
-      (_ArgName("v"), sym_i, _ArgName("expr"))),
+     (_ArgName("v"), sym_i, _ArgName("expr"))),
     ("assert_eq", None, ("a", "b"), ()),
+    ("vector_index", None, ("v", "i"), ()),
+    ("inverse", None, ("a"), ()),
     ("eval_vector_as_poly", None, ("v", "z"), ()),
     ("eval_vector_expression", "eval_vector_expression_i", ("z", "expr", "n"),
-      (_ArgName("z"), sym_i, _ArgName("expr"), _ArgName("n"))),
+     (_ArgName("z"), sym_i, _ArgName("expr"), _ArgName("n"))),
     ("define_eval_vector_expression", "define_eval_vector_expression_i",
-      ("name", "z", "expr", "n"),
-      (_ArgName("name"), _ArgName("z"), sym_i, _ArgName("expr"), _ArgName("n"))),
+     ("name", "z", "expr", "n"),
+     (_ArgName("name"), _ArgName("z"), sym_i, _ArgName("expr"), _ArgName("n"))),
     ("vector_concat", None, None, ()),
+    ("vector_concat_skip", None, None, ()),
     ("concat_and_one", None, ("u", "v"), ()),
     ("check_vector_eq", None, ("v", "expr", "info"),
-      (_ArgName("v"), _ArgName("expr"), _ArgProcess(lambda info: '"%s"' % info, "info"))),
+     (_ArgName("v"), _ArgName("expr"), _ArgProcess(lambda info: '"%s"' % info, "info"))),
     ("check_expression_vector_eq", "check_expression_vector_eq_i", ("u", "v", "len", "info"),
-      (sym_i, _ArgName("u"), _ArgName("v"), _ArgName("len"),
+     (sym_i, _ArgName("u"), _ArgName("v"), _ArgName("len"),
         _ArgProcess(lambda info: '"%s"' % info, "info"))),
     ("define_vec_mut", None, ("v", "expr"), ()),
     ("define_vec", None, ("v", "expr"), ()),
@@ -298,49 +303,56 @@ rust_macro_list = [
     ("scalar_to_field", "to_field", ("c"), ()),
     ("vec", None, None, ()),
     ("vec", "vec_size", ("e", "length"),
-      (_ArgProcess(lambda e, length:
-        "%s; (%s) as usize" % (rust(e), rust(length)),
-        "e", "length"), )),
+     (_ArgProcess(lambda e, length:
+                  "%s; (%s) as usize" % (rust(e), rust(length)),
+                  "e", "length"), )),
     ("linear_combination", None, None, ()),
     ("linear_combination_base_zero", None, None, ()),
     ("power_linear_combination", None, None, ()),
     ("sum", None, None, ()),
+    ("to_bytes", None, None, ()),
     ("define_sum", None, None, ()),
     ("expression_vector", "expression_vector_i", ("expr", "length"),
-      (sym_i, _ArgName("expr"), _ArgName("length"))),
+     (sym_i, _ArgName("expr"), _ArgName("length"))),
     ("add_vector_to_vector", None, ("u", "v"), ()),
     ("add_expression_vector_to_vector", "add_expression_vector_to_vector_i", ("v", "expr"),
-      (_ArgName("v"), sym_i, _ArgName("expr"))),
+     (_ArgName("v"), sym_i, _ArgName("expr"))),
     ("check_poly_eval", None, ("poly", "point", "value", "info"),
-      (_ArgName("poly"), _ArgName("point"), _ArgName("value"),
-       _ArgProcess(lambda info: '"%s"' % info, "info"))),
+     (_ArgName("poly"), _ArgName("point"), _ArgName("value"),
+      _ArgProcess(lambda info: '"%s"' % info, "info"))),
     ("fmt_ff_vector", None, ("v"), ()),
     ("define_generator", None, (), ("gamma", "E")),
-    ("init_size", None, ("name", "attr"), (_ArgName("name"), _ArgName("attr"), "size")),
+    ("init_size", None, ("name", "attr"),
+     (_ArgName("name"), _ArgName("attr"), "size")),
     ("sample_randomizers", None, (), ("rng", )),
     ("concat_matrix_vertically", None,
-      ("result", "h", "arows", "brows", "crows",
-        "acols", "bcols", "cols", "avals", "bvals", "cvals"), ()),
+     ("result", "h", "arows", "brows", "crows",
+      "acols", "bcols", "cols", "avals", "bvals", "cvals"), ()),
     ("concat_matrix_horizontally", None,
-      ("result", "k", "arows", "brows", "crows",
-        "acols", "bcols", "cols", "avals", "bvals", "cvals", "drows", "dvals"), ()),
+     ("result", "k", "arows", "brows", "crows",
+      "acols", "bcols", "cols", "avals", "bvals", "cvals", "drows", "dvals"), ()),
     ("int_array_to_power_vector", None, ("v", "gamma"), ()),
     ("define_int_array_to_power_vector", None, ("name", "v", "gamma"), ()),
     ("define_clone_vector", None, ("name", "v"), ()),
     ("define_hadamard_vector", None, ("name", "u", "v"), ()),
     ("define_matrix_vectors", None, ("u", "w", "v", "M", "gamma"), ()),
     ("define_commit_vector", None, ("cm", "v", "deg"),
-      (_ArgName("cm"), _ArgName("v"), "powers_of_g", _ArgName("deg"))),
+     (_ArgName("cm"), _ArgName("v"), "powers_of_g", _ArgName("deg"))),
     ("define_commit_vector", "define_commit_vector_with_pk", ("cm", "v", "deg"),
-      (_ArgName("cm"), _ArgName("v"), "pk.powers", _ArgName("deg"))),
+     (_ArgName("cm"), _ArgName("v"), "pk.powers", _ArgName("deg"))),
     ("commit_vector", None, ("v", "deg"),
-      (_ArgName("v"), "powers_of_g", _ArgName("deg"))),
+     (_ArgName("v"), "powers_of_g", _ArgName("deg"))),
     ("commit_vector", "commit_vector_with_pk", ("v", "deg"),
-      (_ArgName("v"), "pk.powers", _ArgName("deg"))),
+     (_ArgName("v"), "pk.powers", _ArgName("deg"))),
     ("define_sparse_mvp_vector", None, ("name", "M", "v", "H", "K"), ()),
     ("define_sparse_mvp_concat_vector", None, ("name", "M", "v", "H", "K"), ()),
     ("define_left_sparse_mvp_vector", None, ("name", "M", "v", "H", "K"), ()),
     ("define_concat_vector", None, None, ()),
+    ("define_concat_vector_skip", None, None, ()),
+    ("define_sparse_vector", None, ("v", "indices", "vals", "n"), ()),
+    ("define_sparse_zero_one_vector", None, ("v", "indices", "n"), ()),
+    ("define_permutation_vector_from_wires", None, ("v", "index_pairs", "n"),
+        (_ArgName("v"), "gamma", _ArgName("index_pairs"), _ArgName("n"))),
     ("sparse_mvp_vector", None, ("M", "v", "H", "K"), ()),
     ("zero_pad", None, ("v", "n"), ()),
     ("define_zero_pad_concat_vector", None, None, ()),
@@ -348,22 +360,28 @@ rust_macro_list = [
     ("define_poly_from_vec", None, ("poly", "v"), ()),
     ("get_randomness_from_hash", None, None, ()),
     ("define_expression_vector", "define_expression_vector_i", ("name", "expr", "n"),
-      (_ArgName("name"), sym_i, _ArgName("expr"), _ArgName("n"))),
+     (_ArgName("name"), sym_i, _ArgName("expr"), _ArgName("n"))),
     ("define_expression_vector_inverse", "define_expression_vector_inverse_i",
-      ("name", "expr", "n"), (_ArgName("name"), sym_i, _ArgName("expr"), _ArgName("n"))),
+     ("name", "expr", "n"), (_ArgName("name"), sym_i, _ArgName("expr"), _ArgName("n"))),
     ("minus", None, ("u", "v"), ()),
     ("minus_i64", None, ("u", "v"), ()),
     ("minus_plus_one", None, ("u", "v"), ()),
     ("neg", None, ("u"), ()),
     ("mul", None, ("u", "v"), ()),
     ("define_concat_neg_vector", None, ("name", "u", "v"), ()),
-    ("define_concat_uwinverse_vector", None, ("name", "v", "mu", "u", "nu", "w"), ()),
+    ("define_concat_uwinverse_vector", None,
+     ("name", "v", "mu", "u", "nu", "w"), ()),
     ("accumulate_vector_plus", None, ("v"), ()),
+    ("accumulate_vector_mul", None, ("v"), ()),
+    ("define_accumulate_vector_mul", None, ("name", "v", "n"), (
+        _ArgName("name"), sym_i, _ArgName("v"), _ArgName("n"))),
     ("vector_poly_mul", None, ("u", "v", "omega"), ()),
     ("define_vector_poly_mul", None, ("name", "u", "v", "omega"), ()),
     ("define_shift_minus_one", None, ("name", "vec"), ()),
-    ("define_vector_poly_mul_shift", None, ("name", "u", "v", "omega", "shiftname"), ()),
-    ("define_vector_reverse_omega_shift", None, ("name", "v", "omega", "shiftname"), ()),
+    ("define_vector_poly_mul_shift", None,
+     ("name", "u", "v", "omega", "shiftname"), ()),
+    ("define_vector_reverse_omega_shift", None,
+     ("name", "v", "omega", "shiftname"), ()),
     ("define_vector_power_mul", None, ("name", "v", "alpha", "n"), ()),
     ("define_power_power_mul", None, ("name", "alpha", "n", "beta", "m"), ()),
     ("define_commitment_linear_combination", None, None, ()),
@@ -379,7 +397,7 @@ def _rust_macro(name, argnames, outargs, *args):
 
   if len(args) != len(argnames):
     raise Exception("Macro %s Expect %d arguments (%s), got %d" %
-        (name, len(argnames), ",".join(argnames), len(args)))
+                    (name, len(argnames), ",".join(argnames), len(args)))
 
   if len(outargs) == 0:
     return RustMacro(name, *args)
@@ -409,25 +427,25 @@ for macro_name, funcname, argnames, outargs in rust_macro_list:
       current_module,
       "rust_%s" % funcname,
       (lambda macro_name, argnames, outargs:
-        lambda *args:
+       lambda *args:
           _rust_macro(macro_name, argnames, outargs, *args))(
-        macro_name, argnames, outargs
+          macro_name, argnames, outargs
       ))
   setattr(
       current_module,
       "rust_builder_%s" % funcname,
       (lambda macro_name, argnames, outargs:
-        lambda *args:
+       lambda *args:
           _rust_builder_macro(macro_name, argnames, outargs, *args))(
-        macro_name, argnames, outargs
+          macro_name, argnames, outargs
       ))
   setattr(
       current_module,
       "rust_line_%s" % funcname,
       (lambda macro_name, argnames, outargs:
-        lambda *args:
+       lambda *args:
           _rust_builder_macro(macro_name, argnames, outargs, *args).end())(
-        macro_name, argnames, outargs
+          macro_name, argnames, outargs
       ))
 
 

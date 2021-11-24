@@ -185,12 +185,13 @@ def analyzeHPR():
   H, K, Sa, Sb, Sc, Sd = set_hpr_parameters()
 
   hints = [(Sa, H + 1), (Sa, K + 1), (Sb, H + 1), (Sb, K + 1),
-      (Sc, H + 1), (Sc, K + 1), (H, Sd)]
+           (Sc, H + 1), (Sc, K + 1), (H, Sd)]
   size_map = [(H, "nrows"), (K, "ncols"), (Sa, "adensity"), (Sb, "bdensity"),
-      (Sc, "cdensity"), (Sd, "ddensity")]
+              (Sc, "cdensity"), (Sd, "ddensity")]
   x = get_named_vector("x")
   x.local_evaluate = True
-  x.hint_computation = lambda z: RustMacro("eval_vector_as_poly").append([x, z])
+  x.hint_computation = lambda z: RustMacro(
+      "eval_vector_as_poly").append([x, z])
   ppargs = (H, K, Sa, Sb, Sc, Sd)
   execargs = (x, get_named_vector("w"), get_named_vector(
       "w"), get_named_vector("w"))
@@ -225,11 +226,16 @@ def analyzePOV():
   C, Ca, Cm, Cc = set_pov_parameters()
 
   hints = [(C, Ca + Cm + 1), (C, 1), (Ca, 1), (Cm, 1)]
-  size_map = [(C, "nconsts + size.nadd + size.nmul"),
-              (Ca, "nadd"), (Cm, "nmul"), (Cc, "nconsts")]
+  size_map = [(Ca, "nadd"), (Cm, "nmul"), (Cc, "nconsts"),
+              (C, "nconsts + size.nadd + size.nmul")]
   x = get_named_vector("x")
   x.local_evaluate = True
-  ppargs = (get_named_vector("d"), C - Ca - Cm, Ca, Cm)
+  x.hint_computation = lambda z: RustMacro(
+      "eval_sparse_vector").append([z, "x.instance.0", "x.instance.1"])
+  x._rust_to_bytes_replacement = "x.instance.0, x.instance.1"
+  d = get_named_vector("d")
+  d._is_preprocessed = True
+  ppargs = (d, C - Ca - Cm, Ca, Cm)
   execargs = (x, get_named_vector("a"),
               get_named_vector("b"), get_named_vector("c"))
   analyzeProtocol(POV(), ppargs, execargs, hints, size_map, set_pov_parameters,
@@ -266,6 +272,5 @@ if __name__ == '__main__':
   # analyzeHPRProverEfficient()
   # analyzePOVProverEfficient()
   # analyzeR1CS()
-  analyzeHPR()
-  # analyzePOV()
-
+  # analyzeHPR()
+  analyzePOV()

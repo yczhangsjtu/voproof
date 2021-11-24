@@ -247,11 +247,11 @@ class R1CS(VOProtocol):
 
   def preprocess(self, voexec, H, K, sa, sb, sc):
     M = Matrix("M")
-    voexec.preprocess_rust(rust_line_init_size(H, "nrows"))
-    # voexec.preprocess_rust(rust_line_init_size(K, "ncols"))
-    voexec.preprocess_rust(rust_line_init_size(sa, "adensity"))
-    voexec.preprocess_rust(rust_line_init_size(sb, "bdensity"))
-    voexec.preprocess_rust(rust_line_init_size(sc, "cdensity"))
+    voexec.pp_rust_init_size(H, "nrows")
+    # voexec.pp_rust_init_size(K, "ncols")
+    voexec.pp_rust_init_size(sa, "adensity")
+    voexec.pp_rust_init_size(sb, "bdensity")
+    voexec.pp_rust_init_size(sc, "cdensity")
 
     voexec.preprocess_rust(
         rust_line_concat_matrix_vertically(M, H,

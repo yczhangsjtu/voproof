@@ -1,7 +1,7 @@
 from .pc_protocol import PublicCoinProtocolExecution
 from .symbol.util import simplify_max_with_hints
-from .symbol.vector import NamedVector, VectorCombination
-from .builder.latex import tex, Itemize, add_paren_if_add
+from .symbol.vector import NamedVector, VectorCombination, get_named_vector
+from .builder.latex import tex, Itemize, add_paren_if_add, Math
 from .builder.rust import *
 from sympy import Integer, Max
 from sympy.abc import X
@@ -281,7 +281,7 @@ class VOProtocol(object):
             isinstance(arg, SparseVector) or isinstance(arg, UnitVector) or \
             isinstance(arg, StructuredVector):
       ret = get_named_vector(default_name)
-      voexec.prover_computes(Math(ret).assign(arg))
+      voexec.prover_computes_latex(Math(ret).assign(arg))
       return ret
 
     raise Exception("Invalid argument type %s" % type(arg))

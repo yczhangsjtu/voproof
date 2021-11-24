@@ -87,6 +87,13 @@ def rust_vk(item):
   return rust(item)
 
 
+def rust_to_bytes_replacement(item):
+  if hasattr(item, "_rust_to_bytes_replacement") and \
+          item._rust_to_bytes_replacement is not None:
+    return item._rust_to_bytes_replacement
+  return item
+
+
 def rust_pk(item):
   if hasattr(item, "_is_preprocessed") and item._is_preprocessed:
     return "pk.%s" % rust(item)

@@ -1,6 +1,7 @@
 from .symbol.names import get_name
 from .symbol.poly import NamedVectorPolynomial
-from .symbol.util import rust_pk_vk, rust_vk, get_rust_type
+from .symbol.util import rust_pk_vk, rust_vk, get_rust_type, \
+    rust_to_bytes_replacement
 from .builder.latex import tex, LaTeXBuilder, Math, Enumerate, Itemize
 from .builder.rust import *
 from .piop import ProverSendPolynomials
@@ -250,9 +251,11 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
           Math(r).assign("\\mathsf{H}_{%d}(%s)"
                          % (i+1, ",".join([tex(x) for x in self.transcript]))))
       self.prover_rust_get_randomness_from_hash(
-          r, to_field(i+1), *[rust_pk_vk(x) for x in self.transcript])
+          r, to_field(i+1), *[
+            rust_pk_vk(rust_to_bytes_replacement(x)) for x in self.transcript])
       self.verifier_rust_get_randomness_from_hash(
-          r, to_field(i+1), *[rust_vk(x) for x in self.transcript])
+          r, to_field(i+1), *[
+            rust_vk(rust_to_bytes_replacement(x)) for x in self.transcript])
 
   def _process_prover_send_polynomials(self, polynomials):
     for poly, degree, rust_degree in polynomials:
@@ -377,9 +380,11 @@ class ZKSNARKFromPIOPExecKZG(ZKSNARK):
 
     compute_rand_xi = RustBuilder()
     compute_rand_xi.append(rust_line_get_randomness_from_hash(
-        "rand_xi", to_field(1), *[rust_vk(x) for x in self.transcript]))
+        "rand_xi", to_field(1),
+        *[rust_vk(rust_to_bytes_replacement(x)) for x in self.transcript]))
     compute_rand_xi.append(rust_line_get_randomness_from_hash(
-        "rand_xi_2", to_field(2), *[rust_vk(x) for x in self.transcript]))
+        "rand_xi_2", to_field(2),
+        *[rust_vk(rust_to_bytes_replacement(x)) for x in self.transcript]))
 
     self.prover_computes(open_computation, open_computation_rust)
     self.prover_computes_rust(compute_rand_xi)
