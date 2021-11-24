@@ -10,7 +10,7 @@ use ark_relations::{
 use ark_std::test_rng;
 use voproof::cs::{
   r1cs::{R1CSInstance, R1CSWitness, R1CS},
-  hpr::{HPRInstance, HPRWitness, HPR, generate_random_hpr_instance},
+  hpr::{generate_random_hpr_instance},
   ConstraintSystem,
 };
 use voproof::error::Error;
@@ -163,6 +163,12 @@ fn run_hpr_example<E: PairingEngine>(scale: usize) -> Result<(), Error> {
 
 fn main() {
   if let Err(err) = run_hpr_example::<ark_bls12_381::Bls12_381>(5) {
+    println!("{}", err);
+  } else {
+    println!("Verification pass");
+  }
+
+  if let Err(err) = run_r1cs_example::<ark_bls12_381::Bls12_381>() {
     println!("{}", err);
   } else {
     println!("Verification pass");
