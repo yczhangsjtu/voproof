@@ -2,6 +2,7 @@
 extern crate test;
 use test::Bencher;
 
+use ark_bls12_381::Bls12_381 as E;
 use ark_ec::PairingEngine;
 use ark_ff::fields::PrimeField;
 use ark_relations::{
@@ -15,7 +16,6 @@ use voproof::cs::{
   r1cs::{R1CSInstance, R1CSWitness, R1CS},
   ConstraintSystem,
 };
-use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_r1cs::*, SNARK};
 use voproof::tools::{to_field, to_int};
@@ -104,31 +104,29 @@ fn computes_r1cs<E: PairingEngine>(
 #[bench]
 #[ignore]
 fn bench_setup_test_circuit_scale_1000(b: &mut Bencher) {
-  let max_degree = computes_max_degree::<ark_bls12_381::Bls12_381>(1000) + 10;
+  let max_degree = computes_max_degree::<E>(1000) + 10;
   // Let the universal parameters take a larger size than expected
   b.iter(|| {
-    let _: UniversalParams<ark_bls12_381::Bls12_381> = VOProofR1CS::setup(max_degree).unwrap();
+    let _: UniversalParams<E> = VOProofR1CS::setup(max_degree).unwrap();
   });
 }
 
 #[bench]
 #[ignore]
 fn bench_setup_test_circuit_scale_2000(b: &mut Bencher) {
-  let max_degree = computes_max_degree::<ark_bls12_381::Bls12_381>(2000) + 10;
-  // Let the universal parameters take a larger size than expected
+  let max_degree = computes_max_degree::<E>(2000) + 10;
   b.iter(|| {
-    let _: UniversalParams<ark_bls12_381::Bls12_381> = VOProofR1CS::setup(max_degree).unwrap();
+    let _: UniversalParams<E> = VOProofR1CS::setup(max_degree).unwrap();
   });
 }
 
 #[bench]
 fn bench_indexer_test_circuit_scale_1000(b: &mut Bencher) {
-  let (r1cs, _, _) = computes_r1cs::<ark_bls12_381::Bls12_381>(1000);
+  let (r1cs, _, _) = computes_r1cs::<E>(1000);
 
   let max_degree = VOProofR1CS::get_max_degree(r1cs.get_size());
-  let universal_params: UniversalParams<ark_bls12_381::Bls12_381> =
+  let universal_params: UniversalParams<E> =
     VOProofR1CS::setup(max_degree).unwrap();
-  // Let the universal parameters take a larger size than expected
   b.iter(|| {
     VOProofR1CS::index(&universal_params, &r1cs).unwrap();
   });
@@ -136,13 +134,12 @@ fn bench_indexer_test_circuit_scale_1000(b: &mut Bencher) {
 
 #[bench]
 fn bench_prover_test_circuit_scale_1000(b: &mut Bencher) {
-  let (r1cs, instance, witness) = computes_r1cs::<ark_bls12_381::Bls12_381>(1000);
+  let (r1cs, instance, witness) = computes_r1cs::<E>(1000);
 
   let max_degree = VOProofR1CS::get_max_degree(r1cs.get_size());
-  let universal_params: UniversalParams<ark_bls12_381::Bls12_381> =
+  let universal_params: UniversalParams<E> =
     VOProofR1CS::setup(max_degree).unwrap();
   let (pk, vk) = VOProofR1CS::index(&universal_params, &r1cs).unwrap();
-  // Let the universal parameters take a larger size than expected
   b.iter(|| {
     VOProofR1CS::prove(&pk, &instance, &witness).unwrap();
   });
@@ -150,14 +147,13 @@ fn bench_prover_test_circuit_scale_1000(b: &mut Bencher) {
 
 #[bench]
 fn bench_verifier_test_circuit_scale_1000(b: &mut Bencher) {
-  let (r1cs, instance, witness) = computes_r1cs::<ark_bls12_381::Bls12_381>(1000);
+  let (r1cs, instance, witness) = computes_r1cs::<E>(1000);
 
   let max_degree = VOProofR1CS::get_max_degree(r1cs.get_size());
-  let universal_params: UniversalParams<ark_bls12_381::Bls12_381> =
+  let universal_params: UniversalParams<E> =
     VOProofR1CS::setup(max_degree).unwrap();
   let (pk, vk) = VOProofR1CS::index(&universal_params, &r1cs).unwrap();
   let proof = VOProofR1CS::prove(&pk, &instance, &witness).unwrap();
-  // Let the universal parameters take a larger size than expected
   b.iter(|| {
     VOProofR1CS::verify(&vk, &instance, &proof);
   });
