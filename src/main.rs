@@ -7,14 +7,16 @@ use ark_relations::{
     Variable,
   },
 };
+use ark_std::test_rng;
 use voproof::cs::{
   r1cs::{R1CSInstance, R1CSWitness, R1CS},
+  hpr::{HPRInstance, HPRWitness, HPR, generate_random_hpr_instance},
   ConstraintSystem,
 };
 use voproof::error::Error;
 use voproof::kzg::UniversalParams;
-use voproof::snarks::{voproof_r1cs::*, SNARK};
-use voproof::tools::{to_field, to_int};
+use voproof::snarks::{voproof_r1cs::*, voproof_hpr::*, SNARK};
+use voproof::tools::{to_field, to_int, try_to_int};
 use voproof::*;
 // use voproof::kzg::{KZG10, UniversalParams, Powers, VerifierKey, Randomness};
 
@@ -122,8 +124,45 @@ fn run_r1cs_example<E: PairingEngine>() -> Result<(), Error> {
   VOProofR1CS::verify(&vk, &instance, &proof)
 }
 
+fn run_hpr_example<E: PairingEngine>(scale: usize) -> Result<(), Error> {
+  let rng = &mut test_rng();
+  let (hpr, instance, witness) =
+    generate_random_hpr_instance(scale as u64, scale as u64, scale as u64 / 5, rng);
+
+  if hpr.satisfy(&instance, &witness) {
+    println!("HPR satisfied!");
+  } else {
+    println!("HPR unsatisfied!");
+  }
+
+  let max_degree = VOProofHPR::get_max_degree(hpr.get_size());
+  // Let the universal parameters take a larger size than expected
+  let universal_params: UniversalParams<E> = VOProofHPR::setup(max_degree + 10).unwrap();
+  println!(
+    "Universal parameter size: {}",
+    universal_params.powers_of_g.len()
+  );
+  let (pk, vk) = VOProofHPR::index(&universal_params, &hpr).unwrap();
+  println!("Degree bound: {}", vk.degree_bound);
+  println!("Max degree: {}", pk.max_degree);
+  println!("Prover key matrix size: {}", pk.cap_m_mat.0.len());
+  println!("Prover key u size: {}", pk.u_vec.len());
+  println!("Prover key v size: {}", pk.v_vec.len());
+  println!("Prover key w size: {}", pk.w_vec.len());
+
+  println!("M A row indices: {:?}", pk.cap_m_mat.0);
+  println!("M A col indices: {:?}", pk.cap_m_mat.1);
+  println!("M A vals: {}", fmt_ff_vector!(pk.cap_m_mat.2));
+  let vksize = vk.size.clone();
+  println!("H: {}", vksize.nrows);
+  println!("K: {}", vksize.ncols);
+
+  let proof = VOProofHPR::prove(&pk, &instance, &witness)?;
+  VOProofHPR::verify(&vk, &instance, &proof)
+}
+
 fn main() {
-  if let Err(err) = run_r1cs_example::<ark_bls12_381::Bls12_381>() {
+  if let Err(err) = run_hpr_example::<ark_bls12_381::Bls12_381>(5) {
     println!("{}", err);
   } else {
     println!("Verification pass");

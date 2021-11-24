@@ -374,7 +374,8 @@ macro_rules! concat_matrix_horizontally {
         .map(|a| *a)
         .collect::<Vec<u64>>(),
       $acols
-        .iter().map(|&i| i + 1)
+        .iter()
+        .map(|&i| i + 1)
         .chain($bcols.iter().map(|&i| i + $k as u64 + 1))
         .chain($ccols.iter().map(|&i| i + $k as u64 * 2 + 1))
         .chain((0..$dvals.len()).map(|_| 0))
@@ -804,7 +805,7 @@ macro_rules! define_poly_from_vec {
 #[macro_export]
 macro_rules! sparse_mvp_vector {
   ($mat:expr, $v:expr, $h:expr, $k:expr) => {
-    sparse_mvp($h, $k, &$mat.0, &$mat.1, &$mat.2, &$v).unwrap()
+    sparse_mvp($h as i64, $k as i64, &$mat.0, &$mat.1, &$mat.2, &$v).unwrap()
   };
 }
 

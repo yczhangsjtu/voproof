@@ -10,6 +10,7 @@ from compiler.symbol.names import reset_name_counters, get_name
 from compiler.builder.rust import RustBuilder, rust, RustMacro
 from smvp_protocols import R1CS, R1CSProverEfficient, HPR, HPRProverEfficient
 from pov_protocols import POV, POVProverEfficient
+import sys
 
 ell = Symbol("ell", positive=True)
 m = Symbol("m", positive=True)
@@ -259,6 +260,8 @@ def debug(info=""):
 
 
 if __name__ == '__main__':
+  if "debug" in sys.argv:
+    debug_mode = True
   # analyzeR1CSProverEfficient()
   # analyzeHPRProverEfficient()
   # analyzePOVProverEfficient()
