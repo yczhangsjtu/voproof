@@ -11,7 +11,7 @@ pub struct FanInTwoCircuit<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> {
   variables: Vec<Variable<F>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AddGate {
   left: VariableRef,
   right: VariableRef,
@@ -44,45 +44,82 @@ pub enum GateRef {
   Const(usize),
 }
 
-#[derive(Clone)]
+impl GateRef {
+  pub fn get_index(&self) -> usize {
+    match self {
+      Self::Add(index) => index.clone(),
+      Self::Mul(index) => index.clone(),
+      Self::Const(index) => index.clone(),
+    }
+  }
+}
+
+#[derive(Clone, Debug)]
 pub enum InputWireType {
   Left,
   Right,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum WireType {
   Input(InputWireType),
   Output,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum InputGateWire {
   Add(usize, InputWireType),
   Mul(usize, InputWireType),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum OutputGateWire {
   Add(usize),
   Mul(usize),
   Const(usize),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum GateWire {
   Input(InputGateWire),
   Output(OutputGateWire),
 }
 
-#[derive(Clone)]
+impl GateWire {
+  pub fn get_gate(&self) -> GateRef {
+    match self {
+      Self::Input(wire) => match wire {
+        InputGateWire::Add(index, _) => GateRef::Add(index.clone()),
+        InputGateWire::Mul(index, _) => GateRef::Mul(index.clone()),
+      },
+      Self::Output(wire) => match wire {
+        OutputGateWire::Add(index) => GateRef::Add(index.clone()),
+        OutputGateWire::Mul(index) => GateRef::Mul(index.clone()),
+        OutputGateWire::Const(index) => GateRef::Const(index.clone()),
+      },
+    }
+  }
+}
+
+impl From<InputGateWire> for GateWire {
+  fn from(wire: InputGateWire) -> Self {
+    GateWire::Input(wire)
+  }
+}
+
+impl From<OutputGateWire> for GateWire {
+  fn from(wire: OutputGateWire) -> Self {
+    GateWire::Output(wire)
+  }
+}
+
 pub struct Variable<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> {
   input_wires: Vec<InputGateWire>,
   output_wire: Option<OutputGateWire>,
   value: Option<F>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct VariableRef {
   index: usize,
 }
@@ -284,8 +321,28 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> FanInTwoCircuit<F> {
     }
   }
 
+  pub fn assert_io_size(&self, input_size: usize) -> Result<(), Error> {
+    let expected = self.get_io_size()?;
+    if expected != input_size {
+      Err(Error::InputSizeNotSupported(expected, input_size))
+    } else {
+      Ok(())
+    }
+  }
+
   pub fn mark_wire_as_public(&mut self, gate_wire: &GateWire) {
     self.public_io_wires.push(gate_wire.clone());
+  }
+
+  pub fn mark_variable_as_public(&mut self, var: &VariableRef) -> Result<(), Error> {
+    // If this variable is an output, then mark the corresponding output wire
+    if self.get_var(var).is_gate_output() {
+      self.mark_wire_as_public(&self.get_var(var).try_get_output_wire().unwrap().into());
+    } else {
+      // Otherwise, find arbitrary input wire this variable is assigned to
+      self.mark_wire_as_public(&self.get_var(var).try_get_input_wire().unwrap().into());
+    }
+    Ok(())
   }
 
   pub fn assign_global_inputs(&mut self, input: &Vec<F>) -> Result<(), Error> {
@@ -295,6 +352,40 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> FanInTwoCircuit<F> {
       .zip(self.variables.iter_mut().take(input.len()))
     {
       var.assign(&a);
+    }
+    Ok(())
+  }
+
+  pub fn get_var_from_wire(&self, wire: &GateWire) -> VariableRef {
+    match wire {
+      GateWire::Input(InputGateWire::Add(index, InputWireType::Left)) => {
+        self.add_gates[index.clone()].left.clone()
+      }
+      GateWire::Input(InputGateWire::Add(index, InputWireType::Right)) => {
+        self.add_gates[index.clone()].right.clone()
+      }
+      GateWire::Input(InputGateWire::Mul(index, InputWireType::Left)) => {
+        self.mul_gates[index.clone()].left.clone()
+      }
+      GateWire::Input(InputGateWire::Mul(index, InputWireType::Right)) => {
+        self.mul_gates[index.clone()].right.clone()
+      }
+      GateWire::Output(OutputGateWire::Add(index)) => self.add_gates[index.clone()].output.clone(),
+      GateWire::Output(OutputGateWire::Mul(index)) => self.mul_gates[index.clone()].output.clone(),
+      GateWire::Output(OutputGateWire::Const(index)) => {
+        self.const_gates[index.clone()].output.clone()
+      }
+    }
+  }
+
+  pub fn assign_public_io(&mut self, input: &Vec<F>) -> Result<(), Error> {
+    self.assert_io_size(input.len())?;
+    for (a, wire) in input.iter().zip(self.public_io_wires.clone().iter()) {
+      println!("{:?}", wire);
+      println!("{:?}", &self.get_var_from_wire(wire));
+      self
+        .get_var_mut(&self.get_var_from_wire(wire))
+        .assign_no_overwrite(a)?;
     }
     Ok(())
   }
@@ -320,6 +411,11 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> FanInTwoCircuit<F> {
     Ok(self.num_global_input_variables)
   }
 
+  pub fn get_io_size(&self) -> Result<usize, Error> {
+    self.assert_complete()?;
+    Ok(self.public_io_wires.len())
+  }
+
   pub fn get_output(&self) -> Result<Vec<F>, Error> {
     self
       .global_output_variables
@@ -330,6 +426,21 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> FanInTwoCircuit<F> {
 
   pub fn get_output_size(&self) -> usize {
     self.global_output_variables.len()
+  }
+
+  pub fn get_instance(&self) -> Result<(Vec<u64>, Vec<F>), Error> {
+    Ok((
+      self
+        .public_io_wires
+        .iter()
+        .map(|wire| wire.get_gate().get_index() as u64)
+        .collect(),
+      self
+        .public_io_wires
+        .iter()
+        .map(|wire| -> Result<F, Error> { self.get_var_value(&self.get_var_from_wire(wire)) })
+        .collect::<Result<Vec<F>, Error>>()?,
+    ))
   }
 }
 
@@ -346,6 +457,15 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> Variable<F> {
     self.value = Some(v.clone());
   }
 
+  pub fn assign_no_overwrite(&mut self, v: &F) -> Result<(), Error> {
+    if self.value.is_none() {
+      Err(Error::VariableAlreadySet)
+    } else {
+      self.value = Some(v.clone());
+      Ok(())
+    }
+  }
+
   pub fn try_get_value(&self) -> Option<F> {
     self.value.clone()
   }
@@ -358,13 +478,25 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> Variable<F> {
     }
   }
 
+  pub fn try_get_output_wire(&self) -> Option<OutputGateWire> {
+    self.output_wire.clone()
+  }
+
+  pub fn try_get_input_wire(&self) -> Option<InputGateWire> {
+    if self.input_wires.is_empty() {
+      None
+    } else {
+      Some(self.input_wires[0].clone())
+    }
+  }
+
   pub fn add_add_gate(&mut self, index: usize, wire_type: WireType) -> Result<(), Error> {
     match wire_type {
       WireType::Input(input_wire_type) => self
         .input_wires
         .push(InputGateWire::Add(index, input_wire_type)),
       WireType::Output => {
-        self.assert_not_set()?;
+        self.assert_not_output()?;
         self.output_wire = Some(OutputGateWire::Add(index));
       }
     };
@@ -377,7 +509,7 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> Variable<F> {
         .input_wires
         .push(InputGateWire::Mul(index, input_wire_type)),
       WireType::Output => {
-        self.assert_not_set()?;
+        self.assert_not_output()?;
         self.output_wire = Some(OutputGateWire::Mul(index));
       }
     }
@@ -385,7 +517,7 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> Variable<F> {
   }
 
   pub fn add_const_gate(&mut self, index: usize) -> Result<(), Error> {
-    self.assert_not_set()?;
+    self.assert_not_output()?;
     self.output_wire = Some(OutputGateWire::Const(index));
     Ok(())
   }
@@ -398,9 +530,9 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> Variable<F> {
     self.output_wire.is_some()
   }
 
-  pub fn assert_not_set(&self) -> Result<(), Error> {
+  pub fn assert_not_output(&self) -> Result<(), Error> {
     if self.is_gate_output() {
-      Err(Error::VariableAlreadySet)
+      Err(Error::VariableAlreadySetAsOutput)
     } else {
       Ok(())
     }
@@ -481,5 +613,22 @@ mod tests {
     assert_eq!(circ.get_var(&p).try_get_value().unwrap(), 720);
     assert_eq!(circ.get_var_value(&p).unwrap(), 720);
     assert_eq!(circ.get_output().unwrap(), vec![720]);
+  }
+
+  #[test]
+  fn test_get_instance() {
+    let mut circ = FanInTwoCircuit::<i32>::new();
+    let a = circ.add_global_input_variable().unwrap();
+    let b = circ.add_global_input_variable().unwrap();
+    let c = circ.add_global_input_variable().unwrap();
+    let d = circ.add_vars(&a, &b);
+    let e = circ.mul_vars(&b, &c);
+    let f = circ.mul_vars(&d, &e);
+    let g = circ.add_vars(&a, &d);
+    let h = circ.mul_vars(&g, &f);
+    circ.mark_as_complete().unwrap();
+    circ.mark_variable_as_public(&a);
+    circ.assign_public_io(&vec![1]);
+    assert_eq!(circ.get_instance().unwrap(), (vec![0], vec![1]));
   }
 }

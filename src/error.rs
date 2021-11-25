@@ -182,6 +182,7 @@ pub enum Error {
   CircuitNotComplete,
   CircuitHasNoGlobalInput,
   GatesAreNotEmpty,
+  VariableAlreadySetAsOutput,
   VariableAlreadySet,
   InputSizeNotSupported(usize, usize),
 }
@@ -281,7 +282,8 @@ impl core::fmt::Display for Error {
             Error::AllVariablesAreInputs => write!(f, "AllVariablesAreInputs: there are probably circular dependence between variables"),
             Error::CircuitNotComplete => write!(f, "CircuitNotComplete"),
             Error::CircuitHasNoGlobalInput => write!(f, "CircuitHasNotGlobalInput"),
-            Error::GatesAreNotEmpty => write!(f, "GatesAreNotEmpty"),
+            Error::GatesAreNotEmpty => write!(f, "GatesAreNotEmpty: you should not add any gate before finishing adding all the global inputs"),
+            Error::VariableAlreadySetAsOutput => write!(f, "VariableAlreadySetAsOutput"),
             Error::VariableAlreadySet => write!(f, "VariableAlreadySet"),
             Error::InputSizeNotSupported(expected, real) => write!(f, "InputSizeNotSupported, expected {}, got {}", expected, real),
         }
