@@ -242,8 +242,8 @@ class POV(VOProtocol):
 
     w = get_named_vector("w")
     voexec.prover_computes_latex(
-        Math(w).assign(a.slice(Cc+1, C)).double_bar(b)
-        .double_bar(c))
+        Math(w).assign(a).double_bar(b)
+        .double_bar(c).slice(1, C-Cc))
     voexec.prover_rust_define_concat_vector_skip(w, Cc, a, b, c)
     voexec.prover_submit_vector(w, 3 * C - Cc)
 
@@ -264,14 +264,10 @@ class POV(VOProtocol):
     )
     voexec.hadamard_query(
         PowerVector(1, Ca).shift(2*C+Cm),
-        w.shift(C*2) + w.shift(C) - w,
+        w.shift(C*2) + w.shift(C) - w
     )
-    voexec.hadamard_query(t, w.shift(Cc) - x)
-    voexec.hadamard_query(
-        PowerVector(1, Cc).shift(C+Ca+Cm),
-        w - d.shift(C+Ca+Cm),
-    )
-    voexec.run_subprotocol(CopyCheck(), w.shift(Cc))
+    voexec.hadamard_query(t, w - x)
+    voexec.run_subprotocol(CopyCheck(), w + d.shift(3*C-Cc))
 
 
 class POVProverEfficient(VOProtocol):

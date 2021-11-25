@@ -175,6 +175,15 @@ pub enum Error {
   GZNotZero(String),
   PolynomialEvaluationUnexpected(String, String, String),
   VectorNotEqual(String),
+  VariableNotSet(usize),
+  VariableNotConnected(usize),
+  VariableIsNotOutput(usize),
+  AllVariablesAreInputs,
+  CircuitNotComplete,
+  CircuitHasNoGlobalInput,
+  GatesAreNotEmpty,
+  VariableAlreadySet,
+  InputSizeNotSupported(usize, usize),
 }
 
 impl core::fmt::Display for Error {
@@ -266,6 +275,15 @@ impl core::fmt::Display for Error {
             Error::GZNotZero(info) => write!(f, "GZNotZero {}", info),
             Error::PolynomialEvaluationUnexpected(info1, info2, info3) => write!(f, "PolynomialEvaluationUnexpected {} {} {}", info1, info2, info3),
             Error::VectorNotEqual(info) => write!(f, "VectorNotEqual {}", info),
+            Error::VariableNotSet(index) => write!(f, "VariableNotSet at index {}", index),
+            Error::VariableNotConnected(index) => write!(f, "VariableNotConnected at index {}", index),
+            Error::VariableIsNotOutput(index) => write!(f, "VariableIsNotOutput at index {}", index),
+            Error::AllVariablesAreInputs => write!(f, "AllVariablesAreInputs: there are probably circular dependence between variables"),
+            Error::CircuitNotComplete => write!(f, "CircuitNotComplete"),
+            Error::CircuitHasNoGlobalInput => write!(f, "CircuitHasNotGlobalInput"),
+            Error::GatesAreNotEmpty => write!(f, "GatesAreNotEmpty"),
+            Error::VariableAlreadySet => write!(f, "VariableAlreadySet"),
+            Error::InputSizeNotSupported(expected, real) => write!(f, "InputSizeNotSupported, expected {}, got {}", expected, real),
         }
   }
 }

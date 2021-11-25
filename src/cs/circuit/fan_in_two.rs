@@ -1,0 +1,453 @@
+use crate::error::Error;
+use ark_std::ops::{Add, Mul};
+
+pub struct FanInTwoCircuit<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> {
+  add_gates: Vec<AddGate>,
+  mul_gates: Vec<MulGate>,
+  const_gates: Vec<ConstGate<F>>,
+  public_io_wires: Vec<GateWire>,
+  num_global_input_variables: usize,
+  global_output_variables: Vec<VariableRef>,
+  variables: Vec<Variable<F>>,
+}
+
+#[derive(Clone)]
+pub struct AddGate {
+  left: VariableRef,
+  right: VariableRef,
+  output: VariableRef,
+}
+
+#[derive(Clone)]
+pub struct MulGate {
+  left: VariableRef,
+  right: VariableRef,
+  output: VariableRef,
+}
+
+#[derive(Clone)]
+pub struct ConstGate<F> {
+  output: VariableRef,
+  value: F,
+}
+
+pub enum Gate<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> {
+  AddGate(AddGate),
+  MulGate(MulGate),
+  ConstGate(ConstGate<F>),
+}
+
+#[derive(Clone, Debug)]
+pub enum GateRef {
+  Add(usize),
+  Mul(usize),
+  Const(usize),
+}
+
+#[derive(Clone)]
+pub enum InputWireType {
+  Left,
+  Right,
+}
+
+#[derive(Clone)]
+pub enum WireType {
+  Input(InputWireType),
+  Output,
+}
+
+#[derive(Clone)]
+pub enum InputGateWire {
+  Add(usize, InputWireType),
+  Mul(usize, InputWireType),
+}
+
+#[derive(Clone)]
+pub enum OutputGateWire {
+  Add(usize),
+  Mul(usize),
+  Const(usize),
+}
+
+#[derive(Clone)]
+pub enum GateWire {
+  Input(InputGateWire),
+  Output(OutputGateWire),
+}
+
+#[derive(Clone)]
+pub struct Variable<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> {
+  input_wires: Vec<InputGateWire>,
+  output_wire: Option<OutputGateWire>,
+  value: Option<F>,
+}
+
+#[derive(Clone)]
+pub struct VariableRef {
+  index: usize,
+}
+
+impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> FanInTwoCircuit<F> {
+  pub fn new() -> Self {
+    FanInTwoCircuit::<F> {
+      add_gates: Vec::new(),
+      mul_gates: Vec::new(),
+      const_gates: Vec::new(),
+      public_io_wires: Vec::new(),
+      num_global_input_variables: 0,
+      global_output_variables: Vec::new(),
+      variables: Vec::new(),
+    }
+  }
+
+  pub fn get_var_mut<'a>(&'a mut self, var: &VariableRef) -> &'a mut Variable<F> {
+    &mut self.variables[var.index]
+  }
+
+  pub fn get_var<'a>(&'a self, var: &VariableRef) -> &'a Variable<F> {
+    &self.variables[var.index]
+  }
+
+  pub fn try_get_var_value(&self, var: &VariableRef) -> Option<F> {
+    self.get_var(var).try_get_value()
+  }
+
+  pub fn get_var_value(&self, var: &VariableRef) -> Result<F, Error> {
+    if let Some(v) = self.try_get_var_value(var) {
+      Ok(v)
+    } else {
+      Err(Error::VariableNotSet(var.index.clone()))
+    }
+  }
+
+  pub fn set_var(&mut self, var: &VariableRef, value: F) {
+    self.get_var_mut(var).assign(&value);
+  }
+
+  pub fn get_gate(&self, gate: &GateRef) -> Gate<F> {
+    match gate {
+      GateRef::Add(index) => Gate::AddGate(self.add_gates[index.clone()].clone()),
+      GateRef::Mul(index) => Gate::MulGate(self.mul_gates[index.clone()].clone()),
+      GateRef::Const(index) => Gate::ConstGate(self.const_gates[index.clone()].clone()),
+    }
+  }
+
+  pub fn add_new_variable(&mut self) -> VariableRef {
+    self.variables.push(Variable::new());
+    VariableRef {
+      index: self.variables.len() - 1,
+    }
+  }
+
+  pub fn assert_no_gate(&mut self) -> Result<(), Error> {
+    if self.add_gates.is_empty() && self.mul_gates.is_empty() && self.const_gates.is_empty() {
+      Ok(())
+    } else {
+      Err(Error::GatesAreNotEmpty)
+    }
+  }
+
+  pub fn add_global_input_variable(&mut self) -> Result<VariableRef, Error> {
+    self.assert_no_gate()?;
+    let ret = self.add_new_variable();
+    self.num_global_input_variables += 1;
+    Ok(ret)
+  }
+
+  pub fn add_add_gate(
+    &mut self,
+    a: &VariableRef,
+    b: &VariableRef,
+    c: &VariableRef,
+  ) -> Result<(), Error> {
+    self.add_gates.push(AddGate {
+      left: a.clone(),
+      right: b.clone(),
+      output: c.clone(),
+    });
+    let gate_index = self.add_gates.len() - 1;
+    self
+      .get_var_mut(a)
+      .add_add_gate(gate_index, WireType::Input(InputWireType::Left))?;
+    self
+      .get_var_mut(b)
+      .add_add_gate(gate_index, WireType::Input(InputWireType::Right))?;
+    self
+      .get_var_mut(c)
+      .add_add_gate(gate_index, WireType::Output)?;
+    Ok(())
+  }
+
+  pub fn add_mul_gate(
+    &mut self,
+    a: &VariableRef,
+    b: &VariableRef,
+    c: &VariableRef,
+  ) -> Result<(), Error> {
+    self.mul_gates.push(MulGate {
+      left: a.clone(),
+      right: b.clone(),
+      output: c.clone(),
+    });
+    let gate_index = self.mul_gates.len() - 1;
+    self
+      .get_var_mut(a)
+      .add_mul_gate(gate_index, WireType::Input(InputWireType::Left))?;
+    self
+      .get_var_mut(b)
+      .add_mul_gate(gate_index, WireType::Input(InputWireType::Right))?;
+    self
+      .get_var_mut(c)
+      .add_mul_gate(gate_index, WireType::Output)?;
+    Ok(())
+  }
+
+  pub fn add_const_gate(&mut self, c: F, var: &VariableRef) -> Result<(), Error> {
+    self.const_gates.push(ConstGate {
+      output: var.clone(),
+      value: c,
+    });
+    let gate_index = self.const_gates.len() - 1;
+    self.get_var_mut(var).add_const_gate(gate_index)?;
+    Ok(())
+  }
+
+  pub fn add_vars(&mut self, a: &VariableRef, b: &VariableRef) -> VariableRef {
+    let ret = self.add_new_variable();
+    self.add_add_gate(a, b, &ret).unwrap();
+    ret
+  }
+
+  pub fn mul_vars(&mut self, a: &VariableRef, b: &VariableRef) -> VariableRef {
+    let ret = self.add_new_variable();
+    self.add_mul_gate(a, b, &ret).unwrap();
+    ret
+  }
+
+  pub fn const_var(&mut self, c: F) -> VariableRef {
+    let ret = self.add_new_variable();
+    self.add_const_gate(c, &ret).unwrap();
+    ret
+  }
+
+  pub fn eval_gate(&mut self, gate: &GateRef) -> Result<(), Error> {
+    let gate = self.get_gate(gate);
+    match gate {
+      Gate::AddGate(gate) => self.set_var(
+        &gate.output,
+        self.get_var_value(&gate.left)? + self.get_var_value(&gate.right)?,
+      ),
+      Gate::MulGate(gate) => self.set_var(
+        &gate.output,
+        self.get_var_value(&gate.left)? * self.get_var_value(&gate.right)?,
+      ),
+      Gate::ConstGate(gate) => self.set_var(&gate.output, gate.value),
+    }
+    Ok(())
+  }
+
+  pub fn mark_as_complete(&mut self) -> Result<(), Error> {
+    if self.num_global_input_variables == 0 {
+      return Err(Error::CircuitHasNoGlobalInput);
+    }
+    for (i, var) in self.variables.iter().enumerate() {
+      if !var.is_gate_input() && !var.is_gate_output() {
+        return Err(Error::VariableNotConnected(i));
+      }
+      if !var.is_gate_input() {
+        self.global_output_variables.push(VariableRef { index: i });
+      }
+    }
+    if !self.is_complete() {
+      return Err(Error::AllVariablesAreInputs);
+    }
+    Ok(())
+  }
+
+  pub fn is_complete(&self) -> bool {
+    !self.global_output_variables.is_empty()
+  }
+
+  pub fn assert_complete(&self) -> Result<(), Error> {
+    if !self.is_complete() {
+      return Err(Error::CircuitNotComplete);
+    }
+    Ok(())
+  }
+
+  pub fn assert_input_size(&self, input_size: usize) -> Result<(), Error> {
+    let expected = self.get_input_size()?;
+    if expected != input_size {
+      Err(Error::InputSizeNotSupported(expected, input_size))
+    } else {
+      Ok(())
+    }
+  }
+
+  pub fn mark_wire_as_public(&mut self, gate_wire: &GateWire) {
+    self.public_io_wires.push(gate_wire.clone());
+  }
+
+  pub fn assign_global_inputs(&mut self, input: &Vec<F>) -> Result<(), Error> {
+    self.assert_input_size(input.len())?;
+    for (a, var) in input
+      .iter()
+      .zip(self.variables.iter_mut().take(input.len()))
+    {
+      var.assign(&a);
+    }
+    Ok(())
+  }
+
+  pub fn evaluate(&mut self, input: &Vec<F>) -> Result<(), Error> {
+    self.assign_global_inputs(input)?;
+    // We assume that the variables are in topological order, i.e.,
+    // if a variable a depends on a variable b, then b should be ordered
+    // before a.
+    for i in input.len()..self.variables.len() {
+      if let Some(gate) = self.variables[i].get_outputing_gate() {
+        println!("{:?}", gate);
+        self.eval_gate(&gate)?
+      } else {
+        return Err(Error::VariableIsNotOutput(i));
+      }
+    }
+    Ok(())
+  }
+
+  pub fn get_input_size(&self) -> Result<usize, Error> {
+    self.assert_complete()?;
+    Ok(self.num_global_input_variables)
+  }
+
+  pub fn get_output(&self) -> Result<Vec<F>, Error> {
+    self
+      .global_output_variables
+      .iter()
+      .map(|var| -> Result<F, Error> { self.get_var_value(&var) })
+      .collect()
+  }
+
+  pub fn get_output_size(&self) -> usize {
+    self.global_output_variables.len()
+  }
+}
+
+impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> Variable<F> {
+  pub fn new() -> Self {
+    Variable::<F> {
+      input_wires: Vec::new(),
+      output_wire: None,
+      value: None,
+    }
+  }
+
+  pub fn assign(&mut self, v: &F) {
+    self.value = Some(v.clone());
+  }
+
+  pub fn try_get_value(&self) -> Option<F> {
+    self.value.clone()
+  }
+
+  pub fn get_value(&self) -> Result<F, Error> {
+    if let Some(v) = self.value.clone() {
+      Ok(v.clone())
+    } else {
+      Err(Error::VariableNotSet(0))
+    }
+  }
+
+  pub fn add_add_gate(&mut self, index: usize, wire_type: WireType) -> Result<(), Error> {
+    match wire_type {
+      WireType::Input(input_wire_type) => self
+        .input_wires
+        .push(InputGateWire::Add(index, input_wire_type)),
+      WireType::Output => {
+        self.assert_not_set()?;
+        self.output_wire = Some(OutputGateWire::Add(index));
+      }
+    };
+    Ok(())
+  }
+
+  pub fn add_mul_gate(&mut self, index: usize, wire_type: WireType) -> Result<(), Error> {
+    match wire_type {
+      WireType::Input(input_wire_type) => self
+        .input_wires
+        .push(InputGateWire::Mul(index, input_wire_type)),
+      WireType::Output => {
+        self.assert_not_set()?;
+        self.output_wire = Some(OutputGateWire::Mul(index));
+      }
+    }
+    Ok(())
+  }
+
+  pub fn add_const_gate(&mut self, index: usize) -> Result<(), Error> {
+    self.assert_not_set()?;
+    self.output_wire = Some(OutputGateWire::Const(index));
+    Ok(())
+  }
+
+  pub fn is_gate_input(&self) -> bool {
+    !self.input_wires.is_empty()
+  }
+
+  pub fn is_gate_output(&self) -> bool {
+    self.output_wire.is_some()
+  }
+
+  pub fn assert_not_set(&self) -> Result<(), Error> {
+    if self.is_gate_output() {
+      Err(Error::VariableAlreadySet)
+    } else {
+      Ok(())
+    }
+  }
+
+  pub fn get_outputing_gate(&self) -> Option<GateRef> {
+    if let Some(gate_wire) = self.output_wire.clone() {
+      match gate_wire {
+        OutputGateWire::Add(index) => Some(GateRef::Add(index)),
+        OutputGateWire::Mul(index) => Some(GateRef::Mul(index)),
+        OutputGateWire::Const(index) => Some(GateRef::Const(index)),
+      }
+    } else {
+      None
+    }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use ark_bls12_377::Fr as F;
+
+  #[test]
+  fn test_circuit_evaluation() {
+    let mut circ = FanInTwoCircuit::<i32>::new();
+    let a = circ.add_global_input_variable().unwrap();
+    let b = circ.add_global_input_variable().unwrap();
+    let c = circ.add_global_input_variable().unwrap();
+    let d = circ.add_vars(&a, &b);
+    let e = circ.mul_vars(&b, &c);
+    let f = circ.mul_vars(&d, &e);
+    let g = circ.add_vars(&a, &d);
+    let h = circ.mul_vars(&g, &f);
+    assert!(circ.get_var(&h).is_gate_output());
+    circ.mark_as_complete().unwrap();
+    assert_eq!(circ.get_output_size(), 1);
+    circ.evaluate(&vec![1, 2, 3]).unwrap();
+    assert_eq!(circ.get_var(&a).try_get_value().unwrap(), 1);
+    assert_eq!(circ.get_var(&b).try_get_value().unwrap(), 2);
+    assert_eq!(circ.get_var(&c).try_get_value().unwrap(), 3);
+    assert_eq!(circ.get_var(&d).try_get_value().unwrap(), 3);
+    assert_eq!(circ.get_var(&e).try_get_value().unwrap(), 6);
+    assert_eq!(circ.get_var(&f).try_get_value().unwrap(), 18);
+    assert_eq!(circ.get_var(&g).try_get_value().unwrap(), 4);
+    assert_eq!(circ.get_var(&h).try_get_value().unwrap(), 72);
+    assert_eq!(circ.get_var_value(&h).unwrap(), 72);
+    assert_eq!(circ.get_output().unwrap(), vec![72]);
+  }
+}

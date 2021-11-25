@@ -10,3 +10,4 @@ pub trait Witness<F: Field> {}
 pub mod hpr;
 pub mod pov;
 pub mod r1cs;
+pub mod circuit;
