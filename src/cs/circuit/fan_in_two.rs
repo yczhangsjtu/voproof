@@ -425,7 +425,7 @@ mod tests {
   use ark_bls12_377::Fr as F;
 
   #[test]
-  fn test_circuit_evaluation() {
+  fn test_simple_circuit() {
     let mut circ = FanInTwoCircuit::<i32>::new();
     let a = circ.add_global_input_variable().unwrap();
     let b = circ.add_global_input_variable().unwrap();
@@ -449,5 +449,37 @@ mod tests {
     assert_eq!(circ.get_var(&h).try_get_value().unwrap(), 72);
     assert_eq!(circ.get_var_value(&h).unwrap(), 72);
     assert_eq!(circ.get_output().unwrap(), vec![72]);
+  }
+
+  #[test]
+  fn test_circuit_with_const() {
+    let mut circ = FanInTwoCircuit::<i32>::new();
+    let a = circ.add_global_input_variable().unwrap();
+    let b = circ.add_global_input_variable().unwrap();
+    let c = circ.add_global_input_variable().unwrap();
+    let d = circ.add_vars(&a, &b);
+    let e = circ.mul_vars(&b, &c);
+    let f = circ.mul_vars(&d, &e);
+    let g = circ.add_vars(&a, &d);
+    let h = circ.mul_vars(&g, &f);
+    let o = circ.const_var(10);
+    let p = circ.mul_vars(&h, &o);
+    assert!(circ.get_var(&o).is_gate_output());
+    assert!(circ.get_var(&p).is_gate_output());
+    circ.mark_as_complete().unwrap();
+    assert_eq!(circ.get_output_size(), 1);
+    circ.evaluate(&vec![1, 2, 3]).unwrap();
+    assert_eq!(circ.get_var(&a).try_get_value().unwrap(), 1);
+    assert_eq!(circ.get_var(&b).try_get_value().unwrap(), 2);
+    assert_eq!(circ.get_var(&c).try_get_value().unwrap(), 3);
+    assert_eq!(circ.get_var(&d).try_get_value().unwrap(), 3);
+    assert_eq!(circ.get_var(&e).try_get_value().unwrap(), 6);
+    assert_eq!(circ.get_var(&f).try_get_value().unwrap(), 18);
+    assert_eq!(circ.get_var(&g).try_get_value().unwrap(), 4);
+    assert_eq!(circ.get_var(&h).try_get_value().unwrap(), 72);
+    assert_eq!(circ.get_var(&o).try_get_value().unwrap(), 10);
+    assert_eq!(circ.get_var(&p).try_get_value().unwrap(), 720);
+    assert_eq!(circ.get_var_value(&p).unwrap(), 720);
+    assert_eq!(circ.get_output().unwrap(), vec![720]);
   }
 }
