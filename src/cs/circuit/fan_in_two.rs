@@ -1,7 +1,8 @@
 use crate::error::Error;
 use ark_std::ops::{Add, Mul};
+use ark_std::fmt::Debug;
 
-pub struct FanInTwoCircuit<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> {
+pub struct FanInTwoCircuit<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> {
   add_gates: Vec<AddGate>,
   mul_gates: Vec<MulGate>,
   const_gates: Vec<ConstGate<F>>,
@@ -113,7 +114,8 @@ impl From<OutputGateWire> for GateWire {
   }
 }
 
-pub struct Variable<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> {
+#[derive(Debug)]
+pub struct Variable<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> {
   input_wires: Vec<InputGateWire>,
   output_wire: Option<OutputGateWire>,
   value: Option<F>,
@@ -124,7 +126,7 @@ pub struct VariableRef {
   index: usize,
 }
 
-impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> FanInTwoCircuit<F> {
+impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> FanInTwoCircuit<F> {
   pub fn new() -> Self {
     FanInTwoCircuit::<F> {
       add_gates: Vec::new(),
@@ -155,6 +157,10 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> FanInTwoCircuit<F> {
     } else {
       Err(Error::VariableNotSet(var.index.clone()))
     }
+  }
+
+  pub fn get_wire_value(&self, wire: &GateWire) -> Result<F, Error> {
+    return self.get_var_value(&self.get_var_from_wire(wire));
   }
 
   pub fn set_var(&mut self, var: &VariableRef, value: F) {
@@ -381,8 +387,6 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> FanInTwoCircuit<F> {
   pub fn assign_public_io(&mut self, input: &Vec<F>) -> Result<(), Error> {
     self.assert_io_size(input.len())?;
     for (a, wire) in input.iter().zip(self.public_io_wires.clone().iter()) {
-      println!("{:?}", wire);
-      println!("{:?}", &self.get_var_from_wire(wire));
       self
         .get_var_mut(&self.get_var_from_wire(wire))
         .assign_no_overwrite(a)?;
@@ -438,13 +442,13 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> FanInTwoCircuit<F> {
       self
         .public_io_wires
         .iter()
-        .map(|wire| -> Result<F, Error> { self.get_var_value(&self.get_var_from_wire(wire)) })
+        .map(|wire| -> Result<F, Error> { self.get_wire_value(wire) })
         .collect::<Result<Vec<F>, Error>>()?,
     ))
   }
 }
 
-impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> Variable<F> {
+impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> Variable<F> {
   pub fn new() -> Self {
     Variable::<F> {
       input_wires: Vec::new(),
@@ -459,10 +463,10 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone> Variable<F> {
 
   pub fn assign_no_overwrite(&mut self, v: &F) -> Result<(), Error> {
     if self.value.is_none() {
-      Err(Error::VariableAlreadySet)
-    } else {
       self.value = Some(v.clone());
       Ok(())
+    } else {
+      Err(Error::VariableAlreadySet(format!("{:?}", v)))
     }
   }
 
@@ -627,8 +631,9 @@ mod tests {
     let g = circ.add_vars(&a, &d);
     let h = circ.mul_vars(&g, &f);
     circ.mark_as_complete().unwrap();
-    circ.mark_variable_as_public(&a);
-    circ.assign_public_io(&vec![1]);
+    circ.mark_variable_as_public(&a).unwrap();
+    circ.assign_public_io(&vec![1]).unwrap();
+    assert_eq!(circ.get_var_value(&a).unwrap(), 1);
     assert_eq!(circ.get_instance().unwrap(), (vec![0], vec![1]));
   }
 }

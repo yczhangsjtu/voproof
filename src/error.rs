@@ -183,7 +183,7 @@ pub enum Error {
   CircuitHasNoGlobalInput,
   GatesAreNotEmpty,
   VariableAlreadySetAsOutput,
-  VariableAlreadySet,
+  VariableAlreadySet(String),
   InputSizeNotSupported(usize, usize),
 }
 
@@ -284,7 +284,7 @@ impl core::fmt::Display for Error {
             Error::CircuitHasNoGlobalInput => write!(f, "CircuitHasNotGlobalInput"),
             Error::GatesAreNotEmpty => write!(f, "GatesAreNotEmpty: you should not add any gate before finishing adding all the global inputs"),
             Error::VariableAlreadySetAsOutput => write!(f, "VariableAlreadySetAsOutput"),
-            Error::VariableAlreadySet => write!(f, "VariableAlreadySet"),
+            Error::VariableAlreadySet(info) => write!(f, "VariableAlreadySet to {}", info),
             Error::InputSizeNotSupported(expected, real) => write!(f, "InputSizeNotSupported, expected {}, got {}", expected, real),
         }
   }
