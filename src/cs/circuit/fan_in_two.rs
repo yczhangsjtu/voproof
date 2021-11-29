@@ -1,6 +1,6 @@
 use crate::error::Error;
-use ark_std::ops::{Add, Mul};
 use ark_std::fmt::Debug;
+use ark_std::ops::{Add, Mul};
 
 pub struct FanInTwoCircuit<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> {
   add_gates: Vec<AddGate>,
@@ -126,7 +126,7 @@ pub struct VariableRef {
   index: usize,
 }
 
-impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> FanInTwoCircuit<F> {
+impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug + Default> FanInTwoCircuit<F> {
   pub fn new() -> Self {
     FanInTwoCircuit::<F> {
       add_gates: Vec::new(),
@@ -137,6 +137,22 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> FanInTwoCircuit
       global_output_variables: Vec::new(),
       variables: Vec::new(),
     }
+  }
+
+  pub fn get_add_num(&self) -> usize {
+    self.add_gates.len()
+  }
+
+  pub fn get_mul_num(&self) -> usize {
+    self.mul_gates.len()
+  }
+
+  pub fn get_const_num(&self) -> usize {
+    self.const_gates.len()
+  }
+
+  pub fn get_gate_num(&self) -> usize {
+    self.get_add_num() + self.get_mul_num() + self.get_const_num()
   }
 
   pub fn get_var_mut<'a>(&'a mut self, var: &VariableRef) -> &'a mut Variable<F> {
@@ -432,17 +448,83 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> FanInTwoCircuit
     self.global_output_variables.len()
   }
 
+  // Get the offset of this wire in the entire string from its gate index
+  // consisting of (left mul || left add || left const || right ... || output ...)
+  pub fn get_offset(&self, wire: &GateWire) -> usize {
+    match wire {
+      GateWire::Input(InputGateWire::Add(_, InputWireType::Left)) => self.get_mul_num(),
+      GateWire::Input(InputGateWire::Add(_, InputWireType::Right)) => {
+        self.get_gate_num() + self.get_mul_num()
+      }
+      GateWire::Input(InputGateWire::Mul(_, InputWireType::Left)) => 0,
+      GateWire::Input(InputGateWire::Mul(_, InputWireType::Right)) => self.get_gate_num(),
+      GateWire::Output(OutputGateWire::Add(_)) => self.get_gate_num() * 2 + self.get_mul_num(),
+      GateWire::Output(OutputGateWire::Mul(_)) => self.get_gate_num() * 2,
+      GateWire::Output(OutputGateWire::Const(_)) => self.get_gate_num() * 3 - self.get_const_num(),
+    }
+  }
+
+  pub fn get_wire_global_index(&self, wire: &GateWire) -> usize {
+    wire.get_gate().get_index() + self.get_offset(&wire)
+  }
+
   pub fn get_instance(&self) -> Result<(Vec<u64>, Vec<F>), Error> {
     Ok((
       self
         .public_io_wires
         .iter()
-        .map(|wire| wire.get_gate().get_index() as u64)
+        .map(|wire| self.get_wire_global_index(&wire) as u64)
         .collect(),
       self
         .public_io_wires
         .iter()
         .map(|wire| -> Result<F, Error> { self.get_wire_value(wire) })
+        .collect::<Result<Vec<F>, Error>>()?,
+    ))
+  }
+
+  pub fn get_witness(&self) -> Result<(Vec<F>, Vec<F>, Vec<F>), Error> {
+    Ok((
+      self
+        .mul_gates
+        .iter()
+        .map(|gate| self.get_var_value(&gate.left))
+        .chain(
+          self
+            .add_gates
+            .iter()
+            .map(|gate| self.get_var_value(&gate.left)),
+        )
+        .chain((0..self.get_const_num()).map(|_| Ok(F::default())))
+        .collect::<Result<Vec<F>, Error>>()?,
+      self
+        .mul_gates
+        .iter()
+        .map(|gate| self.get_var_value(&gate.right))
+        .chain(
+          self
+            .add_gates
+            .iter()
+            .map(|gate| self.get_var_value(&gate.right)),
+        )
+        .chain((0..self.get_const_num()).map(|_| Ok(F::default())))
+        .collect::<Result<Vec<F>, Error>>()?,
+      self
+        .mul_gates
+        .iter()
+        .map(|gate| self.get_var_value(&gate.output))
+        .chain(
+          self
+            .add_gates
+            .iter()
+            .map(|gate| self.get_var_value(&gate.output)),
+        )
+        .chain(
+          self
+            .const_gates
+            .iter()
+            .map(|gate| self.get_var_value(&gate.output)),
+        )
         .collect::<Result<Vec<F>, Error>>()?,
     ))
   }
@@ -632,8 +714,84 @@ mod tests {
     let h = circ.mul_vars(&g, &f);
     circ.mark_as_complete().unwrap();
     circ.mark_variable_as_public(&a).unwrap();
-    circ.assign_public_io(&vec![1]).unwrap();
+    circ.mark_variable_as_public(&h).unwrap();
+    circ.assign_public_io(&vec![1, 72]).unwrap();
     assert_eq!(circ.get_var_value(&a).unwrap(), 1);
-    assert_eq!(circ.get_instance().unwrap(), (vec![0], vec![1]));
+    assert_eq!(circ.get_instance().unwrap(), (vec![3, 12], vec![1, 72]));
+  }
+
+  #[test]
+  fn test_get_instance_with_const() {
+    let mut circ = FanInTwoCircuit::<i32>::new();
+    let a = circ.add_global_input_variable().unwrap();
+    let b = circ.add_global_input_variable().unwrap();
+    let c = circ.add_global_input_variable().unwrap();
+    let d = circ.add_vars(&a, &b);
+    let e = circ.mul_vars(&b, &c);
+    let f = circ.mul_vars(&d, &e);
+    let g = circ.add_vars(&a, &d);
+    let h = circ.mul_vars(&g, &f);
+    let o = circ.const_var(10);
+    let p = circ.mul_vars(&h, &o);
+    circ.mark_as_complete().unwrap();
+    circ.mark_variable_as_public(&a).unwrap();
+    circ.mark_variable_as_public(&p).unwrap();
+    circ.assign_public_io(&vec![1, 720]).unwrap();
+    assert_eq!(circ.get_var_value(&a).unwrap(), 1);
+    assert_eq!(circ.get_instance().unwrap(), (vec![4, 17], vec![1, 720]));
+  }
+
+  #[test]
+  fn test_get_witness() {
+    let mut circ = FanInTwoCircuit::<i32>::new();
+    let a = circ.add_global_input_variable().unwrap();
+    let b = circ.add_global_input_variable().unwrap();
+    let c = circ.add_global_input_variable().unwrap();
+    let d = circ.add_vars(&a, &b);
+    let e = circ.mul_vars(&b, &c);
+    let f = circ.mul_vars(&d, &e);
+    let g = circ.add_vars(&a, &d);
+    let h = circ.mul_vars(&g, &f);
+    circ.mark_as_complete().unwrap();
+    circ.mark_variable_as_public(&a).unwrap();
+    circ.mark_variable_as_public(&h).unwrap();
+    circ.evaluate(&vec![1, 2, 3]).unwrap();
+    assert_eq!(
+      circ.get_witness().unwrap(),
+      (
+        vec![2, 3, 4, 1, 1],
+        vec![3, 6, 18, 2, 3],
+        vec![6, 18, 72, 3, 4]
+      )
+    );
+    assert_eq!(circ.get_instance().unwrap(), (vec![3, 12], vec![1, 72]));
+
+    #[test]
+    fn test_get_witness_with_const() {
+      let mut circ = FanInTwoCircuit::<i32>::new();
+      let a = circ.add_global_input_variable().unwrap();
+      let b = circ.add_global_input_variable().unwrap();
+      let c = circ.add_global_input_variable().unwrap();
+      let d = circ.add_vars(&a, &b);
+      let e = circ.mul_vars(&b, &c);
+      let f = circ.mul_vars(&d, &e);
+      let g = circ.add_vars(&a, &d);
+      let h = circ.mul_vars(&g, &f);
+      let o = circ.const_var(10);
+      let p = circ.mul_vars(&h, &o);
+      circ.mark_as_complete().unwrap();
+      circ.mark_variable_as_public(&a).unwrap();
+      circ.mark_variable_as_public(&p).unwrap();
+      circ.evaluate(&vec![1, 2, 3]).unwrap();
+      assert_eq!(
+        circ.get_witness().unwrap(),
+        (
+          vec![2, 3, 4, 72, 1, 1, 0],
+          vec![3, 6, 18, 10, 2, 3, 0],
+          vec![6, 18, 72, 720, 3, 4, 10]
+        )
+      );
+      assert_eq!(circ.get_instance().unwrap(), (vec![4, 17], vec![1, 720]));
+    }
   }
 }
