@@ -640,6 +640,7 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> Variable<F> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::tools::*;
   use ark_bls12_377::Fr as F;
 
   #[test]
@@ -793,5 +794,32 @@ mod tests {
       );
       assert_eq!(circ.get_instance().unwrap(), (vec![4, 17], vec![1, 720]));
     }
+  }
+
+  #[test]
+  fn test_simple_field_circuit() {
+    let mut circ = FanInTwoCircuit::<F>::new();
+    let a = circ.add_global_input_variable().unwrap();
+    let b = circ.add_global_input_variable().unwrap();
+    let c = circ.add_global_input_variable().unwrap();
+    let d = circ.add_vars(&a, &b);
+    let e = circ.mul_vars(&b, &c);
+    let f = circ.mul_vars(&d, &e);
+    let g = circ.add_vars(&a, &d);
+    let h = circ.mul_vars(&g, &f);
+    assert!(circ.get_var(&h).is_gate_output());
+    circ.mark_as_complete().unwrap();
+    assert_eq!(circ.get_output_size(), 1);
+    circ.evaluate(&vec![to_field::<F>(1), to_field::<F>(2), to_field::<F>(3)]).unwrap();
+    assert_eq!(circ.get_var(&a).try_get_value().unwrap(), to_field::<F>(1));
+    assert_eq!(circ.get_var(&b).try_get_value().unwrap(), to_field::<F>(2));
+    assert_eq!(circ.get_var(&c).try_get_value().unwrap(), to_field::<F>(3));
+    assert_eq!(circ.get_var(&d).try_get_value().unwrap(), to_field::<F>(3));
+    assert_eq!(circ.get_var(&e).try_get_value().unwrap(), to_field::<F>(6));
+    assert_eq!(circ.get_var(&f).try_get_value().unwrap(), to_field::<F>(18));
+    assert_eq!(circ.get_var(&g).try_get_value().unwrap(), to_field::<F>(4));
+    assert_eq!(circ.get_var(&h).try_get_value().unwrap(), to_field::<F>(72));
+    assert_eq!(circ.get_var_value(&h).unwrap(), to_field::<F>(72));
+    assert_eq!(circ.get_output().unwrap(), vec![to_field::<F>(72)]);
   }
 }
