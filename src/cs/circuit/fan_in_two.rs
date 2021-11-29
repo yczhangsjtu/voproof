@@ -155,6 +155,36 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug + Default> FanIn
     self.get_add_num() + self.get_mul_num() + self.get_const_num()
   }
 
+  pub fn get_consts(&self) -> Vec<F> {
+    self
+      .const_gates
+      .iter()
+      .map(|gate| gate.value.clone())
+      .collect()
+  }
+
+  pub fn get_wiring(&self) -> Result<Vec<(u64, u64)>, Error> {
+    self.assert_complete()?;
+    let mut ret = Vec::new();
+    for var in self.variables.iter() {
+      if var.get_wire_num() <= 1 {
+        continue;
+      }
+      let mut indices = var
+        .input_wires
+        .iter()
+        .map(|wire| self.get_wire_global_index(&GateWire::Input(wire.clone())))
+        .collect::<Vec<usize>>();
+      if let Some(wire) = var.get_output_wire() {
+        indices.push(self.get_wire_global_index(&GateWire::Output(wire)));
+      }
+      for idxes in indices.windows(2) {
+        ret.push((idxes[0] as u64, idxes[1] as u64));
+      }
+    }
+    Ok(ret)
+  }
+
   pub fn get_var_mut<'a>(&'a mut self, var: &VariableRef) -> &'a mut Variable<F> {
     &mut self.variables[var.index]
   }
@@ -539,6 +569,10 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> Variable<F> {
     }
   }
 
+  pub fn get_wire_num(&self) -> usize {
+    self.input_wires.len() + if self.is_gate_output() { 1 } else { 0 }
+  }
+
   pub fn assign(&mut self, v: &F) {
     self.value = Some(v.clone());
   }
@@ -614,6 +648,10 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> Variable<F> {
 
   pub fn is_gate_output(&self) -> bool {
     self.output_wire.is_some()
+  }
+
+  pub fn get_output_wire(&self) -> Option<OutputGateWire> {
+    self.output_wire.clone()
   }
 
   pub fn assert_not_output(&self) -> Result<(), Error> {
@@ -797,6 +835,65 @@ mod tests {
   }
 
   #[test]
+  fn test_get_consts() {
+    let mut circ = FanInTwoCircuit::<i32>::new();
+    let a = circ.add_global_input_variable().unwrap();
+    let b = circ.add_global_input_variable().unwrap();
+    let c = circ.add_global_input_variable().unwrap();
+    let d = circ.add_vars(&a, &b);
+    let e = circ.mul_vars(&b, &c);
+    let f = circ.mul_vars(&d, &e);
+    let g = circ.add_vars(&a, &d);
+    let h = circ.mul_vars(&g, &f);
+    let o = circ.const_var(10);
+    let p = circ.mul_vars(&h, &o);
+    circ.mark_as_complete().unwrap();
+    assert_eq!(circ.get_consts(), vec![10]);
+  }
+
+  #[test]
+  fn test_get_wiring() {
+    let mut circ = FanInTwoCircuit::<i32>::new();
+    let a = circ.add_global_input_variable().unwrap();
+    let b = circ.add_global_input_variable().unwrap();
+    let c = circ.add_global_input_variable().unwrap();
+    let d = circ.add_vars(&a, &b);
+    let e = circ.mul_vars(&b, &c);
+    let f = circ.mul_vars(&d, &e);
+    let g = circ.add_vars(&a, &d);
+    let h = circ.mul_vars(&g, &f);
+    let o = circ.const_var(10);
+    let p = circ.mul_vars(&h, &o);
+    circ.mark_as_complete().unwrap();
+    assert_eq!(circ.get_var(&a).input_wires.len(), 2);
+    assert!(!circ.get_var(&a).is_gate_output());
+    assert_eq!(circ.get_var(&b).input_wires.len(), 2);
+    assert!(!circ.get_var(&b).is_gate_output());
+    assert_eq!(circ.get_var(&c).input_wires.len(), 1);
+    assert!(!circ.get_var(&c).is_gate_output());
+    assert_eq!(circ.get_var(&d).input_wires.len(), 2);
+    assert!(circ.get_var(&d).is_gate_output());
+    assert_eq!(circ.get_var(&e).input_wires.len(), 1);
+    assert!(circ.get_var(&e).is_gate_output());
+    assert_eq!(circ.get_var(&f).input_wires.len(), 1);
+    assert!(circ.get_var(&f).is_gate_output());
+    assert_eq!(
+      circ.get_wiring().unwrap(),
+      vec![
+        (4, 5),
+        (11, 0),
+        (1, 12),
+        (12, 18),
+        (8, 14),
+        (9, 15),
+        (2, 19),
+        (3, 16),
+        (10, 20)
+      ]
+    );
+  }
+
+  #[test]
   fn test_simple_field_circuit() {
     let mut circ = FanInTwoCircuit::<F>::new();
     let a = circ.add_global_input_variable().unwrap();
@@ -810,7 +907,9 @@ mod tests {
     assert!(circ.get_var(&h).is_gate_output());
     circ.mark_as_complete().unwrap();
     assert_eq!(circ.get_output_size(), 1);
-    circ.evaluate(&vec![to_field::<F>(1), to_field::<F>(2), to_field::<F>(3)]).unwrap();
+    circ
+      .evaluate(&vec![to_field::<F>(1), to_field::<F>(2), to_field::<F>(3)])
+      .unwrap();
     assert_eq!(circ.get_var(&a).try_get_value().unwrap(), to_field::<F>(1));
     assert_eq!(circ.get_var(&b).try_get_value().unwrap(), to_field::<F>(2));
     assert_eq!(circ.get_var(&c).try_get_value().unwrap(), to_field::<F>(3));
