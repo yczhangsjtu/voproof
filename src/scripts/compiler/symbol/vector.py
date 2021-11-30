@@ -15,6 +15,7 @@ class NamedVector(_NamedBasic):
     self.hint_computation = None
     self.randomizers = None
     self._is_preprocessed = False
+    self._do_not_count_shifts = False
     self._rust_to_bytes_replacement = None
 
   def slice(self, start, end=None):
@@ -568,6 +569,8 @@ class VectorCombination(CoeffMap):
       if key == "one":
         continue
       vec, value = vec_value
+      if vec._do_not_count_shifts:
+        continue
       for key2, uv_coeff in value.items():
         unit_vector, coeff = uv_coeff
         lengths.append(unit_vector.position - 1)

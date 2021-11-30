@@ -447,7 +447,6 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug + Default> FanIn
     // before a.
     for i in input.len()..self.variables.len() {
       if let Some(gate) = self.variables[i].get_outputing_gate() {
-        println!("{:?}", gate);
         self.eval_gate(&gate)?
       } else {
         return Err(Error::VariableIsNotOutput(i));

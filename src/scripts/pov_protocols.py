@@ -219,6 +219,11 @@ class POV(VOProtocol):
     voexec.C = C
     voexec.d = d
 
+    """
+    The vector d will never be shifted outside the n-window
+    """
+    d._do_not_count_shifts = True
+
   def execute(self, voexec, x, a, b, c):
     voexec.input_instance(x)
     voexec.input_witness(a)
@@ -242,10 +247,9 @@ class POV(VOProtocol):
 
     w = get_named_vector("w")
     voexec.prover_computes_latex(
-        Math(w).assign(a).double_bar(b)
-        .double_bar(c).slice(1, C-Cc))
-    voexec.prover_rust_define_concat_vector_skip(w, Cc, a, b, c)
-    voexec.prover_submit_vector(w, 3 * C - Cc)
+        Math(w).assign(a).double_bar(b).double_bar(c))
+    voexec.prover_rust_define_concat_vector(w, a, b, c)
+    voexec.prover_submit_vector(w, 3 * C)
 
     t = get_named_vector("t")
     t.local_evaluate = True
@@ -266,8 +270,12 @@ class POV(VOProtocol):
         PowerVector(1, Ca).shift(2*C+Cm),
         w.shift(C*2) + w.shift(C) - w
     )
+    voexec.hadamard_query(
+        PowerVector(1, Cc).shift(2*C+Cm+Ca),
+        w - d.shift(2*C+Cm+Ca)
+    )
     voexec.hadamard_query(t, w - x)
-    voexec.run_subprotocol(CopyCheck(), w + d.shift(3*C-Cc))
+    voexec.run_subprotocol(CopyCheck(), w)
 
 
 class POVProverEfficient(VOProtocol):

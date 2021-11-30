@@ -117,7 +117,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
     define_vec!(b_vec, w.witness.1.clone());
     define_vec!(c_vec, w.witness.2.clone());
     define!(n, 3 * cap_c);
-    define_concat_vector_skip!(w_vec, cap_c - cap_c_a - cap_c_m, a_vec, b_vec, c_vec);
+    define_concat_vector!(w_vec, a_vec, b_vec, c_vec);
     redefine_zero_pad_concat_vector!(w_vec, n, delta_vec);
     define_commit_vector!(cm_w_vec, w_vec, pk.powers, n + 1);
     define_sparse_zero_one_vector!(t_vec, x.instance.0, 3 * cap_c);
@@ -144,11 +144,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
       r_vec,
       i,
       mul!(
-        vector_index!(w_vec, minus_i64!(i, cap_c - cap_c_a - cap_c_m + 1))
+        vector_index!(w_vec, minus_i64!(i, 1))
           + power_vector_index!(gamma, 3 * cap_c, minus_i64!(i, 1)) * zeta
           + range_index!(1, 3 * cap_c, minus_i64!(i, 1)) * zeta_1,
         inverse!(
-          vector_index!(w_vec, minus_i64!(i, cap_c - cap_c_a - cap_c_m + 1))
+          vector_index!(w_vec, minus_i64!(i, 1))
             + range_index!(1, 3 * cap_c, minus_i64!(i, 1)) * zeta_1
             + vector_index!(pk.sigma_vec, minus_i64!(i, 1)) * zeta
         )
@@ -176,25 +176,18 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
           i,
           power(alpha, 4)
             * (-vector_index!(r_vec, minus_i64!(i + n, -3 * cap_c + n + 1))
-              * (vector_index!(
-                w_vec,
-                minus_i64!(i + n, -2 * cap_c - cap_c_a - cap_c_m + n + 1)
-              ) + range_index!(1, 3 * cap_c, minus_i64!(i + n, -3 * cap_c + n + 1)) * zeta_1
+              * (vector_index!(w_vec, minus_i64!(i + n, -3 * cap_c + n + 1))
+                + range_index!(1, 3 * cap_c, minus_i64!(i + n, -3 * cap_c + n + 1)) * zeta_1
                 + vector_index!(pk.sigma_vec, minus_i64!(i + n, -3 * cap_c + n + 1)) * zeta)
               + (vector_index!(r_vec, minus_i64!(i + n, -3 * cap_c + n + 2))
                 + delta!(i + n, -3 * cap_c + n + 1))
-                * (vector_index!(
-                  w_vec,
-                  minus_i64!(i + n, -2 * cap_c - cap_c_a - cap_c_m + n + 1)
-                ) + power_vector_index!(
-                  gamma,
-                  3 * cap_c,
-                  minus_i64!(i + n, -3 * cap_c + n + 1)
-                ) * zeta
+                * (vector_index!(w_vec, minus_i64!(i + n, -3 * cap_c + n + 1))
+                  + power_vector_index!(gamma, 3 * cap_c, minus_i64!(i + n, -3 * cap_c + n + 1))
+                    * zeta
                   + range_index!(1, 3 * cap_c, minus_i64!(i + n, -3 * cap_c + n + 1)) * zeta_1))
-            + power(alpha, 2)
+            + power(alpha, 3)
               * vector_index!(t_vec, minus_i64!(i + n, 1))
-              * (vector_index!(w_vec, minus_i64!(i + n, cap_c - cap_c_a - cap_c_m + 1))
+              * (vector_index!(w_vec, minus_i64!(i + n, 1))
                 - vector_index!(x_vec, minus_i64!(i + n, 1)))
             + vector_index!(w_vec, minus_i64!(i + n, -cap_c_m + n + 1))
               * vector_index!(w_vec, minus_i64!(i + n, -cap_c - cap_c_m + n + 1))
@@ -254,46 +247,28 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
         )
         + power(alpha, 4)
           * (-alpha * power(omega, 3 * cap_c - 1) * delta!(i - maxshift - n, 1)
-            + omega
-              * vector_index!(
-                v_vec_4,
-                minus_i64!(i - maxshift - n, cap_c - cap_c_a - cap_c_m - shiftlength_3)
-              )
+            + omega * vector_index!(v_vec_4, minus_i64!(i - maxshift - n, -shiftlength_3))
             + omega * vector_index!(v_vec_11, minus_i64!(i - maxshift - n, -shiftlength_4)) * zeta
             + omega
               * vector_index!(v_vec_12, minus_i64!(i - maxshift - n, -shiftlength_4))
               * zeta_1
-            + vector_index!(
-              w_vec,
-              minus_i64!(i - maxshift - n, cap_c - cap_c_a - cap_c_m + 1)
-            )
-            - vector_index!(
-              v_vec_4,
-              minus_i64!(
-                i - maxshift - n,
-                cap_c - cap_c_a - cap_c_m - shiftlength_3 + 1
-              )
-            )
+            + vector_index!(w_vec, minus_i64!(i - maxshift - n, 1))
+            - vector_index!(v_vec_4, minus_i64!(i - maxshift - n, 1 - shiftlength_3))
             - vector_index!(v_vec_6, minus_i64!(i - maxshift - n, 1 - shiftlength_5)) * zeta
             + power_vector_index!(gamma, 3 * cap_c, minus_i64!(i - maxshift - n, 1)) * zeta
             + range_index!(1, 3 * cap_c, minus_i64!(i - maxshift - n, 1)) * zeta_1
             - vector_index!(v_vec_12, minus_i64!(i - maxshift - n, 1 - shiftlength_4)) * zeta_1)
         + power(alpha, 3)
-          * (power(omega, 2 * cap_c - 1)
-            * vector_index!(v_vec_9, minus_i64!(i - maxshift - n, 2 - 2 * cap_c))
-            - power(omega, 2 * cap_c - 1)
+          * (vector_index!(v_vec_2, minus_i64!(i - maxshift - n, 1 - shiftlength_1))
+            - vector_index!(v_vec_3, minus_i64!(i - maxshift - n, 1 - shiftlength_2)))
+        + power(alpha, 2)
+          * (power(omega, 3 * cap_c - 1)
+            * vector_index!(v_vec_9, minus_i64!(i - maxshift - n, 2 - 3 * cap_c))
+            - power(omega, 3 * cap_c - 1)
               * vector_index!(
                 v_vec_10,
                 minus_i64!(i - maxshift - n, -cap_c + cap_c_a + cap_c_m + 2)
               ))
-        + power(alpha, 2)
-          * (vector_index!(
-            v_vec_2,
-            minus_i64!(
-              i - maxshift - n,
-              cap_c - cap_c_a - cap_c_m - shiftlength_1 + 1
-            )
-          ) - vector_index!(v_vec_3, minus_i64!(i - maxshift - n, 1 - shiftlength_2)))
         + alpha
           * (power(omega, 2 * cap_c + cap_c_a + cap_c_m - 1)
             * vector_index!(
@@ -330,32 +305,23 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
       power(alpha, 5) * vector_index!(v_vec_5, minus_i64!(i + 1, 3 * cap_c - shiftlength_4))
         + power(alpha, 4)
           * (-alpha * power(omega, 3 * cap_c - 1) * delta!(i + 1, 1)
-            + omega
-              * vector_index!(
-                v_vec_4,
-                minus_i64!(i + 1, cap_c - cap_c_a - cap_c_m - shiftlength_3)
-              )
+            + omega * vector_index!(v_vec_4, minus_i64!(i + 1, -shiftlength_3))
             + omega * vector_index!(v_vec_11, minus_i64!(i + 1, -shiftlength_4)) * zeta
             + omega * vector_index!(v_vec_12, minus_i64!(i + 1, -shiftlength_4)) * zeta_1
-            + vector_index!(w_vec, minus_i64!(i + 1, cap_c - cap_c_a - cap_c_m + 1))
-            - vector_index!(
-              v_vec_4,
-              minus_i64!(i + 1, cap_c - cap_c_a - cap_c_m - shiftlength_3 + 1)
-            )
+            + vector_index!(w_vec, minus_i64!(i + 1, 1))
+            - vector_index!(v_vec_4, minus_i64!(i + 1, 1 - shiftlength_3))
             - vector_index!(v_vec_6, minus_i64!(i + 1, 1 - shiftlength_5)) * zeta
             + power_vector_index!(gamma, 3 * cap_c, minus_i64!(i + 1, 1)) * zeta
             + range_index!(1, 3 * cap_c, minus_i64!(i + 1, 1)) * zeta_1
             - vector_index!(v_vec_12, minus_i64!(i + 1, 1 - shiftlength_4)) * zeta_1)
         + power(alpha, 3)
-          * (power(omega, 2 * cap_c - 1)
-            * vector_index!(v_vec_9, minus_i64!(i + 1, 2 - 2 * cap_c))
-            - power(omega, 2 * cap_c - 1)
-              * vector_index!(v_vec_10, minus_i64!(i + 1, -cap_c + cap_c_a + cap_c_m + 2)))
+          * (vector_index!(v_vec_2, minus_i64!(i + 1, 1 - shiftlength_1))
+            - vector_index!(v_vec_3, minus_i64!(i + 1, 1 - shiftlength_2)))
         + power(alpha, 2)
-          * (vector_index!(
-            v_vec_2,
-            minus_i64!(i + 1, cap_c - cap_c_a - cap_c_m - shiftlength_1 + 1)
-          ) - vector_index!(v_vec_3, minus_i64!(i + 1, 1 - shiftlength_2)))
+          * (power(omega, 3 * cap_c - 1)
+            * vector_index!(v_vec_9, minus_i64!(i + 1, 2 - 3 * cap_c))
+            - power(omega, 3 * cap_c - 1)
+              * vector_index!(v_vec_10, minus_i64!(i + 1, -cap_c + cap_c_a + cap_c_m + 2)))
         + alpha
           * (power(omega, 2 * cap_c + cap_c_a + cap_c_m - 1)
             * vector_index!(v_vec_8, minus_i64!(i + 1, -cap_c_a - cap_c_m + 2))
@@ -394,9 +360,9 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
     define_eval_vector_expression!(y_2, omega / z, i, vector_index!(r_vec, i), n + 1);
     define!(
       c,
-      (-power(alpha, 3)
+      (-power(alpha, 2)
         * z
-        * power(omega / z, cap_c + cap_c_a + cap_c_m)
+        * power(omega / z, 2 * cap_c + cap_c_a + cap_c_m)
         * (one!() - power(omega / z, cap_c - cap_c_a - cap_c_m))
         - alpha
           * power(omega / z, 2 * cap_c + cap_c_m)
@@ -407,16 +373,24 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
           * (one!() - power(omega / z, cap_c_m))
         + (omega - one!() * z)
           * (power(alpha, 4)
-            * (-y_2 * power(z, -2 * cap_c - cap_c_a - cap_c_m + n)
-              + power(z, -2 * cap_c - cap_c_a - cap_c_m + n - 1) * (omega * y_2 + z))
-            + power(alpha, 2) * y_1 * power(z, cap_c - cap_c_a - cap_c_m)
+            * (-y_2 * power(z, -3 * cap_c + n)
+              + power(z, -3 * cap_c + n - 1) * (omega * y_2 + z))
+            + power(alpha, 3) * y_1
             + y * power(z, -cap_c - cap_c_m + n) * power(omega / z, 3 * cap_c - cap_c_m)))
         / (omega - one!() * z)
     );
     define!(
       c_1,
       power(alpha, 2)
-        * (power(alpha, 2)
+        * power(z, 2 * cap_c + cap_c_a + cap_c_m + 1)
+        * power(omega / z, 2 * cap_c + cap_c_a + cap_c_m)
+        * (one!() - power(omega / z, cap_c - cap_c_a - cap_c_m))
+        / (omega - one!() * z)
+    );
+    define!(
+      c_2,
+      power(alpha, 3)
+        * (alpha
           * (-y_2
             * power(z, -3 * cap_c + n)
             * zeta_1
@@ -428,19 +402,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
                 - zeta_1 * (one!() - power(z, 3 * cap_c)) * (gamma * z - one!())))
           + (one!() - z)
             * (gamma * z - one!())
-            * (power(alpha, 3)
+            * (power(alpha, 2)
               * power(z, 3 * cap_c - 1)
               * (y_2 - power(omega / z, 3 * cap_c - 1))
               - eval_sparse_vector!(z, x.instance.0, x.instance.1) * y_1))
         / ((one!() - z) * (gamma * z - one!()))
-    );
-    define!(
-      c_2,
-      power(alpha, 3)
-        * power(z, cap_c + cap_c_a + cap_c_m + 1)
-        * power(omega / z, cap_c + cap_c_a + cap_c_m)
-        * (one!() - power(omega / z, cap_c - cap_c_a - cap_c_m))
-        / (omega - one!() * z)
     );
     define!(
       c_3,
@@ -462,7 +428,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
         linear_combination_base_zero!(
           c,
           vector_index!(w_vec, i),
-          c_2,
+          c_1,
           vector_index!(pk.d_vec, i),
           c_3,
           vector_index!(pk.sigma_vec, i),
@@ -476,15 +442,15 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
         cap_d
       )
     );
-    add_to_first_item!(g_vec, c_1);
+    add_to_first_item!(g_vec, c_2);
     define_commitment_linear_combination!(
       cm_g,
       vk,
-      c_1,
+      c_2,
       cm_w_vec,
       c,
       vk.cm_d_vec,
-      c_2,
+      c_1,
       vk.cm_sigma_vec,
       c_3,
       cm_t_vec_1,
@@ -625,9 +591,9 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
     define!(y_1, eval_sparse_zero_one_vector!(omega / z, x.instance.0));
     define!(
       c,
-      (-power(alpha, 3)
+      (-power(alpha, 2)
         * z
-        * power(omega / z, cap_c + cap_c_a + cap_c_m)
+        * power(omega / z, 2 * cap_c + cap_c_a + cap_c_m)
         * (one!() - power(omega / z, cap_c - cap_c_a - cap_c_m))
         - alpha
           * power(omega / z, 2 * cap_c + cap_c_m)
@@ -638,16 +604,24 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
           * (one!() - power(omega / z, cap_c_m))
         + (omega - one!() * z)
           * (power(alpha, 4)
-            * (-y_2 * power(z, -2 * cap_c - cap_c_a - cap_c_m + n)
-              + power(z, -2 * cap_c - cap_c_a - cap_c_m + n - 1) * (omega * y_2 + z))
-            + power(alpha, 2) * y_1 * power(z, cap_c - cap_c_a - cap_c_m)
+            * (-y_2 * power(z, -3 * cap_c + n)
+              + power(z, -3 * cap_c + n - 1) * (omega * y_2 + z))
+            + power(alpha, 3) * y_1
             + y * power(z, -cap_c - cap_c_m + n) * power(omega / z, 3 * cap_c - cap_c_m)))
         / (omega - one!() * z)
     );
     define!(
       c_1,
       power(alpha, 2)
-        * (power(alpha, 2)
+        * power(z, 2 * cap_c + cap_c_a + cap_c_m + 1)
+        * power(omega / z, 2 * cap_c + cap_c_a + cap_c_m)
+        * (one!() - power(omega / z, cap_c - cap_c_a - cap_c_m))
+        / (omega - one!() * z)
+    );
+    define!(
+      c_2,
+      power(alpha, 3)
+        * (alpha
           * (-y_2
             * power(z, -3 * cap_c + n)
             * zeta_1
@@ -659,19 +633,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
                 - zeta_1 * (one!() - power(z, 3 * cap_c)) * (gamma * z - one!())))
           + (one!() - z)
             * (gamma * z - one!())
-            * (power(alpha, 3)
+            * (power(alpha, 2)
               * power(z, 3 * cap_c - 1)
               * (y_2 - power(omega / z, 3 * cap_c - 1))
               - eval_sparse_vector!(z, x.instance.0, x.instance.1) * y_1))
         / ((one!() - z) * (gamma * z - one!()))
-    );
-    define!(
-      c_2,
-      power(alpha, 3)
-        * power(z, cap_c + cap_c_a + cap_c_m + 1)
-        * power(omega / z, cap_c + cap_c_a + cap_c_m)
-        * (one!() - power(omega / z, cap_c - cap_c_a - cap_c_m))
-        / (omega - one!() * z)
     );
     define!(
       c_3,
@@ -689,11 +655,11 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
     define_commitment_linear_combination!(
       cm_g,
       vk,
-      c_1,
+      c_2,
       cm_w_vec,
       c,
       vk.cm_d_vec,
-      c_2,
+      c_1,
       vk.cm_sigma_vec,
       c_3,
       cm_t_vec_1,
