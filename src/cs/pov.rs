@@ -1,5 +1,6 @@
 use super::*;
 use ark_ff::Field;
+use super::circuit::fan_in_two::FanInTwoCircuit;
 
 pub struct POV<F: Field> {
   pub consts: Vec<F>,
@@ -39,3 +40,14 @@ pub struct POVWitness<F: Field> {
 
 impl<F: Field> Instance<F> for POVInstance<F> {}
 impl<F: Field> Witness<F> for POVWitness<F> {}
+
+impl<F: Field> From<FanInTwoCircuit<F>> for POV<F> {
+  fn from(circuit: FanInTwoCircuit<F>) -> POV<F> {
+    POV {
+      consts: circuit.get_consts(),
+      wires: circuit.get_wiring().unwrap(),
+      nmul: circuit.get_mul_num() as u64,
+      nadd: circuit.get_add_num() as u64,
+    }
+  }
+}
