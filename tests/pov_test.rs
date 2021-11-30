@@ -27,7 +27,7 @@ fn run_pov_example<E: PairingEngine>() -> Result<(), Error> {
     .evaluate(&vec![to_field::<E::Fr>(1), to_field::<E::Fr>(2), to_field::<E::Fr>(3)])
     .unwrap();
   let ins = POVInstance{ instance: circ.get_instance().unwrap() };
-  let wit = POVWitness{ witness: circ.get_witness().unwrap() };
+  let mut wit = POVWitness{ witness: circ.get_witness().unwrap() };
   println!("{:?}", ins.instance.0);
   println!("{}", fmt_ff_vector!(ins.instance.1));
   println!("{}", fmt_ff_vector!(wit.witness.0));
@@ -41,6 +41,7 @@ fn run_pov_example<E: PairingEngine>() -> Result<(), Error> {
   assert_eq!(wit.witness.1.len(), 7);
   assert_eq!(wit.witness.2.len(), 7);
   let pov = POV::from(circ);
+  assert!(pov.satisfy(&ins, &wit));
   let max_degree = VOProofPOV::get_max_degree(pov.get_size());
   // Let the universal parameters take a larger size than expected
   let universal_params: UniversalParams<E> = VOProofPOV::setup(max_degree + 10).unwrap();
@@ -58,6 +59,9 @@ fn run_pov_example<E: PairingEngine>() -> Result<(), Error> {
   VOProofPOV::verify(&vk, &ins, &proof)?;
   proof.y = E::Fr::zero();
   let result = VOProofPOV::verify(&vk, &ins, &proof);
+  assert!(result.is_err());
+  wit.witness.0[0] = E::Fr::zero();
+  let result = VOProofPOV::prove(&pk, &ins, &wit);
   assert!(result.is_err());
   Ok(())
 }
