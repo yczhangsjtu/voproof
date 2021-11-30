@@ -75,7 +75,7 @@ impl<F: PrimeField> HPR<F> {
       .0
       .iter()
       .zip(wit.witness.1.iter())
-      .zip(wit.witness.1.iter())
+      .zip(wit.witness.2.iter())
       .all(|((a, b), c)| *a * *b == *c)
     {
       return false;
