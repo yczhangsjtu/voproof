@@ -226,8 +226,7 @@ def analyzePOV():
   C, Ca, Cm, Cc = set_pov_parameters()
 
   hints = [(C, Ca + Cm + 1), (C, 1), (Ca, 1), (Cm, 1)]
-  size_map = [(Ca, "nadd"), (Cm, "nmul"), (Cc, "nconsts"),
-              (C, "nconsts + size.nadd + size.nmul")]
+  size_map = [(Ca, "nadd"), (Cm, "nmul"), (Cc, "nconsts"), (C, "n")]
   x = get_named_vector("x")
   x.local_evaluate = True
   x.hint_computation = lambda z: RustMacro(

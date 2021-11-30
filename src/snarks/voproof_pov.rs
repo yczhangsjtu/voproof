@@ -42,7 +42,7 @@ impl<E: PairingEngine> SNARKProof<E> for POVProof<E> {}
 
 impl VOProofPOV {
   pub fn get_max_degree(size: POVSize) -> usize {
-    (6 * size.nconsts + size.nadd + size.nmul - size.nmul) as usize
+    (6 * size.n - size.nmul) as usize
   }
 }
 
