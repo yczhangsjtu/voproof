@@ -54,7 +54,8 @@ impl VOProofR1CS {
   }
 }
 
-impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
+impl<E: PairingEngine> SNARK<E> for VOProofR1CS
+{
   type Size = R1CSSize;
   type CS = R1CS<E::Fr>;
   type PK = R1CSProverKey<E>;

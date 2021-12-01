@@ -46,7 +46,8 @@ impl VOProofPOV {
   }
 }
 
-impl<E: PairingEngine> SNARK<E> for VOProofPOV {
+impl<E: PairingEngine> SNARK<E> for VOProofPOV
+{
   type Size = POVSize;
   type CS = POV<E::Fr>;
   type PK = POVProverKey<E>;

@@ -59,7 +59,8 @@ impl VOProofHPR {
   }
 }
 
-impl<E: PairingEngine> SNARK<E> for VOProofHPR {
+impl<E: PairingEngine> SNARK<E> for VOProofHPR
+{
   type Size = HPRSize;
   type CS = HPR<E::Fr>;
   type PK = HPRProverKey<E>;

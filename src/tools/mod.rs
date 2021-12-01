@@ -537,14 +537,12 @@ macro_rules! range_index {
 
 #[macro_export]
 macro_rules! expression_vector {
-  ( $i: ident, $v: expr, $n: expr) => {
-    {
-      let timer = start_timer!(|| "Expression vector");
-      let ret = (1..=$n).map(|$i| $v).collect::<Vec<_>>();
-      end_timer!(timer);
-      ret
-    }
-  };
+  ( $i: ident, $v: expr, $n: expr) => {{
+    let timer = start_timer!(|| "Expression vector");
+    let ret = (1..=$n).map(|$i| $v).collect::<Vec<_>>();
+    end_timer!(timer);
+    ret
+  }};
 }
 
 #[macro_export]
@@ -641,21 +639,21 @@ macro_rules! accumulate_vector_mul {
 
 #[macro_export]
 macro_rules! define_accumulate_vector_mul {
-    ( $name: ident, $i: ident, $init: expr, $v: expr, $n: expr) => {
-        let $name = accumulate_vector_mul!($i, $init, $v, $n);
-    };
+  ( $name: ident, $i: ident, $init: expr, $v: expr, $n: expr) => {
+    let $name = accumulate_vector_mul!($i, $init, $v, $n);
+  };
 
-    ( $name: ident, $i: ident, $v: expr, $n: expr) => {
-        let $name = accumulate_vector_mul!($i, $v, $n);
-    };
+  ( $name: ident, $i: ident, $v: expr, $n: expr) => {
+    let $name = accumulate_vector_mul!($i, $v, $n);
+  };
 
-    ( $name: ident, $v: expr, $init: expr) => {
-        let $name = accumulate_vector_mul!($v, $init);
-    };
+  ( $name: ident, $v: expr, $init: expr) => {
+    let $name = accumulate_vector_mul!($v, $init);
+  };
 
-    ( $name: ident, $v: expr) => {
-        let $name = accumulate_vector_mul!($v);
-    };
+  ( $name: ident, $v: expr) => {
+    let $name = accumulate_vector_mul!($v);
+  };
 }
 
 #[macro_export]
@@ -689,6 +687,18 @@ macro_rules! max {
         let a = $h;
         let b = max!($($v),+);
         if a < b { b } else { a }
+      }
+    };
+}
+
+#[macro_export]
+macro_rules! min {
+    ($h:expr) => ($h);
+    ($h:expr, $($v: expr),+) => {
+      {
+        let a = $h;
+        let b = min!($($v),+);
+        if a < b { a } else { b }
       }
     };
 }
@@ -780,14 +790,12 @@ macro_rules! define_commit_vector {
 
 #[macro_export]
 macro_rules! commit_vector {
-  ($v:expr, $powers:expr, $deg:expr) => {
-    {
-      let timer = start_timer!(|| "Commit vector");
-      let ret = vector_to_commitment::<E>(&$powers, &$v, $deg as u64).unwrap();
-      end_timer!(timer);
-      ret
-    }
-  };
+  ($v:expr, $powers:expr, $deg:expr) => {{
+    let timer = start_timer!(|| "Commit vector");
+    let ret = vector_to_commitment::<E>(&$powers, &$v, $deg as u64).unwrap();
+    end_timer!(timer);
+    ret
+  }};
 }
 
 #[macro_export]
@@ -919,14 +927,16 @@ macro_rules! get_randomness_from_hash {
 macro_rules! vector_poly_mul {
   // Given vectors u, v and field element omega, compute
   // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
-  ($u:expr, $v:expr, $omega:expr) => {
-    {
-      let timer = start_timer!(|| format!("Vector polynomial-multiplication of size {} and {}", $u.len(), $v.len()));
-      let ret = poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec_clone!($v));
-      end_timer!(timer);
-      ret
-    }
-  };
+  ($u:expr, $v:expr, $omega:expr) => {{
+    let timer = start_timer!(|| format!(
+      "Vector polynomial-multiplication of size {} and {}",
+      $u.len(),
+      $v.len()
+    ));
+    let ret = poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec_clone!($v));
+    end_timer!(timer);
+    ret
+  }};
 }
 
 #[macro_export]
@@ -973,14 +983,14 @@ macro_rules! vector_power_mul {
     // let mut ret = vec![E::Fr::zero(); ($n as usize) + $v.len() - 1];
     // let mut last = E::Fr::zero();
     // for i in 1..($n as usize) + $v.len() {
-      // last = last * $alpha;
-      // if i <= $v.len() {
-        // last += vector_index!($v, i)
-      // }
-      // if i > $n as usize {
-        // last -= vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
-      // }
-      // ret[i-1] = last;
+    // last = last * $alpha;
+    // if i <= $v.len() {
+    // last += vector_index!($v, i)
+    // }
+    // if i > $n as usize {
+    // last -= vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
+    // }
+    // ret[i-1] = last;
     // }
     end_timer!(timer);
     ret
@@ -999,28 +1009,54 @@ macro_rules! power_power_mul {
   // Given two power vector, compute the coefficient vector
   // of their product
   ($alpha:expr, $n:expr, $beta:expr, $m:expr) => {{
-    let alpha_power = power($alpha, $n as i64);
-    let mut beta_power = E::Fr::one();
-    let mut late_beta_power = E::Fr::zero();
+    // let alpha_power = power($alpha, $n as i64);
+    // let mut beta_power = E::Fr::one();
+    // let mut late_beta_power = E::Fr::zero();
+    // let timer = start_timer!(|| format!("Power power mul of size {} and {}", $n, $m));
+    // let ret = (1..($n as usize) + ($m as usize))
+    // .scan(E::Fr::zero(), |acc, i| {
+    // *acc = *acc * $alpha + beta_power - late_beta_power * alpha_power;
+    // beta_power = if i >= ($m as usize) {
+    // E::Fr::zero()
+    // } else {
+    // beta_power * $beta
+    // };
+    // late_beta_power = if i < ($n as usize) {
+    // E::Fr::zero()
+    // } else if i == ($n as usize) {
+    // E::Fr::one()
+    // } else {
+    // late_beta_power * $beta
+    // };
+    // Some(*acc)
+    // })
+    // .collect::<Vec<_>>();
+    // end_timer!(timer);
+    // ret
+
     let timer = start_timer!(|| format!("Power power mul of size {} and {}", $n, $m));
-    let ret = (1..($n as usize) + ($m as usize))
-      .scan(E::Fr::zero(), |acc, i| {
-        *acc = *acc * $alpha + beta_power - late_beta_power * alpha_power;
-        beta_power = if i >= ($m as usize) {
-          E::Fr::zero()
-        } else {
-          beta_power * $beta
-        };
-        late_beta_power = if i < ($n as usize) {
-          E::Fr::zero()
-        } else if i == ($n as usize) {
-          E::Fr::one()
-        } else {
-          late_beta_power * $beta
-        };
-        Some(*acc)
-      })
-      .collect::<Vec<_>>();
+    let ret = if $alpha == $beta {
+      (0..($m + $n) as usize - 1)
+        .map(|k| {
+          let l = max!($m as usize, k + 1) - $m as usize;
+          let r = min!(($n - 1) as usize, k);
+          power($alpha, k as i64) * E::Fr::from((r - l + 1) as u128)
+        })
+        .collect::<Vec<_>>()
+    } else {
+      let ratio = $alpha / $beta;
+      let diff_inv = (ratio - E::Fr::one()).inverse().unwrap();
+      (0..($m + $n) as usize - 1)
+        .map(|k| {
+          let l = max!($m as usize, k + 1) - $m as usize;
+          let r = min!(($n - 1) as usize, k);
+          power($beta, k as i64)
+            * power(ratio, l as i64)
+            * (power(ratio, (r - l) as i64 + 1) - E::Fr::one())
+            * diff_inv
+        })
+        .collect::<Vec<_>>()
+    };
     end_timer!(timer);
     ret
   }};
@@ -1228,7 +1264,7 @@ macro_rules! define_permutation_vector_from_wires {
 macro_rules! inverse {
   ($a:expr) => {
     $a.inverse().unwrap()
-  }
+  };
 }
 
 #[cfg(test)]
@@ -1236,9 +1272,9 @@ mod tests {
   use super::*;
   use ark_bls12_381 as E;
   use ark_bls12_381::Fr as F;
+  use ark_ff::{Field, PrimeField};
   use ark_poly::univariate::DensePolynomial as DensePoly;
   use ark_poly_commit::UVPolynomial;
-  use ark_ff::{Field, PrimeField};
   use ark_std::{
     ops::{Add, Mul, Sub},
     One, Zero,
@@ -1586,7 +1622,7 @@ mod tests {
   #[test]
   fn test_define_permutation_vector_from_wires() {
     let gamma = to_field::<F>(2);
-    let index_pairs = vec![(0,1),(2,3),(3,4)];
+    let index_pairs = vec![(0, 1), (2, 3), (3, 4)];
     define_permutation_vector_from_wires!(v, gamma, index_pairs, 5);
     assert_eq!(to_int!(v), vec![2, 1, 8, 16, 4]);
   }
