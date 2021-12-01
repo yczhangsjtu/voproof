@@ -738,13 +738,24 @@ macro_rules! poly_from_vec {
 
 #[macro_export]
 macro_rules! vector_reverse_omega {
-  ($v: expr, $omega:expr) => {
-    $v.iter()
-      .enumerate()
-      .map(|(i, c)| *c * power($omega, i as i64))
+  ($v: expr, $omega:expr) => {{
+    let timer = start_timer!(|| "Reverse omega");
+    let mut omega_power = E::Fr::one();
+    let ret = $v
+      .iter()
+      .map(|c| {
+        let res = *c * omega_power;
+        omega_power = omega_power * $omega;
+        res
+      })
+      .collect::<Vec<E::Fr>>()
+      .iter()
+      .map(|c| *c)
       .rev()
-      .collect::<Vec<_>>()
-  };
+      .collect::<Vec<E::Fr>>();
+    end_timer!(timer);
+    ret
+  }};
 }
 
 #[macro_export]
