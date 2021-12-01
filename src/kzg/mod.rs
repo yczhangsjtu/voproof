@@ -145,11 +145,16 @@ where
     // randomness: &Randomness<E::Fr, P>,
     // ) -> Result<(P, Option<P>), Error> {
   ) -> Result<P, Error> {
-    let divisor = P::from_coefficients_vec(vec![-point.clone(), E::Fr::one()]);
-
-    let witness_time = start_timer!(|| format!("Computing witness polynomial of degree {}", p.degree()));
-    let witness_polynomial = p / &divisor;
+    // let witness_polynomial = p / &divisor;
+    let mut witness_vector = vec![E::Fr::zero(); p.degree()];
+    let witness_time =
+      start_timer!(|| format!("Computing witness polynomial of degree {}", p.degree()));
+    witness_vector[p.degree() - 1] = p.coeffs()[p.degree()];
+    for i in (0..witness_vector.len() - 1).rev() {
+      witness_vector[i] = p.coeffs()[i + 1] + witness_vector[i + 1] * point;
+    }
     end_timer!(witness_time);
+    let witness_polynomial = P::from_coefficients_vec(witness_vector);
 
     // Ok((witness_polynomial, random_witness_polynomial))
     Ok(witness_polynomial)
@@ -164,7 +169,10 @@ where
     let (num_leading_zeros, witness_coeffs) =
       skip_leading_zeros_and_convert_to_bigints(witness_polynomial);
 
-    let witness_comm_time = start_timer!(|| "Computing commitment to witness polynomial");
+    let witness_comm_time = start_timer!(|| format!(
+      "Computing commitment to witness polynomial of degree {}",
+      witness_polynomial.degree()
+    ));
     let w = VariableBaseMSM::multi_scalar_mul(&powers[num_leading_zeros..], &witness_coeffs);
     end_timer!(witness_comm_time);
 

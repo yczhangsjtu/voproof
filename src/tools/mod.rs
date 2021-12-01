@@ -558,7 +558,9 @@ macro_rules! define_expression_vector {
 macro_rules! define_expression_vector_inverse {
   ( $name:ident, $i: ident, $v: expr, $n: expr) => {
     let mut $name = expression_vector!($i, $v, $n);
+    let timer = start_timer!(|| "batch inversion");
     batch_inversion(&mut $name);
+    end_timer!(timer);
     let $name = $name;
   };
 }
@@ -836,6 +838,7 @@ macro_rules! define_concat_vector_skip {
 #[macro_export]
 macro_rules! define_concat_neg_vector {
   ($name:ident, $u:expr, $v:expr ) => {
+    let timer = start_timer!(|| "Define concat neg");
     define_vec!(
       $name,
       $u.iter()
@@ -843,34 +846,37 @@ macro_rules! define_concat_neg_vector {
         .chain($v.iter().map(|a| -*a))
         .collect::<Vec<E::Fr>>()
     );
+    end_timer!(timer);
   };
 }
 
 #[macro_export]
 macro_rules! define_concat_uwinverse_vector {
   ($name:ident, $v:expr, $mu:expr, $u:expr, $nu:expr, $w:expr ) => {
-    define_vec!(
+    let timer = start_timer!(|| "Define uw inverse");
+    define_vec_mut!(
       $name,
-      $v.iter()
+      $u.iter()
         .map(|a| *a)
-        .chain(
-          $u.iter()
-            .map(|a| *a)
-            .zip($w.iter().map(|a| *a))
-            .map(|(u, w)| (($mu - u) * ($nu - w)).inverse().unwrap())
-        )
+        .zip($w.iter().map(|a| *a))
+        .map(|(u, w)| (($mu - u) * ($nu - w)))
         .collect::<Vec<E::Fr>>()
     );
+    batch_inversion(&mut $name);
+    define_concat_vector!($name, $v, $name);
+    end_timer!(timer);
   };
 }
 
 #[macro_export]
 macro_rules! define_zero_pad_concat_vector {
     ($name:ident, $v:expr, $n:expr, $( $u:expr ),+ ) => {
+        let timer = start_timer!(|| "Define zero pad concat vector");
         define_vec!(
             $name,
             zero_pad_and_concat!( $v, $n, $($u),+ )
         );
+        end_timer!(timer);
     };
 }
 
@@ -898,30 +904,36 @@ macro_rules! sparse_mvp_vector {
 #[macro_export]
 macro_rules! define_sparse_mvp_vector {
   ($name:ident, $mat:expr, $v:expr, $h:expr, $k:expr) => {
+    let timer = start_timer!(|| "Sprase MVP");
     define_vec!($name, sparse_mvp_vector!($mat, $v, $h, $k));
+    end_timer!(timer);
   };
 }
 
 #[macro_export]
 macro_rules! define_sparse_mvp_concat_vector {
   ($name:ident, $mat:expr, $v:expr, $h:expr, $k:expr) => {
+    let timer = start_timer!(|| "Sprase MVP concat");
     define_concat_vector!($name, sparse_mvp_vector!($mat, $v, $h, $k), $v);
+    end_timer!(timer);
   };
 }
 
 #[macro_export]
 macro_rules! define_left_sparse_mvp_vector {
   ($name:ident, $mat:expr, $v:expr, $h:expr, $k:expr) => {
+    let timer = start_timer!(|| "Left Sprase MVP");
     let $name = sparse_mvp($k, $h, &$mat.1, &$mat.0, &$mat.2, &$v).unwrap();
+    end_timer!(timer);
   };
 }
 
 #[macro_export]
 macro_rules! get_randomness_from_hash {
     ($name:ident, $( $item:expr ),+) => {
-        let $name = hash_to_field::<E::Fr>(
-            to_bytes!( $( $item ),+ ).unwrap()
-        );
+      let $name = hash_to_field::<E::Fr>(
+        to_bytes!( $( $item ),+ ).unwrap()
+      );
     }
 }
 
@@ -930,7 +942,9 @@ macro_rules! vector_mul {
   // Given vectors u, v and field element omega, compute
   // the coefficient vector of f_u(X) f_v(X)
   ($u:expr, $v:expr) => {{
-    poly_from_vec_clone!($u).mul(&poly_from_vec_clone!($v)).coeffs
+    poly_from_vec_clone!($u)
+      .mul(&poly_from_vec_clone!($v))
+      .coeffs
   }};
 }
 
@@ -984,20 +998,21 @@ macro_rules! vector_power_mul {
     let timer = start_timer!(|| format!("Vector power mul of size {} and {}", $v.len(), $n));
 
     // The accumulator version
-    // let alpha_power = power($alpha, $n as i64);
-    // let ret = (1..($n as usize) + $v.len())
-      // .scan(E::Fr::zero(), |acc, i| {
-        // *acc = *acc * $alpha + vector_index!($v, i)
-          // - vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
-        // Some(*acc)
-      // })
-      // .collect::<Vec<_>>();
+    let alpha_power = power($alpha, $n as i64);
+    let ret = (1..($n as usize) + $v.len())
+      .scan(E::Fr::zero(), |acc, i| {
+        *acc = *acc * $alpha + vector_index!($v, i)
+          - vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
+        Some(*acc)
+      })
+      .collect::<Vec<_>>();
 
     // The Fourier transform version
-    define_expression_vector!(v, i, power_vector_index!($alpha, $n, i), $n);
-    let ret = vector_mul!($v, v);
+    // define_expression_vector!(v, i, power_vector_index!($alpha, $n, i), $n);
+    // let ret = vector_mul!($v, v);
 
     // This is the for-loop version, which is not notably faster
+    // let alpha_power = power($alpha, $n as i64);
     // let mut ret = vec![E::Fr::zero(); ($n as usize) + $v.len() - 1];
     // let mut last = E::Fr::zero();
     // for i in 1..($n as usize) + $v.len() {
@@ -1008,7 +1023,7 @@ macro_rules! vector_power_mul {
     // if i > $n as usize {
     // last -= vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
     // }
-    // ret[i-1] = last;
+    // ret[i - 1] = last;
     // }
     end_timer!(timer);
     ret
@@ -1027,54 +1042,51 @@ macro_rules! power_power_mul {
   // Given two power vector, compute the coefficient vector
   // of their product
   ($alpha:expr, $n:expr, $beta:expr, $m:expr) => {{
-    // let alpha_power = power($alpha, $n as i64);
-    // let mut beta_power = E::Fr::one();
-    // let mut late_beta_power = E::Fr::zero();
-    // let timer = start_timer!(|| format!("Power power mul of size {} and {}", $n, $m));
-    // let ret = (1..($n as usize) + ($m as usize))
-    // .scan(E::Fr::zero(), |acc, i| {
-    // *acc = *acc * $alpha + beta_power - late_beta_power * alpha_power;
-    // beta_power = if i >= ($m as usize) {
-    // E::Fr::zero()
-    // } else {
-    // beta_power * $beta
-    // };
-    // late_beta_power = if i < ($n as usize) {
-    // E::Fr::zero()
-    // } else if i == ($n as usize) {
-    // E::Fr::one()
-    // } else {
-    // late_beta_power * $beta
-    // };
-    // Some(*acc)
-    // })
-    // .collect::<Vec<_>>();
-    // end_timer!(timer);
-    // ret
-
+    let alpha_power = power($alpha, $n as i64);
+    let mut beta_power = E::Fr::one();
+    let mut late_beta_power = E::Fr::zero();
     let timer = start_timer!(|| format!("Power power mul of size {} and {}", $n, $m));
-    let ret = if $alpha == $beta {
-      (0..($m + $n) as usize - 1)
-        .map(|k| {
-          let l = max!($m as usize, k + 1) - $m as usize;
-          let r = min!(($n - 1) as usize, k);
-          power($alpha, k as i64) * E::Fr::from((r - l + 1) as u128)
-        })
-        .collect::<Vec<_>>()
-    } else {
-      let ratio = $alpha / $beta;
-      let diff_inv = (ratio - E::Fr::one()).inverse().unwrap();
-      (0..($m + $n) as usize - 1)
-        .map(|k| {
-          let l = max!($m as usize, k + 1) - $m as usize;
-          let r = min!(($n - 1) as usize, k);
-          power($beta, k as i64)
-            * power(ratio, l as i64)
-            * (power(ratio, (r - l) as i64 + 1) - E::Fr::one())
-            * diff_inv
-        })
-        .collect::<Vec<_>>()
-    };
+    let ret = (1..($n as usize) + ($m as usize))
+      .scan(E::Fr::zero(), |acc, i| {
+        *acc = *acc * $alpha + beta_power - late_beta_power * alpha_power;
+        beta_power = if i >= ($m as usize) {
+          E::Fr::zero()
+        } else {
+          beta_power * $beta
+        };
+        late_beta_power = if i < ($n as usize) {
+          E::Fr::zero()
+        } else if i == ($n as usize) {
+          E::Fr::one()
+        } else {
+          late_beta_power * $beta
+        };
+        Some(*acc)
+      })
+      .collect::<Vec<_>>();
+
+    // let ret = if $alpha == $beta {
+    // (0..($m + $n) as usize - 1)
+    // .map(|k| {
+    // let l = max!($m as usize, k + 1) - $m as usize;
+    // let r = min!(($n - 1) as usize, k);
+    // power($alpha, k as i64) * E::Fr::from((r - l + 1) as u128)
+    // })
+    // .collect::<Vec<_>>()
+    // } else {
+    // let ratio = $alpha / $beta;
+    // let diff_inv = (ratio - E::Fr::one()).inverse().unwrap();
+    // (0..($m + $n) as usize - 1)
+    // .map(|k| {
+    // let l = max!($m as usize, k + 1) - $m as usize;
+    // let r = min!(($n - 1) as usize, k);
+    // power($beta, k as i64)
+    // * power(ratio, l as i64)
+    // * (power(ratio, (r - l) as i64 + 1) - E::Fr::one())
+    // * diff_inv
+    // })
+    // .collect::<Vec<_>>()
+    // };
     end_timer!(timer);
     ret
   }};
