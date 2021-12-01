@@ -147,7 +147,7 @@ where
   ) -> Result<P, Error> {
     let divisor = P::from_coefficients_vec(vec![-point.clone(), E::Fr::one()]);
 
-    let witness_time = start_timer!(|| "Computing witness polynomial");
+    let witness_time = start_timer!(|| format!("Computing witness polynomial of degree {}", p.degree()));
     let witness_polynomial = p / &divisor;
     end_timer!(witness_time);
 

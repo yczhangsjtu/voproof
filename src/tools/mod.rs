@@ -926,6 +926,15 @@ macro_rules! get_randomness_from_hash {
 }
 
 #[macro_export]
+macro_rules! vector_mul {
+  // Given vectors u, v and field element omega, compute
+  // the coefficient vector of f_u(X) f_v(X)
+  ($u:expr, $v:expr) => {{
+    poly_from_vec_clone!($u).mul(&poly_from_vec_clone!($v)).coeffs
+  }};
+}
+
+#[macro_export]
 macro_rules! vector_poly_mul {
   // Given vectors u, v and field element omega, compute
   // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
@@ -973,14 +982,21 @@ macro_rules! vector_power_mul {
   // the coefficient vector of v * power(alpha, n)
   ($v:expr, $alpha:expr, $n:expr) => {{
     let timer = start_timer!(|| format!("Vector power mul of size {} and {}", $v.len(), $n));
-    let alpha_power = power($alpha, $n as i64);
-    let ret = (1..($n as usize) + $v.len())
-      .scan(E::Fr::zero(), |acc, i| {
-        *acc = *acc * $alpha + vector_index!($v, i)
-          - vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
-        Some(*acc)
-      })
-      .collect::<Vec<_>>();
+
+    // The accumulator version
+    // let alpha_power = power($alpha, $n as i64);
+    // let ret = (1..($n as usize) + $v.len())
+      // .scan(E::Fr::zero(), |acc, i| {
+        // *acc = *acc * $alpha + vector_index!($v, i)
+          // - vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
+        // Some(*acc)
+      // })
+      // .collect::<Vec<_>>();
+
+    // The Fourier transform version
+    define_expression_vector!(v, i, power_vector_index!($alpha, $n, i), $n);
+    let ret = vector_mul!($v, v);
+
     // This is the for-loop version, which is not notably faster
     // let mut ret = vec![E::Fr::zero(); ($n as usize) + $v.len() - 1];
     // let mut last = E::Fr::zero();
