@@ -536,7 +536,12 @@ macro_rules! range_index {
 #[macro_export]
 macro_rules! expression_vector {
   ( $i: ident, $v: expr, $n: expr) => {
-    (1..=$n).map(|$i| $v).collect::<Vec<_>>()
+    {
+      let timer = start_timer!(|| "Expression vector");
+      let ret = (1..=$n).map(|$i| $v).collect::<Vec<_>>();
+      end_timer!(timer);
+      ret
+    }
   };
 }
 
@@ -774,7 +779,12 @@ macro_rules! define_commit_vector {
 #[macro_export]
 macro_rules! commit_vector {
   ($v:expr, $powers:expr, $deg:expr) => {
-    vector_to_commitment::<E>(&$powers, &$v, $deg as u64).unwrap()
+    {
+      let timer = start_timer!(|| "Commit vector");
+      let ret = vector_to_commitment::<E>(&$powers, &$v, $deg as u64).unwrap();
+      end_timer!(timer);
+      ret
+    }
   };
 }
 
@@ -908,7 +918,12 @@ macro_rules! vector_poly_mul {
   // Given vectors u, v and field element omega, compute
   // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
   ($u:expr, $v:expr, $omega:expr) => {
-    poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec_clone!($v))
+    {
+      let timer = start_timer!(|| "Vector polynomial-multiplication");
+      let ret = poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec_clone!($v));
+      end_timer!(timer);
+      ret
+    }
   };
 }
 
@@ -943,14 +958,17 @@ macro_rules! vector_power_mul {
   // Given vector v, element alpha, length n, compute
   // the coefficient vector of v * power(alpha, n)
   ($v:expr, $alpha:expr, $n:expr) => {{
+    let timer = start_timer!(|| "Vector power mul");
     let alpha_power = power($alpha, $n as i64);
-    (1..($n as usize) + $v.len())
+    let ret = (1..($n as usize) + $v.len())
       .scan(E::Fr::zero(), |acc, i| {
         *acc = *acc * $alpha + vector_index!($v, i)
           - vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
         Some(*acc)
       })
-      .collect::<Vec<_>>()
+      .collect::<Vec<_>>();
+    end_timer!(timer);
+    ret
   }};
 }
 
@@ -969,7 +987,8 @@ macro_rules! power_power_mul {
     let alpha_power = power($alpha, $n as i64);
     let mut beta_power = E::Fr::one();
     let mut late_beta_power = E::Fr::zero();
-    (1..($n as usize) + ($m as usize))
+    let timer = start_timer!(|| "Power power mul");
+    let ret = (1..($n as usize) + ($m as usize))
       .scan(E::Fr::zero(), |acc, i| {
         *acc = *acc * $alpha + beta_power - late_beta_power * alpha_power;
         beta_power = if i >= ($m as usize) {
@@ -986,7 +1005,9 @@ macro_rules! power_power_mul {
         };
         Some(*acc)
       })
-      .collect::<Vec<_>>()
+      .collect::<Vec<_>>();
+    end_timer!(timer);
+    ret
   }};
 }
 

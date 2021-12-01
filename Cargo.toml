@@ -21,3 +21,10 @@ derivative = { version = "2", features = [ "use_core" ] }
 sha2 = "0.9.6"
 ark-marlin = "0.3.0"
 blake2 = "0.9"
+rayon = {version = "1", optional = true}
+
+[features]
+default = ["std", "parallel"]
+std = ["ark-ff/std", "ark-ec/std", "ark-poly/std", "ark-std/std", "ark-relations/std", "ark-serialize/std"]
+print-trace = ["ark-std/print-trace"]
+parallel = ["std", "ark-ff/parallel", "ark-ec/parallel", "ark-poly/parallel", "ark-std/parallel", "rayon"]

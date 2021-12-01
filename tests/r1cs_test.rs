@@ -16,6 +16,7 @@ use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_r1cs::*, SNARK};
 use voproof::tools::{to_field, to_int};
 use voproof::*;
+use ark_std::{start_timer, end_timer};
 // use voproof::kzg::{KZG10, UniversalParams, Powers, VerifierKey, Randomness};
 
 #[derive(Copy)]
@@ -75,17 +76,17 @@ fn run_r1cs_example<E: PairingEngine>(scale: usize) -> Result<(), Error> {
   let cs = ArkR1CS::<E::Fr>::new_ref();
   c.generate_constraints(cs.clone()).unwrap();
   let r1cs = R1CS::from(cs.into_inner().unwrap());
-  println!("R1CS num rows: {}", r1cs.nrows);
-  println!("R1CS num cols: {}", r1cs.ncols);
-  println!("R1CS A row indices: {:?}", r1cs.arows);
-  println!("R1CS A col indices: {:?}", r1cs.acols);
-  println!("R1CS A vals: {:?}", to_int!(r1cs.avals));
-  println!("R1CS B row indices: {:?}", r1cs.brows);
-  println!("R1CS B col indices: {:?}", r1cs.bcols);
-  println!("R1CS B vals: {:?}", to_int!(r1cs.bvals));
-  println!("R1CS C row indices: {:?}", r1cs.crows);
-  println!("R1CS C col indices: {:?}", r1cs.ccols);
-  println!("R1CS C vals: {:?}", to_int!(r1cs.cvals));
+  // println!("R1CS num rows: {}", r1cs.nrows);
+  // println!("R1CS num cols: {}", r1cs.ncols);
+  // println!("R1CS A row indices: {:?}", r1cs.arows);
+  // println!("R1CS A col indices: {:?}", r1cs.acols);
+  // println!("R1CS A vals: {:?}", to_int!(r1cs.avals));
+  // println!("R1CS B row indices: {:?}", r1cs.brows);
+  // println!("R1CS B col indices: {:?}", r1cs.bcols);
+  // println!("R1CS B vals: {:?}", to_int!(r1cs.bvals));
+  // println!("R1CS C row indices: {:?}", r1cs.crows);
+  // println!("R1CS C col indices: {:?}", r1cs.ccols);
+  // println!("R1CS C vals: {:?}", to_int!(r1cs.cvals));
 
   let instance = R1CSInstance { instance: x };
   let witness = R1CSWitness { witness: w };
@@ -98,28 +99,37 @@ fn run_r1cs_example<E: PairingEngine>(scale: usize) -> Result<(), Error> {
 
   let max_degree = VOProofR1CS::get_max_degree(r1cs.get_size());
   // Let the universal parameters take a larger size than expected
+  let timer = start_timer!(|| "Universal setup");
   let universal_params: UniversalParams<E> = VOProofR1CS::setup(max_degree + 10).unwrap();
-  println!(
-    "Universal parameter size: {}",
-    universal_params.powers_of_g.len()
-  );
+  end_timer!(timer);
+  // println!(
+    // "Universal parameter size: {}",
+    // universal_params.powers_of_g.len()
+  // );
+  let timer = start_timer!(|| "Indexing");
   let (pk, vk) = VOProofR1CS::index(&universal_params, &r1cs).unwrap();
-  println!("Degree bound: {}", vk.degree_bound);
-  println!("Max degree: {}", pk.max_degree);
-  println!("Prover key matrix size: {}", pk.cap_m_mat.0.len());
-  println!("Prover key u size: {}", pk.u_vec.len());
-  println!("Prover key v size: {}", pk.v_vec.len());
-  println!("Prover key w size: {}", pk.w_vec.len());
+  end_timer!(timer);
+  // println!("Degree bound: {}", vk.degree_bound);
+  // println!("Max degree: {}", pk.max_degree);
+  // println!("Prover key matrix size: {}", pk.cap_m_mat.0.len());
+  // println!("Prover key u size: {}", pk.u_vec.len());
+  // println!("Prover key v size: {}", pk.v_vec.len());
+  // println!("Prover key w size: {}", pk.w_vec.len());
+//
+  // println!("M A row indices: {:?}", pk.cap_m_mat.0);
+  // println!("M A col indices: {:?}", pk.cap_m_mat.1);
+  // println!("M A vals: {:?}", to_int!(pk.cap_m_mat.2));
+  // let vksize = vk.size.clone();
+  // println!("H: {}", vksize.nrows);
+  // println!("K: {}", vksize.ncols);
 
-  println!("M A row indices: {:?}", pk.cap_m_mat.0);
-  println!("M A col indices: {:?}", pk.cap_m_mat.1);
-  println!("M A vals: {:?}", to_int!(pk.cap_m_mat.2));
-  let vksize = vk.size.clone();
-  println!("H: {}", vksize.nrows);
-  println!("K: {}", vksize.ncols);
-
+  let timer = start_timer!(|| "Proving");
   let proof = VOProofR1CS::prove(&pk, &instance, &witness)?;
-  VOProofR1CS::verify(&vk, &instance, &proof)
+  end_timer!(timer);
+  let timer = start_timer!(|| "Verifying");
+  let ret = VOProofR1CS::verify(&vk, &instance, &proof);
+  end_timer!(timer);
+  ret
 }
 
 #[test]
@@ -128,4 +138,9 @@ fn test_simple_r1cs_small_scales() {
   assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(10).is_ok());
   assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(15).is_ok());
   assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(20).is_ok());
+}
+
+#[test]
+fn test_simple_r1cs_large_scales() {
+  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(1000).is_ok());
 }

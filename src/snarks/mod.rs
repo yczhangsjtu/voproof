@@ -16,7 +16,7 @@ use ark_ff::to_bytes;
 use ark_ff::{fields::batch_inversion, FftField, Field, FpParameters, PrimeField};
 use ark_poly::{univariate::DensePolynomial as DensePoly, Polynomial};
 use ark_poly_commit::UVPolynomial;
-use ark_std::{ops::Mul, test_rng, vec::Vec, One, Zero};
+use ark_std::{ops::Mul, test_rng, vec::Vec, One, Zero, start_timer, end_timer};
 
 pub trait SNARKProverKey<E: PairingEngine> {}
 pub trait SNARKVerifierKey<E: PairingEngine> {}
