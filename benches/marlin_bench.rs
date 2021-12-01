@@ -18,6 +18,7 @@ use ark_relations::{
 };
 use blake2::Blake2s;
 use voproof::tools::to_field;
+use voproof::*;
 
 #[derive(Copy)]
 struct TestCircuit<F: PrimeField> {
@@ -80,7 +81,7 @@ fn computes_universal_scale<E: PairingEngine>(scale: usize) -> (usize, usize, us
   (
     matrices.num_constraints,
     matrices.num_instance_variables + matrices.num_witness_variables,
-    matrices.a_num_non_zero + matrices.b_num_non_zero + matrices.c_num_non_zero,
+    max!(matrices.a_num_non_zero, matrices.b_num_non_zero, matrices.c_num_non_zero),
   )
 }
 
@@ -108,7 +109,7 @@ fn computes_universal_parameter_and_circuit<E: PairingEngine>(
   let (m, n, s) = (
     matrices.num_constraints,
     matrices.num_instance_variables + matrices.num_witness_variables,
-    matrices.a_num_non_zero + matrices.b_num_non_zero + matrices.c_num_non_zero,
+    max!(matrices.a_num_non_zero, matrices.b_num_non_zero, matrices.c_num_non_zero),
   );
   (
     Marlin::<E::Fr, SonicKZG10<E, P<E::Fr>>, Blake2s>::universal_setup(m, n, s, rng).unwrap(),

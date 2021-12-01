@@ -702,9 +702,16 @@ macro_rules! define_sum {
 }
 
 #[macro_export]
-macro_rules! poly_from_vec {
+macro_rules! poly_from_vec_clone {
   ($v: expr) => {
     DensePoly::from_coefficients_vec($v.clone())
+  };
+}
+
+#[macro_export]
+macro_rules! poly_from_vec {
+  ($v: expr) => {
+    DensePoly::from_coefficients_vec($v)
   };
 }
 
@@ -901,7 +908,7 @@ macro_rules! vector_poly_mul {
   // Given vectors u, v and field element omega, compute
   // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
   ($u:expr, $v:expr, $omega:expr) => {
-    poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec!($v))
+    poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec_clone!($v))
   };
 }
 
