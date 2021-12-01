@@ -72,7 +72,9 @@ pub fn custom_add_three<F: Field>(a: F, b: F, c: F) -> F {
 }
 
 pub fn power<F: Field>(a: F, e: i64) -> F {
-  if e < 0 {
+  if a.is_zero() || a.is_one() {
+    a
+  } else if e < 0 {
     a.inverse().unwrap().pow(&[(-e) as u64])
   } else {
     a.pow(&[e as u64])
