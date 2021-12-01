@@ -407,7 +407,9 @@ macro_rules! multi_delta {
     ( $i: expr, $( $c:expr, $j:expr ),+ ) => {
         {
             let mut s = E::Fr::zero();
-            $( s = s + $c * delta!($i, $j); )+
+            $( if $i == $j {
+              s = s + $c;
+            } )+
             s
         }
     };
