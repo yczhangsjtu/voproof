@@ -1115,14 +1115,17 @@ macro_rules! eval_vector_expression {
   // Compute f(z), where f has coefficient vector
   // expressed by an expression
   ($z:expr, $i:ident, $expr:expr, $n: expr) => {{
+    let timer = start_timer!(|| format!("Eval vector expression of size {}", $n));
     let mut power = E::Fr::one();
-    (1..=$n)
+    let ret = (1..=$n)
       .map(|$i| {
         let ret = $expr * power;
         power = power * $z;
         ret
       })
-      .sum::<E::Fr>()
+      .sum::<E::Fr>();
+    end_timer!(timer);
+    ret
   }};
 }
 
@@ -1131,7 +1134,10 @@ macro_rules! define_eval_vector_expression {
   // Compute f(z), where f has coefficient vector
   // expressed by an expression
   ($name:ident, $z:expr, $i:ident, $expr:expr, $n: expr) => {
-    let $name = eval_vector_expression!($z, $i, $expr, $n);
+    let $name = {
+      let z = $z;
+      eval_vector_expression!(z, $i, $expr, $n)
+    };
   };
 }
 
