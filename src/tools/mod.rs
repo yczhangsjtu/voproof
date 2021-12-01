@@ -919,7 +919,7 @@ macro_rules! vector_poly_mul {
   // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
   ($u:expr, $v:expr, $omega:expr) => {
     {
-      let timer = start_timer!(|| "Vector polynomial-multiplication");
+      let timer = start_timer!(|| format!("Vector polynomial-multiplication of size {} and {}", $u.len(), $v.len()));
       let ret = poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec_clone!($v));
       end_timer!(timer);
       ret
@@ -958,7 +958,7 @@ macro_rules! vector_power_mul {
   // Given vector v, element alpha, length n, compute
   // the coefficient vector of v * power(alpha, n)
   ($v:expr, $alpha:expr, $n:expr) => {{
-    let timer = start_timer!(|| "Vector power mul");
+    let timer = start_timer!(|| format!("Vector power mul of size {} and {}", $v.len(), $n));
     let alpha_power = power($alpha, $n as i64);
     let ret = (1..($n as usize) + $v.len())
       .scan(E::Fr::zero(), |acc, i| {
@@ -967,6 +967,19 @@ macro_rules! vector_power_mul {
         Some(*acc)
       })
       .collect::<Vec<_>>();
+    // This is the for-loop version, which is not notably faster
+    // let mut ret = vec![E::Fr::zero(); ($n as usize) + $v.len() - 1];
+    // let mut last = E::Fr::zero();
+    // for i in 1..($n as usize) + $v.len() {
+      // last = last * $alpha;
+      // if i <= $v.len() {
+        // last += vector_index!($v, i)
+      // }
+      // if i > $n as usize {
+        // last -= vector_index!($v, (i as i64) - ($n as i64)) * alpha_power;
+      // }
+      // ret[i-1] = last;
+    // }
     end_timer!(timer);
     ret
   }};
@@ -987,7 +1000,7 @@ macro_rules! power_power_mul {
     let alpha_power = power($alpha, $n as i64);
     let mut beta_power = E::Fr::one();
     let mut late_beta_power = E::Fr::zero();
-    let timer = start_timer!(|| "Power power mul");
+    let timer = start_timer!(|| format!("Power power mul of size {} and {}", $n, $m));
     let ret = (1..($n as usize) + ($m as usize))
       .scan(E::Fr::zero(), |acc, i| {
         *acc = *acc * $alpha + beta_power - late_beta_power * alpha_power;
