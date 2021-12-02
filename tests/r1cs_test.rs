@@ -141,6 +141,56 @@ fn test_simple_r1cs_small_scales() {
 }
 
 #[test]
-fn test_simple_r1cs_large_scales() {
+fn test_simple_r1cs_large_scale_1000() {
   assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(1000).is_ok());
+}
+
+#[test]
+fn test_simple_r1cs_large_scale_2000() {
+  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(2000).is_ok());
+}
+
+#[test]
+fn test_simple_r1cs_large_scale_4000() {
+  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(4000).is_ok());
+}
+
+#[test]
+fn test_simple_r1cs_large_scale_8000() {
+  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(8000).is_ok());
+}
+
+#[test]
+fn test_simple_r1cs_large_scale_16000() {
+  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(16000).is_ok());
+}
+
+#[test]
+fn test_simple_r1cs_large_scale_32000() {
+  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(32000).is_ok());
+}
+
+#[test]
+fn test_simple_r1cs_large_scale_64000() {
+  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(64000).is_ok());
+}
+
+#[test]
+fn test_simple_r1cs_large_scale_128000() {
+  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(128000).is_ok());
+}
+
+#[test]
+fn test_simple_r1cs_large_scale_256000() {
+  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(256000).is_ok());
+}
+
+#[test]
+fn test_simple_r1cs_large_scale_512000() {
+  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(512000).is_ok());
+}
+
+#[test]
+fn test_simple_r1cs_large_scale_1024000() {
+  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(1024000).is_ok());
 }

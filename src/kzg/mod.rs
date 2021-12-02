@@ -98,13 +98,13 @@ where
       coeffs.len() - 1,
       // hiding_bound,
     ));
-    end_timer!(commit_time);
 
     let (num_leading_zeros, plain_coeffs) = skip_leading_zeros_and_convert_to_bigints_vec(coeffs);
 
     let msm_time = start_timer!(|| "MSM to compute commitment to plaintext poly");
     let commitment = VariableBaseMSM::multi_scalar_mul(&powers[num_leading_zeros..], &plain_coeffs);
     end_timer!(msm_time);
+    end_timer!(commit_time);
 
     Ok(Commitment(commitment.into()))
   }
@@ -119,13 +119,13 @@ where
       polynomial.degree(),
       // hiding_bound,
     ));
-    end_timer!(commit_time);
 
     let (num_leading_zeros, plain_coeffs) = skip_leading_zeros_and_convert_to_bigints(polynomial);
 
     let msm_time = start_timer!(|| "MSM to compute commitment to plaintext poly");
     let commitment = VariableBaseMSM::multi_scalar_mul(&powers[num_leading_zeros..], &plain_coeffs);
     end_timer!(msm_time);
+    end_timer!(commit_time);
 
     Ok(Commitment(commitment.into()))
   }
@@ -173,7 +173,9 @@ where
       "Computing commitment to witness polynomial of degree {}",
       witness_polynomial.degree()
     ));
+    let msm_time = start_timer!(|| "MSM to compute commitment to plaintext poly");
     let w = VariableBaseMSM::multi_scalar_mul(&powers[num_leading_zeros..], &witness_coeffs);
+    end_timer!(msm_time);
     end_timer!(witness_comm_time);
 
     Ok(Proof { w: w.into_affine() })
@@ -184,7 +186,7 @@ where
     Self::check_degree_is_too_large(p.degree(), powers.len())?;
     let open_time = start_timer!(|| format!("Opening polynomial of degree {}", p.degree()));
 
-    let witness_time = start_timer!(|| "Computing witness polynomials");
+    let witness_time = start_timer!(|| "Computing witness polynomial");
     let witness_poly = Self::compute_witness_polynomial(p, &point)?;
     end_timer!(witness_time);
 
@@ -217,7 +219,7 @@ where
     }
     let open_time = start_timer!(|| format!("Opening polynomials"));
 
-    let witness_time = start_timer!(|| "Computing witness polynomials");
+    let witness_time = start_timer!(|| "Computing witness polynomial");
     let mut witness_poly_f = P::zero();
     let mut xi_power = E::Fr::one();
     let mut witness_poly_g = P::zero();
