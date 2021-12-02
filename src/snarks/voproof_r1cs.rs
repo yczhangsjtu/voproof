@@ -320,14 +320,77 @@ impl<E: PairingEngine> SNARK<E> for VOProofR1CS {
     );
     define!(c_12, omega.inverse().unwrap());
     define!(c_13, one!() / (gamma * omega));
-    define_vector_poly_mul_shift!(v_vec_1, h_vec, pk.w_vec, omega, shiftlength);
+    define_vector_domain_evaluations_dict!(_h_vec_left_eval_dict, _h_vec_right_eval_dict);
+    define_vector_domain_evaluations_dict!(_pk_w_vec_left_eval_dict, _pk_w_vec_right_eval_dict);
+    define_vector_poly_mul_shift!(
+      v_vec_1,
+      h_vec,
+      pk.w_vec,
+      omega,
+      shiftlength,
+      _h_vec_left_eval_dict,
+      _pk_w_vec_right_eval_dict
+    );
     define_vector_reverse_omega_shift!(v_vec_2, h_vec, omega, shiftlength_1);
-    define_vector_poly_mul_shift!(v_vec_3, h_vec, pk.u_vec, omega, shiftlength_2);
-    define_vector_poly_mul_shift!(v_vec_4, h_vec, pk.y_vec, omega, shiftlength_3);
-    define_vector_poly_mul_shift!(v_vec_5, u_vec_1, u_vec_1, omega, shiftlength_4);
-    define_vector_poly_mul_shift!(v_vec_6, u_vec_1, s_vec, omega, shiftlength_5);
-    define_vector_poly_mul_shift!(v_vec_7, h_vec, s_vec, omega, shiftlength_6);
-    define_vector_poly_mul_shift!(v_vec_8, h_vec, pk.v_vec, omega, shiftlength_7);
+    define_vector_domain_evaluations_dict!(_pk_u_vec_left_eval_dict, _pk_u_vec_right_eval_dict);
+    define_vector_poly_mul_shift!(
+      v_vec_3,
+      h_vec,
+      pk.u_vec,
+      omega,
+      shiftlength_2,
+      _h_vec_left_eval_dict,
+      _pk_u_vec_right_eval_dict
+    );
+    define_vector_domain_evaluations_dict!(_pk_y_vec_left_eval_dict, _pk_y_vec_right_eval_dict);
+    define_vector_poly_mul_shift!(
+      v_vec_4,
+      h_vec,
+      pk.y_vec,
+      omega,
+      shiftlength_3,
+      _h_vec_left_eval_dict,
+      _pk_y_vec_right_eval_dict
+    );
+    define_vector_domain_evaluations_dict!(_u_vec_1_left_eval_dict, _u_vec_1_right_eval_dict);
+    define_vector_poly_mul_shift!(
+      v_vec_5,
+      u_vec_1,
+      u_vec_1,
+      omega,
+      shiftlength_4,
+      _u_vec_1_left_eval_dict,
+      _u_vec_1_right_eval_dict
+    );
+    define_vector_domain_evaluations_dict!(_s_vec_left_eval_dict, _s_vec_right_eval_dict);
+    define_vector_poly_mul_shift!(
+      v_vec_6,
+      u_vec_1,
+      s_vec,
+      omega,
+      shiftlength_5,
+      _u_vec_1_left_eval_dict,
+      _s_vec_right_eval_dict
+    );
+    define_vector_poly_mul_shift!(
+      v_vec_7,
+      h_vec,
+      s_vec,
+      omega,
+      shiftlength_6,
+      _h_vec_left_eval_dict,
+      _s_vec_right_eval_dict
+    );
+    define_vector_domain_evaluations_dict!(_pk_v_vec_left_eval_dict, _pk_v_vec_right_eval_dict);
+    define_vector_poly_mul_shift!(
+      v_vec_8,
+      h_vec,
+      pk.v_vec,
+      omega,
+      shiftlength_7,
+      _h_vec_left_eval_dict,
+      _pk_v_vec_right_eval_dict
+    );
     define_vector_reverse_omega_shift!(v_vec_9, r_vec_tilde, omega, shiftlength_8);
     define_vector_power_mul!(v_vec_10, s_vec, c_12, 3 * cap_h);
     define_vector_power_mul!(v_vec_11, s_vec, c_13, 3 * cap_h);

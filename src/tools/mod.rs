@@ -960,27 +960,72 @@ macro_rules! vector_mul {
 }
 
 #[macro_export]
+macro_rules! get_eval {
+  ($poly:expr, $evals_dict:expr, $size:expr) => {{
+    $evals_dict.entry($size).or_insert_with(|| {
+      let timer = start_timer!(|| format!("Forward FFT of size {}", $size));
+      let domain = GeneralEvaluationDomain::new($size).unwrap();
+      let evals: Evaluations<E::Fr, GeneralEvaluationDomain<E::Fr>> =
+        $poly.evaluate_over_domain_by_ref(domain);
+      end_timer!(timer);
+      evals
+    })
+  }};
+}
+
+#[macro_export]
 macro_rules! vector_poly_mul {
   // Given vectors u, v and field element omega, compute
   // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
-  ($u:expr, $v:expr, $omega:expr) => {{
+  ($u:expr, $v:expr, $omega:expr, $left_name:expr, $right_name:expr) => {{
     let timer = start_timer!(|| format!(
       "Vector polynomial-multiplication of size {} and {}",
       $u.len(),
       $v.len()
     ));
-    let ret = poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec_clone!($v));
+    let u = poly_from_vec!(vector_reverse_omega!($u, $omega));
+    let v = poly_from_vec_clone!($v);
+    let size =
+      GeneralEvaluationDomain::<E::Fr>::compute_size_of_domain($u.len() + $v.len()).unwrap();
+    let mut uevals = get_eval!(u, $left_name, size).clone();
+    let vevals = get_eval!(v, $right_name, size);
+    uevals
+      .evals
+      .iter_mut()
+      .zip(vevals.evals.iter())
+      .for_each(|(a, b)| *a *= b);
+    // uevals *= &vevals;
+    let fft_timer = start_timer!(|| format!("Inverse FFT"));
+    let ret = uevals.interpolate();
+    end_timer!(fft_timer);
+    // let ret = poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec_clone!($v));
     end_timer!(timer);
     ret
   }};
 }
 
 #[macro_export]
+macro_rules! define_vector_domain_evaluations_dict {
+  // To cache the evaluations of vectors and save some FFTs
+  // Since a vector might be evaluated after "reverse and multily omega"
+  // when it appears on the left side of the multiplication, its evaluations
+  // are different when it appears on different sides. So one vector needs
+  // two evaluation maps. Each map maps the given domain size to the corresponding
+  // evaluation
+  ($left_name:ident, $right_name:ident) => {
+    let mut $left_name: HashMap<usize, Evaluations<E::Fr, GeneralEvaluationDomain<E::Fr>>> =
+      HashMap::new();
+    let mut $right_name: HashMap<usize, Evaluations<E::Fr, GeneralEvaluationDomain<E::Fr>>> =
+      HashMap::new();
+  };
+}
+
+#[macro_export]
 macro_rules! define_vector_poly_mul {
   // Given vectors u, v and field element omega, compute
   // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
-  ($name:ident, $u:expr, $v:expr, $omega:expr) => {
-    let $name = vector_poly_mul!($u, $v, $omega).coeffs;
+  ($name:ident, $u:expr, $v:expr, $omega:expr, $left_name:expr, $right_name:expr) => {
+    let $name = vector_poly_mul!($u, $v, $omega, $left_name, $right_name).coeffs;
   };
 }
 
@@ -988,8 +1033,8 @@ macro_rules! define_vector_poly_mul {
 macro_rules! define_vector_poly_mul_shift {
   // Given vectors u, v and field element omega, compute
   // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
-  ($name:ident, $u:expr, $v:expr, $omega:expr, $shiftname:ident) => {
-    define_vector_poly_mul!($name, $u, $v, $omega);
+  ($name:ident, $u:expr, $v:expr, $omega:expr, $shiftname:ident, $left_name:expr, $right_name:expr) => {
+    define_vector_poly_mul!($name, $u, $v, $omega, $left_name, $right_name);
     define_shift_minus_one!($shiftname, $u);
   };
 }
@@ -1320,9 +1365,14 @@ mod tests {
   use ark_bls12_381 as E;
   use ark_bls12_381::Fr as F;
   use ark_ff::{Field, PrimeField};
-  use ark_poly::univariate::DensePolynomial as DensePoly;
+  use ark_poly::{
+    univariate::DensePolynomial as DensePoly, EvaluationDomain, Evaluations,
+    GeneralEvaluationDomain, Polynomial,
+  };
+
   use ark_poly_commit::UVPolynomial;
   use ark_std::{
+    collections::HashMap,
     ops::{Add, Mul, Sub},
     One, Zero,
   };
@@ -1536,7 +1586,9 @@ mod tests {
     let u = to_field!(vec![1, 1, 1, 1]);
     let v = to_field!(vec![1, 2, 3, 4]);
     let omega = to_field::<F>(2);
-    let poly = vector_poly_mul!(u, v, omega);
+    define_vector_domain_evaluations_dict!(_u_left_dict, _u_right_dict);
+    define_vector_domain_evaluations_dict!(_v_left_dict, _v_right_dict);
+    let poly = vector_poly_mul!(u, v, omega, _u_left_dict, _u_right_dict);
     assert_eq!(to_int!(poly.coeffs), vec![8, 20, 34, 49, 24, 11, 4]);
   }
 

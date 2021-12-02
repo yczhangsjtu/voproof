@@ -146,6 +146,16 @@ fn bench_marlin_prover_test_circuit_scale_1000(b: &mut Bencher) {
 }
 
 #[bench]
+fn bench_marlin_prover_test_circuit_scale_4000(b: &mut Bencher) {
+  let (srs, c, _) = computes_universal_parameter_and_circuit::<E>(4000);
+  let (pk, _) = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::index(&srs, c).unwrap();
+  let rng = &mut ark_std::test_rng();
+  b.iter(|| {
+    let _ = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::prove(&pk, c.clone(), rng).unwrap();
+  });
+}
+
+#[bench]
 fn bench_marlin_verifier_test_circuit_scale_1000(b: &mut Bencher) {
   let (srs, c, x) = computes_universal_parameter_and_circuit::<E>(1000);
   let (pk, vk) = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::index(&srs, c).unwrap();

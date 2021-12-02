@@ -1,9 +1,9 @@
 // mod template;
 
 use crate::cs::{
-  r1cs::{R1CSInstance, R1CSSize, R1CSWitness, R1CS},
   hpr::{HPRInstance, HPRSize, HPRWitness, HPR},
   pov::{POVInstance, POVSize, POVWitness, POV},
+  r1cs::{R1CSInstance, R1CSSize, R1CSWitness, R1CS},
   CSSize, ConstraintSystem, Instance, Witness,
 };
 use crate::error::Error;
@@ -14,9 +14,18 @@ use crate::*;
 use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::to_bytes;
 use ark_ff::{fields::batch_inversion, FftField, Field, FpParameters, PrimeField};
-use ark_poly::{univariate::DensePolynomial as DensePoly, Polynomial};
+use ark_poly::{
+  univariate::{DensePolynomial as DensePoly}, EvaluationDomain, GeneralEvaluationDomain,
+  Polynomial, Evaluations
+};
 use ark_poly_commit::UVPolynomial;
-use ark_std::{ops::Mul, test_rng, vec::Vec, One, Zero, start_timer, end_timer};
+use ark_std::{
+  collections::{hash_map::HashMap},
+  end_timer,
+  start_timer, test_rng,
+  vec::Vec,
+  One, Zero,
+};
 
 pub trait SNARKProverKey<E: PairingEngine> {}
 pub trait SNARKVerifierKey<E: PairingEngine> {}

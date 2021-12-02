@@ -145,6 +145,18 @@ fn bench_prover_test_circuit_scale_1000(b: &mut Bencher) {
   });
 }
 
+fn bench_prover_test_circuit_scale_4000(b: &mut Bencher) {
+  let (r1cs, instance, witness) = computes_r1cs::<E>(4000);
+
+  let max_degree = VOProofR1CS::get_max_degree(r1cs.get_size());
+  let universal_params: UniversalParams<E> =
+    VOProofR1CS::setup(max_degree).unwrap();
+  let (pk, vk) = VOProofR1CS::index(&universal_params, &r1cs).unwrap();
+  b.iter(|| {
+    VOProofR1CS::prove(&pk, &instance, &witness).unwrap();
+  });
+}
+
 #[bench]
 fn bench_verifier_test_circuit_scale_1000(b: &mut Bencher) {
   let (r1cs, instance, witness) = computes_r1cs::<E>(1000);
