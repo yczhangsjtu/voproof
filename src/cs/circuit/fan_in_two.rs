@@ -803,34 +803,34 @@ mod tests {
       )
     );
     assert_eq!(circ.get_instance().unwrap(), (vec![3, 12], vec![1, 72]));
+  }
 
-    #[test]
-    fn test_get_witness_with_const() {
-      let mut circ = FanInTwoCircuit::<i32>::new();
-      let a = circ.add_global_input_variable().unwrap();
-      let b = circ.add_global_input_variable().unwrap();
-      let c = circ.add_global_input_variable().unwrap();
-      let d = circ.add_vars(&a, &b);
-      let e = circ.mul_vars(&b, &c);
-      let f = circ.mul_vars(&d, &e);
-      let g = circ.add_vars(&a, &d);
-      let h = circ.mul_vars(&g, &f);
-      let o = circ.const_var(10);
-      let p = circ.mul_vars(&h, &o);
-      circ.mark_as_complete().unwrap();
-      circ.mark_variable_as_public(&a).unwrap();
-      circ.mark_variable_as_public(&p).unwrap();
-      circ.evaluate(&vec![1, 2, 3]).unwrap();
-      assert_eq!(
-        circ.get_witness().unwrap(),
-        (
-          vec![2, 3, 4, 72, 1, 1, 0],
-          vec![3, 6, 18, 10, 2, 3, 0],
-          vec![6, 18, 72, 720, 3, 4, 10]
-        )
-      );
-      assert_eq!(circ.get_instance().unwrap(), (vec![4, 17], vec![1, 720]));
-    }
+  #[test]
+  fn test_get_witness_with_const() {
+    let mut circ = FanInTwoCircuit::<i32>::new();
+    let a = circ.add_global_input_variable().unwrap();
+    let b = circ.add_global_input_variable().unwrap();
+    let c = circ.add_global_input_variable().unwrap();
+    let d = circ.add_vars(&a, &b);
+    let e = circ.mul_vars(&b, &c);
+    let f = circ.mul_vars(&d, &e);
+    let g = circ.add_vars(&a, &d);
+    let h = circ.mul_vars(&g, &f);
+    let o = circ.const_var(10);
+    let p = circ.mul_vars(&h, &o);
+    circ.mark_as_complete().unwrap();
+    circ.mark_variable_as_public(&a).unwrap();
+    circ.mark_variable_as_public(&p).unwrap();
+    circ.evaluate(&vec![1, 2, 3]).unwrap();
+    assert_eq!(
+      circ.get_witness().unwrap(),
+      (
+        vec![2, 3, 4, 72, 1, 1, 0],
+        vec![3, 6, 18, 10, 2, 3, 0],
+        vec![6, 18, 72, 720, 3, 4, 10]
+      )
+    );
+    assert_eq!(circ.get_instance().unwrap(), (vec![4, 17], vec![1, 720]));
   }
 
   #[test]
@@ -845,7 +845,7 @@ mod tests {
     let g = circ.add_vars(&a, &d);
     let h = circ.mul_vars(&g, &f);
     let o = circ.const_var(10);
-    let p = circ.mul_vars(&h, &o);
+    circ.mul_vars(&h, &o);
     circ.mark_as_complete().unwrap();
     assert_eq!(circ.get_consts(), vec![10]);
   }
@@ -862,7 +862,7 @@ mod tests {
     let g = circ.add_vars(&a, &d);
     let h = circ.mul_vars(&g, &f);
     let o = circ.const_var(10);
-    let p = circ.mul_vars(&h, &o);
+    circ.mul_vars(&h, &o);
     circ.mark_as_complete().unwrap();
     assert_eq!(circ.get_var(&a).input_wires.len(), 2);
     assert!(!circ.get_var(&a).is_gate_output());

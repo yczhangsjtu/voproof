@@ -68,10 +68,10 @@ fn computes_universal_scale<E: PairingEngine>(scale: usize) -> (usize, usize, us
     num_variables: scale,
     num_constraints: scale,
   };
-  let x = vec![c.a.unwrap(), c.b.unwrap(), (c.a.unwrap() * c.b.unwrap())];
-  let w = vec![c.a.unwrap(); scale - 3];
+  // let x = vec![c.a.unwrap(), c.b.unwrap(), (c.a.unwrap() * c.b.unwrap())];
+  // let w = vec![c.a.unwrap(); scale - 3];
 
-  let mut cs = ArkR1CS::<E::Fr>::new_ref();
+  let cs = ArkR1CS::<E::Fr>::new_ref();
   c.generate_constraints(cs.clone()).unwrap();
   cs.inline_all_lcs();
   let matrices = cs.to_matrices().unwrap();
@@ -97,9 +97,9 @@ fn computes_universal_parameter_and_circuit<E: PairingEngine>(
     num_constraints: scale,
   };
   let x = vec![c.a.unwrap(), c.b.unwrap(), (c.a.unwrap() * c.b.unwrap())];
-  let w = vec![c.a.unwrap(); scale - 3];
+  // let w = vec![c.a.unwrap(); scale - 3];
 
-  let mut cs = ArkR1CS::<E::Fr>::new_ref();
+  let cs = ArkR1CS::<E::Fr>::new_ref();
   c.generate_constraints(cs.clone()).unwrap();
   cs.inline_all_lcs();
   let matrices = cs.to_matrices().unwrap();
@@ -128,7 +128,7 @@ fn test_marlin_setup_test_circuit_scale_1000() {
 fn test_marlin_index_test_circuit_scale_1000() {
   let (srs, c, _) = computes_universal_parameter_and_circuit::<E>(1000);
   let timer = start_timer!(|| "Index");
-  let (pk, _) = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::index(&srs, c).unwrap();
+  let (_, _) = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::index(&srs, c).unwrap();
   end_timer!(timer);
 }
 

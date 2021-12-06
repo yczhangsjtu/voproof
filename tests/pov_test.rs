@@ -1,11 +1,10 @@
 use ark_ec::PairingEngine;
-use ark_ff::fields::PrimeField;
-use ark_std::{test_rng, Zero};
+use ark_std::{Zero};
 use voproof::cs::{pov::*, circuit::fan_in_two::FanInTwoCircuit, ConstraintSystem};
 use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_pov::*, SNARK};
-use voproof::tools::{to_field, to_int, try_to_int};
+use voproof::tools::{to_field, try_to_int};
 use voproof::*;
 
 fn run_pov_example<E: PairingEngine>() -> Result<(), Error> {

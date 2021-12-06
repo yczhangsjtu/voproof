@@ -442,14 +442,13 @@ mod tests {
   #![allow(non_camel_case_types)]
   use crate::kzg::*;
   use crate::*;
-  use ark_ec::group::Group;
   use ark_poly_commit::{PCCommitment, Polynomial};
 
   use ark_bls12_377::Bls12_377;
   use ark_bls12_381::Bls12_381;
   use ark_ec::PairingEngine;
   use ark_poly::univariate::DensePolynomial as DensePoly;
-  use ark_std::{collections::BTreeMap, test_rng};
+  use ark_std::{test_rng};
 
   type Fr = <ark_bls12_381::Bls12_381 as PairingEngine>::Fr;
   type UniPoly_381 = DensePoly<<Bls12_381 as PairingEngine>::Fr>;
@@ -622,8 +621,8 @@ mod tests {
       let mut g_comms = Vec::new();
       let mut f_values = Vec::new();
       let mut g_values = Vec::new();
-      let mut z = E::Fr::rand(rng);
-      let mut zz = E::Fr::rand(rng);
+      let z = E::Fr::rand(rng);
+      let zz = E::Fr::rand(rng);
       end_timer!(batch_check_test_time_preamble);
 
       let batch_check_test_time_prepare = start_timer!(|| format!(

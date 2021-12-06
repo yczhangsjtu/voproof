@@ -14,8 +14,7 @@ use voproof::cs::{
 use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_r1cs::*, SNARK};
-use voproof::tools::{to_field, to_int};
-use voproof::*;
+use voproof::tools::{to_field};
 use ark_std::{start_timer, end_timer};
 // use voproof::kzg::{KZG10, UniversalParams, Powers, VerifierKey, Randomness};
 

@@ -1367,13 +1367,12 @@ mod tests {
   use ark_ff::{Field, PrimeField};
   use ark_poly::{
     univariate::DensePolynomial as DensePoly, EvaluationDomain, Evaluations,
-    GeneralEvaluationDomain, Polynomial,
+    GeneralEvaluationDomain,
   };
 
   use ark_poly_commit::UVPolynomial;
   use ark_std::{
     collections::HashMap,
-    ops::{Add, Mul, Sub},
     One, Zero,
   };
 
