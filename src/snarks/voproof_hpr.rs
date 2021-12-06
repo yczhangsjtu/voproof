@@ -154,19 +154,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofHPR {
     let vk = pk.verifier_key.clone();
     let cap_d = pk.verifier_key.degree_bound as i64;
     let rng = &mut test_rng();
-    sample_randomizers!(
-      rng,
-      delta_vec,
-      1,
-      delta_vec_1,
-      1,
-      delta_vec_2,
-      1,
-      delta_vec_3,
-      1,
-      delta_vec_4,
-      1
-    );
+    sample_randomizers!(rng, delta_vec, 1, delta_vec_1, 1, delta_vec_2, 1);
     define_vec!(x_vec, x.instance.clone());
     define_vec!(w_vec, w.witness.0.clone());
     define_vec!(w_vec_1, w.witness.1.clone());
@@ -201,8 +189,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofHPR {
     );
     define_left_sparse_mvp_vector!(c_vec, pk.cap_m_mat, r_vec, cap_h, 3 * cap_k + 1);
     define_concat_neg_vector!(s_vec, r_vec, c_vec);
-    redefine_zero_pad_concat_vector!(s_vec, n, delta_vec_1);
-    define_commit_vector!(cm_s_vec, s_vec, pk.powers, n + 1);
+    define_commit_vector!(cm_s_vec, s_vec, pk.powers, cap_h + 3 * cap_k + 1);
     get_randomness_from_hash!(
       nu,
       one!(),
@@ -221,8 +208,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofHPR {
       3 * cap_k + 1
     );
     define_concat_uwinverse_vector!(h_vec, rnu_vec, mu, pk.u_vec, nu, pk.w_vec);
-    redefine_zero_pad_concat_vector!(h_vec, n, delta_vec_2);
-    define_commit_vector!(cm_h_vec, h_vec, pk.powers, n + 1);
+    define_commit_vector!(cm_h_vec, h_vec, pk.powers, 3 * cap_k + ell + 1);
     get_randomness_from_hash!(
       beta,
       one!(),
@@ -259,7 +245,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofHPR {
       ),
       n
     );
-    define_concat_vector!(r_vec_tilde, accumulate_vector_plus!(r_vec_1), delta_vec_3);
+    define_concat_vector!(r_vec_tilde, accumulate_vector_plus!(r_vec_1), delta_vec_1);
     define_commit_vector!(cm_r_vec_tilde, r_vec_tilde, pk.powers, n + 1);
     define!(
       maxshift,
@@ -293,7 +279,7 @@ impl<E: PairingEngine> SNARK<E> for VOProofHPR {
     define_vec!(
       t_vec,
       vector_concat!(
-        delta_vec_4,
+        delta_vec_2,
         expression_vector!(
           i,
           c_1
