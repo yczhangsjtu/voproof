@@ -223,6 +223,7 @@ fn test_marlin_prover_test_circuit_scale_256000() {
 }
 
 #[test]
+#[ignore]
 fn test_marlin_prover_test_circuit_scale_512000() {
   let (srs, c, _) = computes_universal_parameter_and_circuit::<E>(512000);
   let (pk, _) = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::index(&srs, c).unwrap();
@@ -233,6 +234,7 @@ fn test_marlin_prover_test_circuit_scale_512000() {
 }
 
 #[test]
+#[ignore]
 fn test_marlin_prover_test_circuit_scale_1024000() {
   let (srs, c, _) = computes_universal_parameter_and_circuit::<E>(1024000);
   let (pk, _) = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::index(&srs, c).unwrap();

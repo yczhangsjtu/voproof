@@ -186,11 +186,13 @@ fn test_simple_r1cs_large_scale_256000() {
 }
 
 #[test]
+#[ignore]
 fn test_simple_r1cs_large_scale_512000() {
   assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(512000).is_ok());
 }
 
 #[test]
+#[ignore]
 fn test_simple_r1cs_large_scale_1024000() {
   assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(1024000).is_ok());
 }
