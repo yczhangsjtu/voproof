@@ -605,7 +605,7 @@ mod tests {
   {
     let rng = &mut test_rng();
     let batch_check_test_time = start_timer!(|| "Batch check test time");
-    for _ in 0..10 {
+    for i in 0..10 {
       let batch_check_test_time_body = start_timer!(|| format!("Batch check test body time {}", i));
 
       let batch_check_test_time_preamble =

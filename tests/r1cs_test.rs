@@ -133,10 +133,18 @@ fn run_r1cs_example<E: PairingEngine>(scale: usize) -> Result<(), Error> {
 
 #[test]
 fn test_simple_r1cs_small_scales() {
-  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(5).is_ok());
-  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(10).is_ok());
-  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(15).is_ok());
-  assert!(run_r1cs_example::<ark_bls12_381::Bls12_381>(20).is_ok());
+  let result = run_r1cs_example::<ark_bls12_381::Bls12_381>(5);
+  if !result.is_ok() {
+    if let Err(Error::VectorNotEqual(info)) = result {
+      println!("{}", info);
+    } else {
+      println!("{:?}", result);
+    }
+    assert!(false);
+  }
+  run_r1cs_example::<ark_bls12_381::Bls12_381>(10).unwrap();
+  run_r1cs_example::<ark_bls12_381::Bls12_381>(15).unwrap();
+  run_r1cs_example::<ark_bls12_381::Bls12_381>(20).unwrap();
 }
 
 #[test]

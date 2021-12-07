@@ -21,6 +21,7 @@ use ark_poly::{
 use ark_poly_commit::UVPolynomial;
 use ark_std::{
   collections::{hash_map::HashMap},
+  ops::Mul,
   end_timer,
   start_timer, test_rng,
   vec::Vec,

@@ -1005,6 +1005,15 @@ macro_rules! vector_poly_mul {
 }
 
 #[macro_export]
+macro_rules! vector_poly_mul_no_dict {
+  // Given vectors u, v and field element omega, compute
+  // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
+  ($u:expr, $v:expr, $omega:expr) => {{
+    poly_from_vec!(vector_reverse_omega!($u, $omega)).mul(&poly_from_vec_clone!($v))
+  }};
+}
+
+#[macro_export]
 macro_rules! define_vector_domain_evaluations_dict {
   // To cache the evaluations of vectors and save some FFTs
   // Since a vector might be evaluated after "reverse and multily omega"
@@ -1036,6 +1045,15 @@ macro_rules! define_vector_poly_mul_shift {
   ($name:ident, $u:expr, $v:expr, $omega:expr, $shiftname:ident, $left_name:expr, $right_name:expr) => {
     define_vector_poly_mul!($name, $u, $v, $omega, $left_name, $right_name);
     define_shift_minus_one!($shiftname, $u);
+  };
+}
+
+#[macro_export]
+macro_rules! define_vector_poly_mul_no_dict {
+  // Given vectors u, v and field element omega, compute
+  // the coefficient vector of X^{|u|-1} f_u(omega X^{-1}) f_v(X)
+  ($name:ident, $u:expr, $v:expr, $omega:expr) => {
+    let $name = vector_poly_mul_no_dict!($u, $v, $omega).coeffs;
   };
 }
 
