@@ -1,5 +1,5 @@
 use ark_ec::PairingEngine;
-use ark_ff::fields::{PrimeField, FftField, FpParameters};
+use ark_ff::fields::{FftField, FpParameters, PrimeField};
 use ark_relations::{
   lc,
   r1cs::{
@@ -7,6 +7,7 @@ use ark_relations::{
     Variable,
   },
 };
+use ark_std::{end_timer, start_timer};
 use voproof::cs::{
   r1cs::{R1CSInstance, R1CSWitness, R1CS},
   ConstraintSystem,
@@ -14,9 +15,8 @@ use voproof::cs::{
 use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_r1cs::*, SNARK};
-use voproof::tools::{to_field};
+use voproof::tools::to_field;
 use voproof::*;
-use ark_std::{start_timer, end_timer};
 // use voproof::kzg::{KZG10, UniversalParams, Powers, VerifierKey, Randomness};
 
 #[derive(Copy)]
@@ -103,8 +103,8 @@ fn run_r1cs_example<E: PairingEngine>(scale: usize) -> Result<(), Error> {
   let universal_params: UniversalParams<E> = VOProofR1CS::setup(max_degree + 10).unwrap();
   end_timer!(timer);
   // println!(
-    // "Universal parameter size: {}",
-    // universal_params.powers_of_g.len()
+  // "Universal parameter size: {}",
+  // universal_params.powers_of_g.len()
   // );
   let timer = start_timer!(|| "Indexing");
   let (pk, vk) = VOProofR1CS::index(&universal_params, &r1cs).unwrap();
@@ -115,7 +115,7 @@ fn run_r1cs_example<E: PairingEngine>(scale: usize) -> Result<(), Error> {
   // println!("Prover key u size: {}", pk.u_vec.len());
   // println!("Prover key v size: {}", pk.v_vec.len());
   // println!("Prover key w size: {}", pk.w_vec.len());
-//
+  //
   // println!("M A row indices: {:?}", pk.cap_m_mat.0);
   // println!("M A col indices: {:?}", pk.cap_m_mat.1);
   // println!("M A vals: {:?}", to_int!(pk.cap_m_mat.2));
