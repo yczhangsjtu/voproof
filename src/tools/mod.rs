@@ -887,6 +887,26 @@ macro_rules! define_concat_uwinverse_vector {
 }
 
 #[macro_export]
+macro_rules! define_uwinverse_vector {
+  ($name:ident, $mu:expr, $u:expr, $nu:expr, $w:expr ) => {
+    let $name = {
+      let timer = start_timer!(|| "Define uw inverse");
+      define_vec_mut!(
+        $name,
+        $u.iter()
+          .map(|a| *a)
+          .zip($w.iter().map(|a| *a))
+          .map(|(u, w)| (($mu - u) * ($nu - w)))
+          .collect::<Vec<E::Fr>>()
+      );
+      batch_inversion(&mut $name);
+      end_timer!(timer);
+      $name
+    };
+  };
+}
+
+#[macro_export]
 macro_rules! define_zero_pad_concat_vector {
     ($name:ident, $v:expr, $n:expr, $( $u:expr ),+ ) => {
         let timer = start_timer!(|| "Define zero pad concat vector");
