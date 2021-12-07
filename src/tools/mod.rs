@@ -464,7 +464,12 @@ macro_rules! commitment_linear_combination_no_one {
 #[macro_export]
 macro_rules! define_commitment_linear_combination {
     ( $name: ident, $vk: expr, $one: expr, $( $cm:expr, $c:expr ),* ) => {
-        let $name = commitment_linear_combination!($one, $vk, $( $cm, $c ),* );
+      let $name = {
+        let timer = start_timer!(|| "Linearly combining commitments");
+        let ret = commitment_linear_combination!($one, $vk, $( $cm, $c ),* );
+        end_timer!(timer);
+        ret
+      };
     };
 }
 

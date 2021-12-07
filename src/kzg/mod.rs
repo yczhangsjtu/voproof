@@ -266,11 +266,15 @@ where
     let check_time = start_timer!(|| "Checking evaluation");
     let inner = comm.0.into_projective() - &vk.g.mul(value.into_repr());
     // left hand side = e(C - y G, H) = (f(x) - y) e(G, H)
+    let timer = start_timer!(|| "Pairing");
     let lhs = E::pairing(inner, vk.h);
+    end_timer!(timer);
 
     let inner = vk.beta_h.into_projective() - &vk.h.mul(point.into_repr());
     // right hand side = e(W, (x - z) H) = w (x - z) e(G, H)
+    let timer = start_timer!(|| "Pairing");
     let rhs = E::pairing(proof.w, inner);
+    end_timer!(timer);
 
     end_timer!(check_time, || format!("Result: {}", lhs == rhs));
     // f(x) - y = w (x - z) => w = (f(x) - y) / (x - z)
