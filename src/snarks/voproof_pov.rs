@@ -177,9 +177,9 @@ impl<E: PairingEngine> SNARK<E> for VOProofPOV {
         delta_vec_2,
         expression_vector!(
           i,
-          c * vector_index!(t_vec, minus_i64!(i + n, 1))
-            * (vector_index!(w_vec, minus_i64!(i + n, 1))
-              - vector_index!(x_vec, minus_i64!(i + n, 1)))
+          -c * vector_index!(t_vec, minus_i64!(i + n, 1))
+            * (vector_index!(x_vec, minus_i64!(i + n, 1))
+              - vector_index!(w_vec, minus_i64!(i + n, 1)))
             + c_2
               * vector_index!(r_vec, minus_i64!(i + n, -3 * cap_c + n + 1))
               * (vector_index!(w_vec, minus_i64!(i + n, -3 * cap_c + n + 1))
