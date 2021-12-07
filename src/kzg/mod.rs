@@ -318,14 +318,14 @@ where
     total_q -= &vk.g.mul(y);
 
     for (c, v) in g_commitments.iter().zip(g_values) {
-      total_q_2 += &c.0.mul(xi_power_2.into_repr());
+      total_q_2 += &c.0.mul((xi_power_2 * randomizer).into_repr());
       y_2 += &(xi_power_2 * v);
       xi_power_2 *= rand_xi_2;
     }
-    total_q_2 -= &vk.g.mul(y_2);
+    total_q_2 -= &vk.g.mul(y_2 * randomizer);
 
     let point_f = total_q
-      + &total_q_2.mul(randomizer.into_repr())
+      + &total_q_2
       + &proof.w.mul(z.into_repr())
       + &proof_2.w.mul(randomizer * zz);
     let point_f = point_f.into_affine();
