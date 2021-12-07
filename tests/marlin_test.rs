@@ -1,7 +1,7 @@
 use ark_bls12_381::Bls12_381 as E;
 use ark_bls12_381::Fr;
 use ark_ec::PairingEngine;
-use ark_ff::fields::PrimeField;
+use ark_ff::fields::{PrimeField, FftField, FpParameters};
 use ark_marlin::{Marlin, UniversalSRS};
 use ark_poly::univariate::DensePolynomial as P;
 use ark_poly_commit::sonic_pc::SonicKZG10;
@@ -63,8 +63,8 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for TestCircuit<F> {
 
 fn computes_universal_scale<E: PairingEngine>(scale: usize) -> (usize, usize, usize) {
   let c = TestCircuit::<E::Fr> {
-    a: Some(to_field::<E::Fr>(3)),
-    b: Some(to_field::<E::Fr>(2)),
+    a: Some(generator_of!(E)),
+    b: Some(generator_of!(E) * generator_of!(E)),
     num_variables: scale,
     num_constraints: scale,
   };

@@ -804,9 +804,16 @@ macro_rules! define_commit_vector {
 }
 
 #[macro_export]
+macro_rules! compute_density {
+  ($v:expr) => {{
+    $v.iter().filter(|a| !a.is_zero()).count()
+  }};
+}
+
+#[macro_export]
 macro_rules! commit_vector {
   ($v:expr, $powers:expr, $deg:expr) => {{
-    let timer = start_timer!(|| "Commit vector");
+    let timer = start_timer!(|| format!("Commit vector of density {}", compute_density!($v)));
     let ret = vector_to_commitment::<E>(&$powers, &$v, $deg as u64).unwrap();
     end_timer!(timer);
     ret
@@ -1389,10 +1396,7 @@ mod tests {
   };
 
   use ark_poly_commit::UVPolynomial;
-  use ark_std::{
-    collections::HashMap,
-    One, Zero,
-  };
+  use ark_std::{collections::HashMap, One, Zero};
 
   #[test]
   fn test_int_field_transform() {

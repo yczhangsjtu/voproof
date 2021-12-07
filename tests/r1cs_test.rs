@@ -1,5 +1,5 @@
 use ark_ec::PairingEngine;
-use ark_ff::fields::PrimeField;
+use ark_ff::fields::{PrimeField, FftField, FpParameters};
 use ark_relations::{
   lc,
   r1cs::{
@@ -15,6 +15,7 @@ use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_r1cs::*, SNARK};
 use voproof::tools::{to_field};
+use voproof::*;
 use ark_std::{start_timer, end_timer};
 // use voproof::kzg::{KZG10, UniversalParams, Powers, VerifierKey, Randomness};
 
@@ -64,8 +65,8 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for TestCircuit<F> {
 
 fn run_r1cs_example<E: PairingEngine>(scale: usize) -> Result<(), Error> {
   let c = TestCircuit::<E::Fr> {
-    a: Some(to_field::<E::Fr>(3)),
-    b: Some(to_field::<E::Fr>(2)),
+    a: Some(generator_of!(E)),
+    b: Some(generator_of!(E) * generator_of!(E)),
     num_variables: scale,
     num_constraints: scale,
   };
