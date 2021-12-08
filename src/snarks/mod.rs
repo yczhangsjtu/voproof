@@ -84,3 +84,4 @@ pub trait SNARK<E: PairingEngine> {
 pub mod voproof_hpr;
 pub mod voproof_pov;
 pub mod voproof_r1cs;
+pub mod voproof_r1cs_prover_efficient;
