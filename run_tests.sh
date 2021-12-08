@@ -8,6 +8,6 @@ for scale in 1000 2000 4000 8000 16000 32000 64000 128000; do # 256000 512000 10
   $prefix test_simple_r1cs_large_scale_$scale $postfix | egrep '^End:' | tee -a test_result.txt
   echo "VOR1CS Prover Efficient $scale" | tee -a test_result.txt
   $prefix test_simple_r1cs_pe_large_scale_$scale $postfix | egrep '^End:' | tee -a test_result.txt
-  echo "Marlin Prover Efficient $scale" | tee -a test_result.txt
+  echo "Marlin $scale" | tee -a test_result.txt
   $prefix test_marlin_prover_test_circuit_scale_$scale $postfix | egrep '^End:' | tee -a test_result.txt
 done
