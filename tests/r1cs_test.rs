@@ -75,8 +75,12 @@ fn run_r1cs_example<E: PairingEngine>(scale: usize) -> Result<(), Error> {
   let cs = ArkR1CS::<E::Fr>::new_ref();
   c.generate_constraints(cs.clone()).unwrap();
   let r1cs = R1CS::from(cs.into_inner().unwrap());
-  // println!("R1CS num rows: {}", r1cs.nrows);
-  // println!("R1CS num cols: {}", r1cs.ncols);
+  println!("R1CS num rows: {}", r1cs.nrows);
+  println!("R1CS num cols: {}", r1cs.ncols);
+  println!("R1CS non entries: {}, {}, {} (total {}, max {})",
+      r1cs.arows.len(), r1cs.brows.len(), r1cs.crows.len(),
+      r1cs.arows.len() + r1cs.brows.len() + r1cs.crows.len(),
+      max!(r1cs.arows.len(), r1cs.brows.len(), r1cs.crows.len()));
   // println!("R1CS A row indices: {:?}", r1cs.arows);
   // println!("R1CS A col indices: {:?}", r1cs.acols);
   // println!("R1CS A vals: {:?}", to_int!(r1cs.avals));
@@ -144,8 +148,12 @@ fn run_r1cs_pe_example<E: PairingEngine>(scale: usize) -> Result<(), Error> {
   let cs = ArkR1CS::<E::Fr>::new_ref();
   c.generate_constraints(cs.clone()).unwrap();
   let r1cs = R1CS::from(cs.into_inner().unwrap());
-  // println!("R1CS num rows: {}", r1cs.nrows);
-  // println!("R1CS num cols: {}", r1cs.ncols);
+  println!("R1CS num rows: {}", r1cs.nrows);
+  println!("R1CS num cols: {}", r1cs.ncols);
+  println!("R1CS non entries: {}, {}, {} (total {}, max {})",
+      r1cs.arows.len(), r1cs.brows.len(), r1cs.crows.len(),
+      r1cs.arows.len() + r1cs.brows.len() + r1cs.crows.len(),
+      max!(r1cs.arows.len(), r1cs.brows.len(), r1cs.crows.len()));
   // println!("R1CS A row indices: {:?}", r1cs.arows);
   // println!("R1CS A col indices: {:?}", r1cs.acols);
   // println!("R1CS A vals: {:?}", to_int!(r1cs.avals));

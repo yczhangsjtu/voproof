@@ -17,7 +17,7 @@ use voproof::cs::{
   ConstraintSystem,
 };
 use voproof::kzg::UniversalParams;
-use voproof::snarks::{voproof_r1cs::*, SNARK};
+use voproof::snarks::{voproof_r1cs::*, voproof_r1cs_prover_efficient::*, SNARK};
 use voproof::tools::{to_field, to_int};
 use voproof::*;
 
@@ -168,5 +168,19 @@ fn bench_verifier_test_circuit_scale_1000(b: &mut Bencher) {
   let proof = VOProofR1CS::prove(&pk, &instance, &witness).unwrap();
   b.iter(|| {
     VOProofR1CS::verify(&vk, &instance, &proof);
+  });
+}
+
+#[bench]
+fn bench_verifier_pe_test_circuit_scale_1000(b: &mut Bencher) {
+  let (r1cs, instance, witness) = computes_r1cs::<E>(1000);
+
+  let max_degree = VOProofR1CSProverEfficient::get_max_degree(r1cs.get_size());
+  let universal_params: UniversalParams<E> =
+    VOProofR1CSProverEfficient::setup(max_degree).unwrap();
+  let (pk, vk) = VOProofR1CSProverEfficient::index(&universal_params, &r1cs).unwrap();
+  let proof = VOProofR1CSProverEfficient::prove(&pk, &instance, &witness).unwrap();
+  b.iter(|| {
+    VOProofR1CSProverEfficient::verify(&vk, &instance, &proof);
   });
 }
