@@ -653,3 +653,6 @@ pub(crate) fn poseidon_parameters() -> PoseidonParameters<ark_bls12_381::Fr> {
 
     PoseidonParameters::<F>::new(full_rounds, partial_rounds, alpha, mds, ark)
 }
+
+pub mod mt_circuit;
+pub mod test_circuit;
