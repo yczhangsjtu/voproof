@@ -15,7 +15,6 @@ use voproof::cs::{
 use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_r1cs::*, voproof_r1cs_prover_efficient::*, SNARK};
-use voproof::tools::to_field;
 use voproof::*;
 // use voproof::kzg::{KZG10, UniversalParams, Powers, VerifierKey, Randomness};
 
@@ -222,7 +221,7 @@ macro_rules! define_test_small_scale {
 }
 
 define_test_small_scale!(test_simple_r1cs_small_scales, run_r1cs_example);
-define_test_small_scale!(test_simple_r1cs_prover_efficient_small_scales, run_r1cs_pe_example);
+define_test_small_scale!(test_simple_r1cs_pe_small_scales, run_r1cs_pe_example);
 
 macro_rules! define_test_large_scale {
   ($func_name: ident, $exec_name: ident, $scale: literal) => {
