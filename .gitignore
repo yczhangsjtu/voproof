@@ -1,3 +1,3 @@
 /target
 *.pyc
-test_result.txt
+test_result*
