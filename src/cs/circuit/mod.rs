@@ -92,7 +92,8 @@ impl<F: Field> From<R1CS<F>> for FanInTwoCircuit<F> {
         if row.len() > 0 {
           row
             .iter()
-            .fold(zero.clone(), |a, b| circ.add_vars(&a, &b))
+            .skip(1)
+            .fold(row[0].clone(), |a, b| circ.add_vars(&a, &b))
         } else {
           zero.clone()
         }
@@ -104,7 +105,8 @@ impl<F: Field> From<R1CS<F>> for FanInTwoCircuit<F> {
         if row.len() > 0 {
           row
             .iter()
-            .fold(zero.clone(), |a, b| circ.add_vars(&a, &b))
+            .skip(1)
+            .fold(row[0].clone(), |a, b| circ.add_vars(&a, &b))
         } else {
           zero.clone()
         }
@@ -116,7 +118,8 @@ impl<F: Field> From<R1CS<F>> for FanInTwoCircuit<F> {
         if row.len() > 0 {
           row
             .iter()
-            .fold(zero.clone(), |a, b| circ.add_vars(&a, &b))
+            .skip(1)
+            .fold(row[0].clone(), |a, b| circ.add_vars(&a, &b))
         } else {
           zero.clone()
         }
