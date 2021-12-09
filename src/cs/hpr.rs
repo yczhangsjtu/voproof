@@ -4,6 +4,7 @@ use crate::*;
 use ark_ff::{Field, PrimeField};
 use ark_std::{rand::RngCore, UniformRand};
 
+#[derive(Clone)]
 pub struct HPR<F: Field> {
   pub arows: Vec<u64>,
   pub acols: Vec<u64>,
@@ -60,10 +61,12 @@ pub struct HPRSize {
 
 impl CSSize for HPRSize {}
 
+#[derive(Clone)]
 pub struct HPRInstance<F: Field> {
   pub instance: Vec<F>,
 }
 
+#[derive(Clone)]
 pub struct HPRWitness<F: Field> {
   pub witness: (Vec<F>, Vec<F>, Vec<F>),
 }

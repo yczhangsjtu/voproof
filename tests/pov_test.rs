@@ -12,7 +12,7 @@ use ark_relations::{
 use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_pov::*, SNARK};
-use voproof::tools::{to_field, try_to_int};
+use voproof::tools::{to_field, try_to_int, fmt_field};
 use voproof::*;
 mod utils;
 use utils::test_circuit::TestCircuit;
@@ -120,6 +120,17 @@ fn run_pov_from_r1cs<E: PairingEngine>(scale: usize) {
   } else {
     println!("R1CS unsatisfied!");
   }
+
+  let mut circ = FanInTwoCircuit::from(r1cs.clone());
+  let input = instance
+    .instance.clone()
+    .into_iter()
+    .chain(witness.witness.clone().into_iter())
+    .collect();
+  circ.evaluate(&input).unwrap();
+  let output = circ.get_output().unwrap();
+  println!("{}", fmt_ff_vector!(output));
+  assert_eq!(output, vec![E::Fr::zero(); r1cs.nrows as usize]);
 
   let (pov, instance, witness) = pov_triple_from_r1cs_triple(r1cs, instance, witness);
   assert!(pov.satisfy_gate_logics(&witness));

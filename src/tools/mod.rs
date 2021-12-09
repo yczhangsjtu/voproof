@@ -1281,25 +1281,29 @@ macro_rules! check_poly_eval {
   };
 }
 
+pub fn fmt_field<F: Field>(v: &F) -> String {
+  if let Some(x) = try_to_int::<F>(v.clone()) {
+    format!("Fp256({})", x)
+  } else {
+    if let Some(x) = try_to_int::<F>(-v.clone()) {
+      format!("Fp256(-{})", x)
+    } else {
+      v.to_string()
+    }
+  }
+}
+
 #[macro_export]
 macro_rules! fmt_ff {
   ($a:expr) => {
-    if let Some(x) = try_to_int::<E::Fr>($a.clone()) {
-      format!("Fp256({})", x)
-    } else {
-      if let Some(x) = try_to_int::<E::Fr>(-$a.clone()) {
-        format!("Fp256(-{})", x)
-      } else {
-        $a.to_string()
-      }
-    }
+    fmt_field::<E::Fr>($a)
   };
 }
 
 #[macro_export]
 macro_rules! fmt_ff_vector {
   ($v: expr) => {
-    ($v.iter().map(|e| fmt_ff!(e)).collect::<Vec<String>>()).join("\n")
+    ($v.iter().map(|e| fmt_field::<E::Fr>(e)).collect::<Vec<String>>()).join("\n")
   };
 }
 

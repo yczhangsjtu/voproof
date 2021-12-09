@@ -216,6 +216,14 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug + Default> FanIn
     self.get_var(var).try_get_value()
   }
 
+  pub fn get_var_value_str_or_empty(&self, var: &VariableRef) -> String {
+    if let Some(v) = self.try_get_var_value(var) {
+      format!("{:?}", v)
+    } else {
+      String::from("")
+    }
+  }
+
   pub fn get_var_value(&self, var: &VariableRef) -> Result<F, Error> {
     if let Some(v) = self.try_get_var_value(var) {
       Ok(v)
@@ -585,6 +593,32 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug + Default> FanIn
       return Err(Error::TryingToConnectTheSameVariable);
     }
     self.assert_equals.push((a.clone(), b.clone()));
+    Ok(())
+  }
+}
+
+impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug + Default> core::fmt::Display
+  for FanInTwoCircuit<F>
+{
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    for g in self.add_gates.iter() {
+      write!(
+        f,
+        "Var({}) {:?} + Var({}) {:?} = Var({}) {:?}\n",
+        g.left.index, self.get_var_value_str_or_empty(&g.left),
+        g.right.index, self.get_var_value_str_or_empty(&g.right),
+        g.output.index, self.get_var_value_str_or_empty(&g.output),
+      )?;
+    }
+    for g in self.mul_gates.iter() {
+      write!(
+        f,
+        "Var({}) {:?} * Var({}) {:?} = Var({}) {:?}\n",
+        g.left.index, self.get_var_value_str_or_empty(&g.left),
+        g.right.index, self.get_var_value_str_or_empty(&g.right),
+        g.output.index, self.get_var_value_str_or_empty(&g.output),
+      )?;
+    }
     Ok(())
   }
 }

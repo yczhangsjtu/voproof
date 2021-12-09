@@ -16,7 +16,7 @@ use voproof::cs::{
 use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_r1cs::*, voproof_hpr::*, SNARK};
-use voproof::tools::{to_field, to_int, try_to_int};
+use voproof::tools::{to_field, to_int, fmt_field};
 use voproof::*;
 // use voproof::kzg::{KZG10, UniversalParams, Powers, VerifierKey, Randomness};
 

@@ -4,6 +4,7 @@ use crate::*;
 use ark_ff::{Field, PrimeField};
 use ark_relations::r1cs::ConstraintSystem as ArkR1CS;
 
+#[derive(Clone)]
 pub struct R1CS<F: Field> {
   pub arows: Vec<u64>,
   pub acols: Vec<u64>,
@@ -153,10 +154,12 @@ pub struct R1CSSize {
 
 impl CSSize for R1CSSize {}
 
+#[derive(Clone)]
 pub struct R1CSInstance<F: Field> {
   pub instance: Vec<F>,
 }
 
+#[derive(Clone)]
 pub struct R1CSWitness<F: Field> {
   pub witness: Vec<F>,
 }
