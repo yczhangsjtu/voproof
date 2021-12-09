@@ -185,6 +185,8 @@ pub enum Error {
   VariableAlreadySetAsOutput,
   VariableAlreadySet(String),
   InputSizeNotSupported(usize, usize),
+  TryingToConnectTheSameVariable,
+  ConnectedVariablesDoNotHaveWire,
 }
 
 impl core::fmt::Display for Error {
@@ -286,6 +288,8 @@ impl core::fmt::Display for Error {
             Error::VariableAlreadySetAsOutput => write!(f, "VariableAlreadySetAsOutput"),
             Error::VariableAlreadySet(info) => write!(f, "VariableAlreadySet to {}", info),
             Error::InputSizeNotSupported(expected, real) => write!(f, "InputSizeNotSupported, expected {}, got {}", expected, real),
+            Error::TryingToConnectTheSameVariable => write!(f, "TryingToConnectTheSameVariable"),
+            Error::ConnectedVariablesDoNotHaveWire => write!(f, "ConnectedVariablesDoNotHaveWire"),
         }
   }
 }

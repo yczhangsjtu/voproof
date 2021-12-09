@@ -1,5 +1,6 @@
 use super::circuit::fan_in_two::FanInTwoCircuit;
 use super::*;
+use super::r1cs::{R1CS, R1CSInstance, R1CSWitness};
 use ark_ff::Field;
 
 pub struct POV<F: Field> {
@@ -129,6 +130,41 @@ impl<F: Field> POV<F> {
     }
     true
   }
+}
+
+pub fn pov_pair_from_r1cs_pair<F: Field>(
+  r1cs: R1CS<F>,
+  instance: R1CSInstance<F>,
+) -> (POV<F>, POVInstance<F>) {
+  let mut circ = FanInTwoCircuit::from(r1cs);
+  circ.assign_public_io(&instance.instance).unwrap();
+  let x = circ.get_instance().unwrap();
+  (
+    POV::from(circ),
+    POVInstance { instance: x },
+  )
+}
+
+pub fn pov_triple_from_r1cs_triple<F: Field>(
+  r1cs: R1CS<F>,
+  instance: R1CSInstance<F>,
+  witness: R1CSWitness<F>,
+) -> (POV<F>, POVInstance<F>, POVWitness<F>) {
+  let mut circ = FanInTwoCircuit::from(r1cs);
+  let input = instance
+    .instance
+    .into_iter()
+    .chain(witness.witness.into_iter())
+    .collect();
+  circ.evaluate(&input).unwrap();
+  let x = circ.get_instance().unwrap();
+  let w = circ.get_witness().unwrap();
+
+  (
+    POV::from(circ),
+    POVInstance { instance: x },
+    POVWitness { witness: w },
+  )
 }
 
 #[cfg(test)]

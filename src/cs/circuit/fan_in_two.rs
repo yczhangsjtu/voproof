@@ -10,6 +10,7 @@ pub struct FanInTwoCircuit<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + 
   num_global_input_variables: usize,
   global_output_variables: Vec<VariableRef>,
   variables: Vec<Variable<F>>,
+  assert_equals: Vec<(VariableRef, VariableRef)>,
 }
 
 #[derive(Clone, Debug)]
@@ -121,7 +122,7 @@ pub struct Variable<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> 
   value: Option<F>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VariableRef {
   index: usize,
 }
@@ -136,6 +137,7 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug + Default> FanIn
       num_global_input_variables: 0,
       global_output_variables: Vec::new(),
       variables: Vec::new(),
+      assert_equals: Vec::new(),
     }
   }
 
@@ -181,6 +183,23 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug + Default> FanIn
       for idxes in indices.windows(2) {
         ret.push((idxes[0] as u64, idxes[1] as u64));
       }
+    }
+
+    for (a, b) in self.assert_equals.iter() {
+      let a = if let Some(a) = self.get_var(a).try_get_any_wire() {
+        a
+      } else {
+        return Err(Error::ConnectedVariablesDoNotHaveWire);
+      };
+      let b = if let Some(b) = self.get_var(b).try_get_any_wire() {
+        b
+      } else {
+        return Err(Error::ConnectedVariablesDoNotHaveWire);
+      };
+      ret.push((
+        self.get_wire_global_index(&a) as u64,
+        self.get_wire_global_index(&b) as u64,
+      ));
     }
     Ok(ret)
   }
@@ -557,6 +576,17 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug + Default> FanIn
         .collect::<Result<Vec<F>, Error>>()?,
     ))
   }
+
+  // Must be careful when using this function. Double check that the two
+  // input variables are not connected by other links already. Otherwise
+  // the resulting POV relation might be invalid
+  pub fn assert_equal(&mut self, a: &VariableRef, b: &VariableRef) -> Result<(), Error> {
+    if a == b {
+      return Err(Error::TryingToConnectTheSameVariable);
+    }
+    self.assert_equals.push((a.clone(), b.clone()));
+    Ok(())
+  }
 }
 
 impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> Variable<F> {
@@ -606,6 +636,16 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> Variable<F> {
       None
     } else {
       Some(self.input_wires[0].clone())
+    }
+  }
+
+  pub fn try_get_any_wire(&self) -> Option<GateWire> {
+    if let Some(wire) = self.try_get_input_wire() {
+      Some(GateWire::Input(wire))
+    } else if let Some(wire) = self.try_get_output_wire() {
+      Some(GateWire::Output(wire))
+    } else {
+      None
     }
   }
 
@@ -888,6 +928,50 @@ mod tests {
         (2, 19),
         (3, 16),
         (10, 20)
+      ]
+    );
+  }
+
+  #[test]
+  fn test_get_wiring_with_assert_equals() {
+    let mut circ = FanInTwoCircuit::<i32>::new();
+    let a = circ.add_global_input_variable().unwrap();
+    let b = circ.add_global_input_variable().unwrap();
+    let c = circ.add_global_input_variable().unwrap();
+    let d = circ.add_vars(&a, &b);
+    let e = circ.mul_vars(&b, &c);
+    let f = circ.mul_vars(&d, &e);
+    let g = circ.add_vars(&a, &d);
+    let h = circ.mul_vars(&g, &f);
+    let o = circ.const_var(10);
+    let p = circ.mul_vars(&h, &o);
+    circ.assert_equal(&a, &p);
+    circ.mark_as_complete().unwrap();
+    assert_eq!(circ.get_var(&a).input_wires.len(), 2);
+    assert!(!circ.get_var(&a).is_gate_output());
+    assert_eq!(circ.get_var(&b).input_wires.len(), 2);
+    assert!(!circ.get_var(&b).is_gate_output());
+    assert_eq!(circ.get_var(&c).input_wires.len(), 1);
+    assert!(!circ.get_var(&c).is_gate_output());
+    assert_eq!(circ.get_var(&d).input_wires.len(), 2);
+    assert!(circ.get_var(&d).is_gate_output());
+    assert_eq!(circ.get_var(&e).input_wires.len(), 1);
+    assert!(circ.get_var(&e).is_gate_output());
+    assert_eq!(circ.get_var(&f).input_wires.len(), 1);
+    assert!(circ.get_var(&f).is_gate_output());
+    assert_eq!(
+      circ.get_wiring().unwrap(),
+      vec![
+        (4, 5),
+        (11, 0),
+        (1, 12),
+        (12, 18),
+        (8, 14),
+        (9, 15),
+        (2, 19),
+        (3, 16),
+        (10, 20),
+        (4, 17),
       ]
     );
   }

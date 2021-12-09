@@ -1,11 +1,21 @@
+use ark_ff::{PrimeField, FftField, FpParameters};
 use ark_ec::PairingEngine;
-use ark_std::{Zero};
-use voproof::cs::{pov::*, circuit::fan_in_two::FanInTwoCircuit, ConstraintSystem};
+use ark_std::Zero;
+use voproof::cs::{circuit::fan_in_two::FanInTwoCircuit, pov::*, r1cs::*, ConstraintSystem};
+use ark_relations::{
+  lc, ns,
+  r1cs::{
+    ConstraintSynthesizer, ConstraintSystem as ArkR1CS, ConstraintSystemRef, SynthesisError,
+    Variable,
+  },
+};
 use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_pov::*, SNARK};
 use voproof::tools::{to_field, try_to_int};
 use voproof::*;
+mod utils;
+use utils::test_circuit::TestCircuit;
 
 fn run_pov_example<E: PairingEngine>() -> Result<(), Error> {
   let mut circ = FanInTwoCircuit::<E::Fr>::new();
@@ -23,10 +33,18 @@ fn run_pov_example<E: PairingEngine>() -> Result<(), Error> {
   circ.mark_variable_as_public(&a).unwrap();
   circ.mark_variable_as_public(&p).unwrap();
   circ
-    .evaluate(&vec![to_field::<E::Fr>(1), to_field::<E::Fr>(2), to_field::<E::Fr>(3)])
+    .evaluate(&vec![
+      to_field::<E::Fr>(1),
+      to_field::<E::Fr>(2),
+      to_field::<E::Fr>(3),
+    ])
     .unwrap();
-  let ins = POVInstance{ instance: circ.get_instance().unwrap() };
-  let mut wit = POVWitness{ witness: circ.get_witness().unwrap() };
+  let ins = POVInstance {
+    instance: circ.get_instance().unwrap(),
+  };
+  let mut wit = POVWitness {
+    witness: circ.get_witness().unwrap(),
+  };
   println!("{:?}", ins.instance.0);
   println!("{}", fmt_ff_vector!(ins.instance.1));
   println!("{}", fmt_ff_vector!(wit.witness.0));
@@ -68,4 +86,48 @@ fn run_pov_example<E: PairingEngine>() -> Result<(), Error> {
 #[test]
 fn test_simple_pov() {
   assert!(run_pov_example::<ark_bls12_381::Bls12_381>().is_ok());
+}
+
+fn run_pov_from_r1cs<E: PairingEngine>(scale: usize) {
+  let c = TestCircuit::<E::Fr> {
+    a: Some(generator_of!(E)),
+    b: Some(generator_of!(E) * generator_of!(E)),
+    num_variables: scale,
+    num_constraints: scale,
+  };
+  let x = vec![c.a.unwrap(), c.b.unwrap(), (c.a.unwrap() * c.b.unwrap())];
+  let w = vec![c.a.unwrap(); scale - 3];
+
+  let cs = ArkR1CS::<E::Fr>::new_ref();
+  c.generate_constraints(cs.clone()).unwrap();
+  let r1cs = R1CS::from(cs.into_inner().unwrap());
+  println!("R1CS num rows: {}", r1cs.nrows);
+  println!("R1CS num cols: {}", r1cs.ncols);
+  println!(
+    "R1CS non entries: {}, {}, {} (total {}, max {})",
+    r1cs.arows.len(),
+    r1cs.brows.len(),
+    r1cs.crows.len(),
+    r1cs.arows.len() + r1cs.brows.len() + r1cs.crows.len(),
+    max!(r1cs.arows.len(), r1cs.brows.len(), r1cs.crows.len())
+  );
+
+  let instance = R1CSInstance { instance: x };
+  let witness = R1CSWitness { witness: w };
+
+  if r1cs.satisfy(&instance, &witness) {
+    println!("R1CS satisfied!");
+  } else {
+    println!("R1CS unsatisfied!");
+  }
+
+  let (pov, instance, witness) = pov_triple_from_r1cs_triple(r1cs, instance, witness);
+  assert!(pov.satisfy_gate_logics(&witness));
+  assert!(pov.satisfy_wiring(&witness));
+  assert!(witness.satisfy_instance(&instance));
+}
+
+#[test]
+fn test_pov_from_r1cs() {
+  run_pov_from_r1cs::<ark_bls12_381::Bls12_381>(5);
 }
