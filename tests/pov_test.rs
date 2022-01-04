@@ -1,8 +1,5 @@
-use ark_ff::{PrimeField, FftField, FpParameters, Fp256};
 use ark_ec::PairingEngine;
-use ark_std::Zero;
-use ark_serialize::{CanonicalSerialize};
-use voproof::cs::{circuit::fan_in_two::FanInTwoCircuit, pov::*, r1cs::*, ConstraintSystem};
+use ark_ff::{FftField, Fp256, FpParameters, PrimeField};
 use ark_relations::{
   lc, ns,
   r1cs::{
@@ -10,14 +7,17 @@ use ark_relations::{
     Variable,
   },
 };
+use ark_serialize::CanonicalSerialize;
+use ark_std::{end_timer, start_timer, Zero};
+use voproof::cs::{circuit::fan_in_two::FanInTwoCircuit, pov::*, r1cs::*, ConstraintSystem};
 use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_pov::*, SNARK};
-use voproof::tools::{to_field, try_to_int, fmt_field};
+use voproof::tools::{fmt_field, to_field, try_to_int};
 use voproof::*;
 mod utils;
-use utils::test_circuit::TestCircuit;
 use utils::mt_circuit::MerkleTreeCircuit;
+use utils::test_circuit::TestCircuit;
 
 fn run_pov_example<E: PairingEngine>() -> Result<(), Error> {
   let mut circ = FanInTwoCircuit::<E::Fr>::new();
@@ -126,13 +126,13 @@ fn run_pov_from_r1cs<E: PairingEngine>(scale: usize) {
 
   let mut circ = FanInTwoCircuit::from(r1cs.clone());
   let input = instance
-    .instance.clone()
+    .instance
+    .clone()
     .into_iter()
     .chain(witness.witness.clone().into_iter())
     .collect();
   circ.evaluate(&input).unwrap();
   let output = circ.get_output().unwrap();
-  println!("{}", fmt_ff_vector!(output));
   assert_eq!(output, vec![E::Fr::zero(); r1cs.nrows as usize]);
 
   let (pov, instance, witness) = pov_triple_from_r1cs_triple(r1cs, instance, witness);
@@ -146,10 +146,10 @@ fn test_pov_from_r1cs() {
   run_pov_from_r1cs::<ark_bls12_381::Bls12_381>(5);
 }
 
-fn run_pov_mt<E: PairingEngine<Fr = Fp256<ark_bls12_381::FrParameters>>>(scale: usize) {
-  let c = MerkleTreeCircuit {
-    height: scale
-  };
+fn run_pov_mt<E: PairingEngine<Fr = Fp256<ark_bls12_381::FrParameters>>>(
+  scale: usize,
+) -> Result<(), Error> {
+  let c = MerkleTreeCircuit { height: scale };
   let cs = ArkR1CS::<E::Fr>::new_ref();
   c.generate_constraints(cs.clone()).unwrap();
   let cs = cs.into_inner().unwrap();
@@ -172,22 +172,66 @@ fn run_pov_mt<E: PairingEngine<Fr = Fp256<ark_bls12_381::FrParameters>>>(scale: 
 
   let mut circ = FanInTwoCircuit::from(r1cs.clone());
   let input = instance
-    .instance.clone()
+    .instance
+    .clone()
     .into_iter()
     .chain(witness.witness.clone().into_iter())
     .collect();
   circ.evaluate(&input).unwrap();
   let output = circ.get_output().unwrap();
-  println!("{}", fmt_ff_vector!(output));
   assert_eq!(output, vec![E::Fr::zero(); r1cs.nrows as usize]);
 
   let (pov, instance, witness) = pov_triple_from_r1cs_triple(r1cs, instance, witness);
   assert!(pov.satisfy_gate_logics(&witness));
   assert!(pov.satisfy_wiring(&witness));
   assert!(witness.satisfy_instance(&instance));
+
+  let max_degree = VOProofPOV::get_max_degree(pov.get_size());
+  // Let the universal parameters take a larger size than expected
+  let timer = start_timer!(|| "Universal setup");
+  let universal_params: UniversalParams<E> = VOProofPOV::setup(max_degree + 10).unwrap();
+  end_timer!(timer);
+  // println!(
+  // "Universal parameter size: {}",
+  // universal_params.powers_of_g.len()
+  // );
+  let timer = start_timer!(|| "Indexing");
+  let (pk, vk) = VOProofPOV::index(&universal_params, &pov).unwrap();
+  end_timer!(timer);
+  // println!("Degree bound: {}", vk.degree_bound);
+  // println!("Max degree: {}", pk.max_degree);
+  // println!("Prover key matrix size: {}", pk.cap_m_mat.0.len());
+  // println!("Prover key u size: {}", pk.u_vec.len());
+  // println!("Prover key v size: {}", pk.v_vec.len());
+  // println!("Prover key w size: {}", pk.w_vec.len());
+  //
+  // println!("M A row indices: {:?}", pk.cap_m_mat.0);
+  // println!("M A col indices: {:?}", pk.cap_m_mat.1);
+  // println!("M A vals: {:?}", to_int!(pk.cap_m_mat.2));
+  // let vksize = vk.size.clone();
+  // println!("H: {}", vksize.nrows);
+  // println!("K: {}", vksize.ncols);
+
+  let timer = start_timer!(|| "Proving");
+  let proof = VOProofPOV::prove(&pk, &instance, &witness)?;
+  end_timer!(timer);
+  let timer = start_timer!(|| "Verifying");
+  let ret = VOProofPOV::verify(&vk, &instance, &proof);
+  end_timer!(timer);
+  println!("Proof size: {}", proof.serialized_size());
+  ret
 }
 
-#[test]
-fn test_pov_mt() {
-  run_pov_mt::<ark_bls12_381::Bls12_381>(4);
+macro_rules! define_pov_mt_test_large_scale {
+  ($func_name: ident, $exec_name: ident, $scale: literal) => {
+    #[test]
+    fn $func_name() {
+      $exec_name::<ark_bls12_381::Bls12_381>($scale).unwrap();
+    }
+  };
 }
+
+define_pov_mt_test_large_scale!(test_pov_mt_8, run_pov_mt, 8);
+define_pov_mt_test_large_scale!(test_pov_mt_16, run_pov_mt, 16);
+define_pov_mt_test_large_scale!(test_pov_mt_32, run_pov_mt, 32);
+define_pov_mt_test_large_scale!(test_pov_mt_64, run_pov_mt, 64);
