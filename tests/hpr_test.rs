@@ -1,5 +1,6 @@
 use ark_ec::PairingEngine;
 use ark_std::test_rng;
+use ark_serialize::{CanonicalSerialize};
 use voproof::cs::{hpr::*, ConstraintSystem};
 use voproof::error::Error;
 use voproof::kzg::UniversalParams;
@@ -41,6 +42,7 @@ fn run_hpr_example<E: PairingEngine>(scale: usize) -> Result<(), Error> {
   println!("K: {}", vksize.ncols);
 
   let proof = VOProofHPR::prove(&pk, &instance, &witness)?;
+  println!("Proof size: {}", proof.serialized_size());
   VOProofHPR::verify(&vk, &instance, &proof)
 }
 

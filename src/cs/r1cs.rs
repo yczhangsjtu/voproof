@@ -4,7 +4,7 @@ use crate::*;
 use ark_ff::{Field, PrimeField};
 use ark_relations::r1cs::ConstraintSystem as ArkR1CS;
 
-#[derive(Clone)]
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct R1CS<F: Field> {
   pub arows: Vec<u64>,
   pub acols: Vec<u64>,
@@ -142,7 +142,7 @@ impl<F: Field> From<ArkR1CS<F>> for R1CS<F> {
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct R1CSSize {
   pub nrows: u64,
   pub ncols: u64,

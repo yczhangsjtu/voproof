@@ -1,6 +1,7 @@
-use ark_ff::{PrimeField, FftField, FpParameters};
+use ark_ff::{PrimeField, FftField, FpParameters, Fp256};
 use ark_ec::PairingEngine;
 use ark_std::Zero;
+use ark_serialize::{CanonicalSerialize};
 use voproof::cs::{circuit::fan_in_two::FanInTwoCircuit, pov::*, r1cs::*, ConstraintSystem};
 use ark_relations::{
   lc, ns,
@@ -16,6 +17,7 @@ use voproof::tools::{to_field, try_to_int, fmt_field};
 use voproof::*;
 mod utils;
 use utils::test_circuit::TestCircuit;
+use utils::mt_circuit::MerkleTreeCircuit;
 
 fn run_pov_example<E: PairingEngine>() -> Result<(), Error> {
   let mut circ = FanInTwoCircuit::<E::Fr>::new();
@@ -74,6 +76,7 @@ fn run_pov_example<E: PairingEngine>() -> Result<(), Error> {
 
   let mut proof = VOProofPOV::prove(&pk, &ins, &wit)?;
   VOProofPOV::verify(&vk, &ins, &proof)?;
+  println!("Proof size: {}", proof.serialized_size());
   proof.y = E::Fr::zero();
   let result = VOProofPOV::verify(&vk, &ins, &proof);
   assert!(result.is_err());
@@ -141,4 +144,50 @@ fn run_pov_from_r1cs<E: PairingEngine>(scale: usize) {
 #[test]
 fn test_pov_from_r1cs() {
   run_pov_from_r1cs::<ark_bls12_381::Bls12_381>(5);
+}
+
+fn run_pov_mt<E: PairingEngine<Fr = Fp256<ark_bls12_381::FrParameters>>>(scale: usize) {
+  let c = MerkleTreeCircuit {
+    height: scale
+  };
+  let cs = ArkR1CS::<E::Fr>::new_ref();
+  c.generate_constraints(cs.clone()).unwrap();
+  let cs = cs.into_inner().unwrap();
+  let x = cs
+    .instance_assignment
+    .iter()
+    .skip(1)
+    .map(|x| *x)
+    .collect::<Vec<E::Fr>>();
+  let w = cs.witness_assignment.clone();
+  let r1cs = R1CS::from(cs);
+  let instance = R1CSInstance { instance: x };
+  let witness = R1CSWitness { witness: w };
+
+  if r1cs.satisfy(&instance, &witness) {
+    println!("R1CS satisfied!");
+  } else {
+    println!("R1CS unsatisfied!");
+  }
+
+  let mut circ = FanInTwoCircuit::from(r1cs.clone());
+  let input = instance
+    .instance.clone()
+    .into_iter()
+    .chain(witness.witness.clone().into_iter())
+    .collect();
+  circ.evaluate(&input).unwrap();
+  let output = circ.get_output().unwrap();
+  println!("{}", fmt_ff_vector!(output));
+  assert_eq!(output, vec![E::Fr::zero(); r1cs.nrows as usize]);
+
+  let (pov, instance, witness) = pov_triple_from_r1cs_triple(r1cs, instance, witness);
+  assert!(pov.satisfy_gate_logics(&witness));
+  assert!(pov.satisfy_wiring(&witness));
+  assert!(witness.satisfy_instance(&instance));
+}
+
+#[test]
+fn test_pov_mt() {
+  run_pov_mt::<ark_bls12_381::Bls12_381>(4);
 }

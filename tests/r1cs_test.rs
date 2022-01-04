@@ -1,7 +1,7 @@
 use ark_ec::PairingEngine;
 use ark_ff::{
   fields::{FftField, Field, FpParameters, PrimeField},
-  Fp256,
+  Fp256, to_bytes
 };
 use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, uint64::UInt64, R1CSVar};
 use ark_relations::{
@@ -12,6 +12,7 @@ use ark_relations::{
   },
 };
 use ark_std::{end_timer, start_timer};
+use ark_serialize::{CanonicalSerialize};
 use voproof::cs::{
   r1cs::{R1CSInstance, R1CSWitness, R1CS},
   ConstraintSystem,
@@ -370,6 +371,7 @@ macro_rules! define_run_r1cs_mt_example {
       let timer = start_timer!(|| "Verifying");
       let ret = $snark::verify(&vk, &instance, &proof);
       end_timer!(timer);
+      println!("Proof size: {}", proof.serialized_size());
       ret
     }
   }

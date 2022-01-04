@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone)]
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct __NAME__ProverKey<E: PairingEngine> {
   pub verifier_key: __NAME__VerifierKey<E>,
   pub powers: Vec<E::G1Affine>,
@@ -8,7 +8,7 @@ pub struct __NAME__ProverKey<E: PairingEngine> {
   /*{ProverKey}*/
 }
 
-#[derive(Clone)]
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct __NAME__VerifierKey<E: PairingEngine> {
   /*{VerifierKey}*/
   pub kzg_vk: VerifierKey<E>,
@@ -16,7 +16,7 @@ pub struct __NAME__VerifierKey<E: PairingEngine> {
   pub degree_bound: u64,
 }
 
-#[derive(Clone)]
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct __NAME__Proof<E: PairingEngine> {/*{Proof}*/}
 
 pub struct VOProof__NAME__ {}

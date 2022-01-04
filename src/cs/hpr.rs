@@ -4,7 +4,7 @@ use crate::*;
 use ark_ff::{Field, PrimeField};
 use ark_std::{rand::RngCore, UniformRand};
 
-#[derive(Clone)]
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct HPR<F: Field> {
   pub arows: Vec<u64>,
   pub acols: Vec<u64>,
@@ -48,7 +48,7 @@ impl<F: Field> ConstraintSystem<F, HPRSize> for HPR<F> {
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct HPRSize {
   pub nrows: u64,
   pub ncols: u64,

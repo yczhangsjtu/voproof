@@ -25,7 +25,9 @@ use ark_std::{
   start_timer, test_rng,
   vec::Vec,
   One, Zero,
+  io::{Read, Write}
 };
+use ark_serialize::{CanonicalSerialize, CanonicalDeserialize, SerializationError};
 
 pub trait SNARKProverKey<E: PairingEngine> {}
 pub trait SNARKVerifierKey<E: PairingEngine> {}

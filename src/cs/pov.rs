@@ -3,7 +3,7 @@ use super::*;
 use super::r1cs::{R1CS, R1CSInstance, R1CSWitness};
 use ark_ff::Field;
 
-#[derive(Clone)]
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct POV<F: Field> {
   pub consts: Vec<F>,
   pub wires: Vec<(u64, u64)>,
@@ -22,7 +22,7 @@ impl<F: Field> ConstraintSystem<F, POVSize> for POV<F> {
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct POVSize {
   pub nconsts: u64,
   pub nmul: u64,
