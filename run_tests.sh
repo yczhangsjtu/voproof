@@ -22,6 +22,8 @@ postfix="-- --nocapture"
 # done
 
 for scale in 8 16 32 64; do
-  echo "VOPLONK $scale" | tee -a test_result_mt.txt
-  $prefix test_pov_mt_$scale $postfix | egrep '^End:' | tee -a test_result_mt.txt
+  # echo "VOPLONK $scale" | tee -a test_result_mt.txt
+  # $prefix test_pov_mt_$scale $postfix | egrep '^End:' | tee -a test_result_mt.txt
+  echo "VOPLONK Prover Efficient $scale" | tee -a test_result_mt.txt
+  $prefix test_pov_pe_mt_$scale $postfix | egrep '^End:' | tee -a test_result_mt.txt
 done

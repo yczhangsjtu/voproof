@@ -86,3 +86,4 @@ pub mod voproof_hpr;
 pub mod voproof_pov;
 pub mod voproof_r1cs;
 pub mod voproof_r1cs_prover_efficient;
+pub mod voproof_pov_prover_efficient;

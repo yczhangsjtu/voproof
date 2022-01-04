@@ -12,84 +12,98 @@ use ark_std::{end_timer, start_timer, Zero};
 use voproof::cs::{circuit::fan_in_two::FanInTwoCircuit, pov::*, r1cs::*, ConstraintSystem};
 use voproof::error::Error;
 use voproof::kzg::UniversalParams;
-use voproof::snarks::{voproof_pov::*, SNARK};
+use voproof::snarks::{voproof_pov::*, voproof_pov_prover_efficient::*, SNARK};
 use voproof::tools::{fmt_field, to_field, try_to_int};
 use voproof::*;
 mod utils;
 use utils::mt_circuit::MerkleTreeCircuit;
 use utils::test_circuit::TestCircuit;
 
-fn run_pov_example<E: PairingEngine>() -> Result<(), Error> {
-  let mut circ = FanInTwoCircuit::<E::Fr>::new();
-  let a = circ.add_global_input_variable().unwrap();
-  let b = circ.add_global_input_variable().unwrap();
-  let c = circ.add_global_input_variable().unwrap();
-  let d = circ.add_vars(&a, &b);
-  let e = circ.mul_vars(&b, &c);
-  let f = circ.mul_vars(&d, &e);
-  let g = circ.add_vars(&a, &d);
-  let h = circ.mul_vars(&g, &f);
-  let o = circ.const_var(to_field::<E::Fr>(10));
-  let p = circ.mul_vars(&h, &o);
-  circ.mark_as_complete().unwrap();
-  circ.mark_variable_as_public(&a).unwrap();
-  circ.mark_variable_as_public(&p).unwrap();
-  circ
-    .evaluate(&vec![
-      to_field::<E::Fr>(1),
-      to_field::<E::Fr>(2),
-      to_field::<E::Fr>(3),
-    ])
-    .unwrap();
-  let ins = POVInstance {
-    instance: circ.get_instance().unwrap(),
-  };
-  let mut wit = POVWitness {
-    witness: circ.get_witness().unwrap(),
-  };
-  println!("{:?}", ins.instance.0);
-  println!("{}", fmt_ff_vector!(ins.instance.1));
-  println!("{}", fmt_ff_vector!(wit.witness.0));
-  println!("{}", fmt_ff_vector!(wit.witness.1));
-  println!("{}", fmt_ff_vector!(wit.witness.2));
-  println!("{:?}", circ.get_wiring());
-  assert_eq!(circ.get_add_num(), 2);
-  assert_eq!(circ.get_mul_num(), 4);
-  assert_eq!(circ.get_const_num(), 1);
-  assert_eq!(wit.witness.0.len(), 7);
-  assert_eq!(wit.witness.1.len(), 7);
-  assert_eq!(wit.witness.2.len(), 7);
-  let pov = POV::from(circ);
-  assert!(pov.satisfy(&ins, &wit));
-  let max_degree = VOProofPOV::get_max_degree(pov.get_size());
-  // Let the universal parameters take a larger size than expected
-  let universal_params: UniversalParams<E> = VOProofPOV::setup(max_degree + 10).unwrap();
-  println!(
-    "Universal parameter size: {}",
-    universal_params.powers_of_g.len()
-  );
-  let (pk, vk) = VOProofPOV::index(&universal_params, &pov).unwrap();
-  println!("Degree bound: {}", vk.degree_bound);
-  println!("Max degree: {}", pk.max_degree);
-  println!("Prover key sigma size: {}", pk.sigma_vec.len());
-  println!("Prover key d size: {}", pk.d_vec.len());
+macro_rules! define_run_pov_example {
+  ($func_name:ident, $snark:ident) => (
+    fn $func_name<E: PairingEngine>() -> Result<(), Error> {
+      let mut circ = FanInTwoCircuit::<E::Fr>::new();
+      let a = circ.add_global_input_variable().unwrap();
+      let b = circ.add_global_input_variable().unwrap();
+      let c = circ.add_global_input_variable().unwrap();
+      let d = circ.add_vars(&a, &b);
+      let e = circ.mul_vars(&b, &c);
+      let f = circ.mul_vars(&d, &e);
+      let g = circ.add_vars(&a, &d);
+      let h = circ.mul_vars(&g, &f);
+      let o = circ.const_var(to_field::<E::Fr>(10));
+      let p = circ.mul_vars(&h, &o);
+      circ.mark_as_complete().unwrap();
+      circ.mark_variable_as_public(&a).unwrap();
+      circ.mark_variable_as_public(&p).unwrap();
+      circ
+        .evaluate(&vec![
+          to_field::<E::Fr>(1),
+          to_field::<E::Fr>(2),
+          to_field::<E::Fr>(3),
+        ])
+        .unwrap();
+      let ins = POVInstance {
+        instance: circ.get_instance().unwrap(),
+      };
+      let mut wit = POVWitness {
+        witness: circ.get_witness().unwrap(),
+      };
+      println!("{:?}", ins.instance.0);
+      println!("{}", fmt_ff_vector!(ins.instance.1));
+      println!("{}", fmt_ff_vector!(wit.witness.0));
+      println!("{}", fmt_ff_vector!(wit.witness.1));
+      println!("{}", fmt_ff_vector!(wit.witness.2));
+      println!("{:?}", circ.get_wiring());
+      assert_eq!(circ.get_add_num(), 2);
+      assert_eq!(circ.get_mul_num(), 4);
+      assert_eq!(circ.get_const_num(), 1);
+      assert_eq!(wit.witness.0.len(), 7);
+      assert_eq!(wit.witness.1.len(), 7);
+      assert_eq!(wit.witness.2.len(), 7);
+      let pov = POV::from(circ);
+      assert!(pov.satisfy(&ins, &wit));
+      let max_degree = $snark::get_max_degree(pov.get_size());
+      // Let the universal parameters take a larger size than expected
+      let universal_params: UniversalParams<E> = $snark::setup(max_degree + 10).unwrap();
+      println!(
+        "Universal parameter size: {}",
+        universal_params.powers_of_g.len()
+      );
+      let (pk, vk) = $snark::index(&universal_params, &pov).unwrap();
+      println!("Degree bound: {}", vk.degree_bound);
+      println!("Max degree: {}", pk.max_degree);
+      println!("Prover key sigma size: {}", pk.sigma_vec.len());
+      println!("Prover key d size: {}", pk.d_vec.len());
 
-  let mut proof = VOProofPOV::prove(&pk, &ins, &wit)?;
-  VOProofPOV::verify(&vk, &ins, &proof)?;
-  println!("Proof size: {}", proof.serialized_size());
-  proof.y = E::Fr::zero();
-  let result = VOProofPOV::verify(&vk, &ins, &proof);
-  assert!(result.is_err());
-  wit.witness.0[0] = E::Fr::zero();
-  let result = VOProofPOV::prove(&pk, &ins, &wit);
-  assert!(result.is_err());
-  Ok(())
+      let mut proof = $snark::prove(&pk, &ins, &wit)?;
+      $snark::verify(&vk, &ins, &proof)?;
+      println!("Proof size: {}", proof.serialized_size());
+      proof.y = E::Fr::zero();
+      let result = $snark::verify(&vk, &ins, &proof);
+      assert!(result.is_err());
+      wit.witness.0[0] = E::Fr::zero();
+      let result = $snark::prove(&pk, &ins, &wit);
+      assert!(result.is_err());
+      Ok(())
+    }
+  )
 }
 
-#[test]
-fn test_simple_pov() {
-  assert!(run_pov_example::<ark_bls12_381::Bls12_381>().is_ok());
+define_run_pov_example!(run_pov_example, VOProofPOV);
+define_run_pov_example!(run_pov_pe_example, VOProofPOVProverEfficient);
+
+macro_rules! define_test_simple_pov {
+  ($func_name: ident, $exec_name: ident) => {
+    #[test]
+    fn $func_name() {
+      assert!($exec_name::<ark_bls12_381::Bls12_381>().is_ok());
+    }
+  }
 }
+
+define_test_simple_pov!(test_simple_pov, run_pov_example);
+define_test_simple_pov!(test_simple_pov_pe, run_pov_pe_example);
 
 fn run_pov_from_r1cs<E: PairingEngine>(scale: usize) {
   let c = TestCircuit::<E::Fr> {
@@ -146,81 +160,88 @@ fn test_pov_from_r1cs() {
   run_pov_from_r1cs::<ark_bls12_381::Bls12_381>(5);
 }
 
-fn run_pov_mt<E: PairingEngine<Fr = Fp256<ark_bls12_381::FrParameters>>>(
-  scale: usize,
-) -> Result<(), Error> {
-  let c = MerkleTreeCircuit { height: scale };
-  let cs = ArkR1CS::<E::Fr>::new_ref();
-  c.generate_constraints(cs.clone()).unwrap();
-  let cs = cs.into_inner().unwrap();
-  let x = cs
-    .instance_assignment
-    .iter()
-    .skip(1)
-    .map(|x| *x)
-    .collect::<Vec<E::Fr>>();
-  let w = cs.witness_assignment.clone();
-  let r1cs = R1CS::from(cs);
-  let instance = R1CSInstance { instance: x };
-  let witness = R1CSWitness { witness: w };
+macro_rules! define_run_pov_mt {
+  ($func_name:ident, $snark:ident) => {
+    fn $func_name<E: PairingEngine<Fr = Fp256<ark_bls12_381::FrParameters>>>(
+      scale: usize,
+    ) -> Result<(), Error> {
+      let c = MerkleTreeCircuit { height: scale };
+      let cs = ArkR1CS::<E::Fr>::new_ref();
+      c.generate_constraints(cs.clone()).unwrap();
+      let cs = cs.into_inner().unwrap();
+      let x = cs
+        .instance_assignment
+        .iter()
+        .skip(1)
+        .map(|x| *x)
+        .collect::<Vec<E::Fr>>();
+      let w = cs.witness_assignment.clone();
+      let r1cs = R1CS::from(cs);
+      let instance = R1CSInstance { instance: x };
+      let witness = R1CSWitness { witness: w };
 
-  if r1cs.satisfy(&instance, &witness) {
-    println!("R1CS satisfied!");
-  } else {
-    println!("R1CS unsatisfied!");
+      if r1cs.satisfy(&instance, &witness) {
+        println!("R1CS satisfied!");
+      } else {
+        println!("R1CS unsatisfied!");
+      }
+
+      let mut circ = FanInTwoCircuit::from(r1cs.clone());
+      let input = instance
+        .instance
+        .clone()
+        .into_iter()
+        .chain(witness.witness.clone().into_iter())
+        .collect();
+      circ.evaluate(&input).unwrap();
+      let output = circ.get_output().unwrap();
+      assert_eq!(output, vec![E::Fr::zero(); r1cs.nrows as usize]);
+
+      let (pov, instance, witness) = pov_triple_from_r1cs_triple(r1cs, instance, witness);
+      assert!(pov.satisfy_gate_logics(&witness));
+      assert!(pov.satisfy_wiring(&witness));
+      assert!(witness.satisfy_instance(&instance));
+
+      let max_degree = $snark::get_max_degree(pov.get_size());
+      // Let the universal parameters take a larger size than expected
+      let timer = start_timer!(|| "Universal setup");
+      let universal_params: UniversalParams<E> = $snark::setup(max_degree + 10).unwrap();
+      end_timer!(timer);
+      // println!(
+      // "Universal parameter size: {}",
+      // universal_params.powers_of_g.len()
+      // );
+      let timer = start_timer!(|| "Indexing");
+      let (pk, vk) = $snark::index(&universal_params, &pov).unwrap();
+      end_timer!(timer);
+      // println!("Degree bound: {}", vk.degree_bound);
+      // println!("Max degree: {}", pk.max_degree);
+      // println!("Prover key matrix size: {}", pk.cap_m_mat.0.len());
+      // println!("Prover key u size: {}", pk.u_vec.len());
+      // println!("Prover key v size: {}", pk.v_vec.len());
+      // println!("Prover key w size: {}", pk.w_vec.len());
+      //
+      // println!("M A row indices: {:?}", pk.cap_m_mat.0);
+      // println!("M A col indices: {:?}", pk.cap_m_mat.1);
+      // println!("M A vals: {:?}", to_int!(pk.cap_m_mat.2));
+      // let vksize = vk.size.clone();
+      // println!("H: {}", vksize.nrows);
+      // println!("K: {}", vksize.ncols);
+
+      let timer = start_timer!(|| "Proving");
+      let proof = $snark::prove(&pk, &instance, &witness)?;
+      end_timer!(timer);
+      let timer = start_timer!(|| "Verifying");
+      let ret = $snark::verify(&vk, &instance, &proof);
+      end_timer!(timer);
+      println!("Proof size: {}", proof.serialized_size());
+      ret
+    }
   }
-
-  let mut circ = FanInTwoCircuit::from(r1cs.clone());
-  let input = instance
-    .instance
-    .clone()
-    .into_iter()
-    .chain(witness.witness.clone().into_iter())
-    .collect();
-  circ.evaluate(&input).unwrap();
-  let output = circ.get_output().unwrap();
-  assert_eq!(output, vec![E::Fr::zero(); r1cs.nrows as usize]);
-
-  let (pov, instance, witness) = pov_triple_from_r1cs_triple(r1cs, instance, witness);
-  assert!(pov.satisfy_gate_logics(&witness));
-  assert!(pov.satisfy_wiring(&witness));
-  assert!(witness.satisfy_instance(&instance));
-
-  let max_degree = VOProofPOV::get_max_degree(pov.get_size());
-  // Let the universal parameters take a larger size than expected
-  let timer = start_timer!(|| "Universal setup");
-  let universal_params: UniversalParams<E> = VOProofPOV::setup(max_degree + 10).unwrap();
-  end_timer!(timer);
-  // println!(
-  // "Universal parameter size: {}",
-  // universal_params.powers_of_g.len()
-  // );
-  let timer = start_timer!(|| "Indexing");
-  let (pk, vk) = VOProofPOV::index(&universal_params, &pov).unwrap();
-  end_timer!(timer);
-  // println!("Degree bound: {}", vk.degree_bound);
-  // println!("Max degree: {}", pk.max_degree);
-  // println!("Prover key matrix size: {}", pk.cap_m_mat.0.len());
-  // println!("Prover key u size: {}", pk.u_vec.len());
-  // println!("Prover key v size: {}", pk.v_vec.len());
-  // println!("Prover key w size: {}", pk.w_vec.len());
-  //
-  // println!("M A row indices: {:?}", pk.cap_m_mat.0);
-  // println!("M A col indices: {:?}", pk.cap_m_mat.1);
-  // println!("M A vals: {:?}", to_int!(pk.cap_m_mat.2));
-  // let vksize = vk.size.clone();
-  // println!("H: {}", vksize.nrows);
-  // println!("K: {}", vksize.ncols);
-
-  let timer = start_timer!(|| "Proving");
-  let proof = VOProofPOV::prove(&pk, &instance, &witness)?;
-  end_timer!(timer);
-  let timer = start_timer!(|| "Verifying");
-  let ret = VOProofPOV::verify(&vk, &instance, &proof);
-  end_timer!(timer);
-  println!("Proof size: {}", proof.serialized_size());
-  ret
 }
+
+define_run_pov_mt!(run_pov_mt, VOProofPOV);
+define_run_pov_mt!(run_pov_pe_mt, VOProofPOVProverEfficient);
 
 macro_rules! define_pov_mt_test_large_scale {
   ($func_name: ident, $exec_name: ident, $scale: literal) => {
@@ -235,3 +256,8 @@ define_pov_mt_test_large_scale!(test_pov_mt_8, run_pov_mt, 8);
 define_pov_mt_test_large_scale!(test_pov_mt_16, run_pov_mt, 16);
 define_pov_mt_test_large_scale!(test_pov_mt_32, run_pov_mt, 32);
 define_pov_mt_test_large_scale!(test_pov_mt_64, run_pov_mt, 64);
+
+define_pov_mt_test_large_scale!(test_pov_pe_mt_8, run_pov_pe_mt, 8);
+define_pov_mt_test_large_scale!(test_pov_pe_mt_16, run_pov_pe_mt, 16);
+define_pov_mt_test_large_scale!(test_pov_pe_mt_32, run_pov_pe_mt, 32);
+define_pov_mt_test_large_scale!(test_pov_pe_mt_64, run_pov_pe_mt, 64);
