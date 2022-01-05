@@ -682,6 +682,25 @@ macro_rules! vector_concat_skip {
 }
 
 #[macro_export]
+macro_rules! define_concat_subvec {
+  ($u:ident, $a:expr, $ai:expr, $aj:expr, $b:expr, $bi:expr, $bj:expr) => {
+    let $u = (&$a)
+      .iter()
+      .map(|a| *a)
+      .skip($ai as usize)
+      .take($aj as usize - $ai as usize)
+      .chain(
+        (&$b)
+          .iter()
+          .map(|a| *a)
+          .skip($bi as usize)
+          .take($bj as usize - $bi as usize),
+      )
+      .collect::<Vec<_>>();
+  };
+}
+
+#[macro_export]
 macro_rules! concat_and_one {
   ( $u: expr, $v: expr ) => {
     vector_concat!(vec!(one!()), $u, $v)
@@ -1303,7 +1322,11 @@ macro_rules! fmt_ff {
 #[macro_export]
 macro_rules! fmt_ff_vector {
   ($v: expr) => {
-    ($v.iter().map(|e| fmt_field::<E::Fr>(e)).collect::<Vec<String>>()).join("\n")
+    ($v
+      .iter()
+      .map(|e| fmt_field::<E::Fr>(e))
+      .collect::<Vec<String>>())
+    .join("\n")
   };
 }
 
