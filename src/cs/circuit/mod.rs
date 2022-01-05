@@ -65,19 +65,25 @@ impl<F: Field> From<R1CS<F>> for FanInTwoCircuit<F> {
     let mut b_mul_results: Vec<Vec<VariableRef>> = vec![Vec::new(); r1cs.nrows as usize];
     let mut c_mul_results: Vec<Vec<VariableRef>> = vec![Vec::new(); r1cs.nrows as usize];
     value_to_position_lists
-      .values()
+      .iter()
       .zip(const_vars.iter())
-      .for_each(|(value, cvar)| {
+      .for_each(|((v, value), cvar)| {
         value.iter().for_each(|(ri, ci, mtype)| {
           let mul_results = match mtype {
             Matrix::A => &mut a_mul_results,
             Matrix::B => &mut b_mul_results,
             Matrix::C => &mut c_mul_results,
           };
-          let var = if *ci > 0 {
+          let var = if v.is_zero() {
+            zero.clone()
+          } else if *ci > 0 {
             // Input vars does not include the leading 1, so minus 1
             // from the index
-            circ.mul_vars(&cvar, &input_vars[*ci - 1])
+            if v.is_one() {
+              input_vars[*ci - 1].clone()
+            } else {
+              circ.mul_vars(&cvar, &input_vars[*ci - 1])
+            }
           } else {
             // For the first column, directly use the constant variable
             // as the multiplication result

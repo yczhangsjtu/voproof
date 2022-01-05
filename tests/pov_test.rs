@@ -180,6 +180,17 @@ macro_rules! define_run_pov_mt {
       let instance = R1CSInstance { instance: x };
       let witness = R1CSWitness { witness: w };
 
+      println!("R1CS num rows: {}", r1cs.nrows);
+      println!("R1CS num cols: {}", r1cs.ncols);
+      println!(
+        "R1CS non entries: {}, {}, {} (total {}, max {})",
+        r1cs.arows.len(),
+        r1cs.brows.len(),
+        r1cs.crows.len(),
+        r1cs.arows.len() + r1cs.brows.len() + r1cs.crows.len(),
+        max!(r1cs.arows.len(), r1cs.brows.len(), r1cs.crows.len())
+      );
+
       if r1cs.satisfy(&instance, &witness) {
         println!("R1CS satisfied!");
       } else {
@@ -201,6 +212,10 @@ macro_rules! define_run_pov_mt {
       assert!(pov.satisfy_gate_logics(&witness));
       assert!(pov.satisfy_wiring(&witness));
       assert!(witness.satisfy_instance(&instance));
+      println!("Number of addition gates: {}", circ.get_add_num());
+      println!("Number of mul gates: {}", circ.get_mul_num());
+      println!("Number of const gates: {}", circ.get_const_num());
+      println!("Length of witness: {}", witness.witness.0.len());
 
       let max_degree = $snark::get_max_degree(pov.get_size());
       // Let the universal parameters take a larger size than expected
@@ -214,6 +229,10 @@ macro_rules! define_run_pov_mt {
       let timer = start_timer!(|| "Indexing");
       let (pk, vk) = $snark::index(&universal_params, &pov).unwrap();
       end_timer!(timer);
+      println!("Degree bound: {}", vk.degree_bound);
+      println!("Max degree: {}", pk.max_degree);
+      println!("Prover key sigma size: {}", pk.sigma_vec.len());
+      println!("Prover key d size: {}", pk.d_vec.len());
       // println!("Degree bound: {}", vk.degree_bound);
       // println!("Max degree: {}", pk.max_degree);
       // println!("Prover key matrix size: {}", pk.cap_m_mat.0.len());
