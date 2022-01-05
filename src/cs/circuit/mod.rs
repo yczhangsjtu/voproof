@@ -68,6 +68,7 @@ impl<F: Field> From<R1CS<F>> for FanInTwoCircuit<F> {
       .iter()
       .zip(const_vars.iter())
       .for_each(|((v, value), cvar)| {
+        let mut mul_results_cache: HashMap<usize, VariableRef> = HashMap::new();
         value.iter().for_each(|(ri, ci, mtype)| {
           let mul_results = match mtype {
             Matrix::A => &mut a_mul_results,
@@ -82,7 +83,10 @@ impl<F: Field> From<R1CS<F>> for FanInTwoCircuit<F> {
             if v.is_one() {
               input_vars[*ci - 1].clone()
             } else {
-              circ.mul_vars(&cvar, &input_vars[*ci - 1])
+              mul_results_cache
+                .entry(*ci - 1)
+                .or_insert_with(|| circ.mul_vars(&cvar, &input_vars[*ci - 1]))
+                .clone()
             }
           } else {
             // For the first column, directly use the constant variable
