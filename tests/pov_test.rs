@@ -147,7 +147,8 @@ fn run_pov_from_r1cs<E: PairingEngine>(scale: usize) {
     .collect();
   circ.evaluate(&input).unwrap();
   let output = circ.get_output().unwrap();
-  assert_eq!(output, vec![E::Fr::zero(); r1cs.nrows as usize]);
+  assert!(output.iter().all(|o| o.is_zero()));
+  // assert_eq!(output, vec![E::Fr::zero(); r1cs.nrows as usize]);
 
   let (pov, instance, witness) = pov_triple_from_r1cs_triple(r1cs, instance, witness);
   assert!(pov.satisfy_gate_logics(&witness));

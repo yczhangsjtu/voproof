@@ -1,4 +1,5 @@
 use crate::error::Error;
+use ark_std::collections::HashMap;
 use ark_std::fmt::Debug;
 use ark_std::ops::{Add, Mul};
 
@@ -11,6 +12,9 @@ pub struct FanInTwoCircuit<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + 
   global_output_variables: Vec<VariableRef>,
   variables: Vec<Variable<F>>,
   assert_equals: Vec<(VariableRef, VariableRef)>,
+  add_vars_cache: HashMap<(VariableRef, VariableRef), VariableRef>,
+  mul_vars_cache: HashMap<(VariableRef, VariableRef), VariableRef>,
+  const_vars_cache: HashMap<String, VariableRef>,
 }
 
 #[derive(Clone, Debug)]
@@ -122,7 +126,7 @@ pub struct Variable<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug> 
   value: Option<F>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct VariableRef {
   index: usize,
 }
@@ -138,6 +142,9 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug + Default> FanIn
       global_output_variables: Vec::new(),
       variables: Vec::new(),
       assert_equals: Vec::new(),
+      add_vars_cache: HashMap::new(),
+      mul_vars_cache: HashMap::new(),
+      const_vars_cache: HashMap::new(),
     }
   }
 
@@ -329,21 +336,42 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug + Default> FanIn
   }
 
   pub fn add_vars(&mut self, a: &VariableRef, b: &VariableRef) -> VariableRef {
-    let ret = self.add_new_variable();
-    self.add_add_gate(a, b, &ret).unwrap();
-    ret
+    let (a, b) = if a < b { (a, b) } else { (b, a) };
+    let cached = self.add_vars_cache.get(&(a.clone(), b.clone()));
+    if let Some(var) = cached {
+      var.clone()
+    } else {
+      let ret = self.add_new_variable();
+      self.add_add_gate(a, b, &ret).unwrap();
+      self.add_vars_cache.insert((a.clone(), b.clone()), ret.clone());
+      ret
+    }
   }
 
   pub fn mul_vars(&mut self, a: &VariableRef, b: &VariableRef) -> VariableRef {
-    let ret = self.add_new_variable();
-    self.add_mul_gate(a, b, &ret).unwrap();
-    ret
+    let (a, b) = if a < b { (a, b) } else { (b, a) };
+    let cached = self.mul_vars_cache.get(&(a.clone(), b.clone()));
+    if let Some(var) = cached {
+      var.clone()
+    } else {
+      let ret = self.add_new_variable();
+      self.add_mul_gate(a, b, &ret).unwrap();
+      self.mul_vars_cache.insert((a.clone(), b.clone()), ret.clone());
+      ret
+    }
   }
 
   pub fn const_var(&mut self, c: F) -> VariableRef {
-    let ret = self.add_new_variable();
-    self.add_const_gate(c, &ret).unwrap();
-    ret
+    let key = format!("{:?}", c);
+    let cached = self.const_vars_cache.get(&key);
+    if let Some(var) = cached {
+      var.clone()
+    } else {
+      let ret = self.add_new_variable();
+      self.add_const_gate(c, &ret).unwrap();
+      self.const_vars_cache.insert(key, ret.clone());
+      ret
+    }
   }
 
   pub fn eval_gate(&mut self, gate: &GateRef) -> Result<(), Error> {
@@ -605,18 +633,24 @@ impl<F: Add<F, Output = F> + Mul<F, Output = F> + Clone + Debug + Default> core:
       write!(
         f,
         "Var({}) {:?} + Var({}) {:?} = Var({}) {:?}\n",
-        g.left.index, self.get_var_value_str_or_empty(&g.left),
-        g.right.index, self.get_var_value_str_or_empty(&g.right),
-        g.output.index, self.get_var_value_str_or_empty(&g.output),
+        g.left.index,
+        self.get_var_value_str_or_empty(&g.left),
+        g.right.index,
+        self.get_var_value_str_or_empty(&g.right),
+        g.output.index,
+        self.get_var_value_str_or_empty(&g.output),
       )?;
     }
     for g in self.mul_gates.iter() {
       write!(
         f,
         "Var({}) {:?} * Var({}) {:?} = Var({}) {:?}\n",
-        g.left.index, self.get_var_value_str_or_empty(&g.left),
-        g.right.index, self.get_var_value_str_or_empty(&g.right),
-        g.output.index, self.get_var_value_str_or_empty(&g.output),
+        g.left.index,
+        self.get_var_value_str_or_empty(&g.left),
+        g.right.index,
+        self.get_var_value_str_or_empty(&g.right),
+        g.output.index,
+        self.get_var_value_str_or_empty(&g.output),
       )?;
     }
     Ok(())
