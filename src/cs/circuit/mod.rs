@@ -18,7 +18,6 @@ impl<F: Field> From<R1CS<F>> for FanInTwoCircuit<F> {
     let input_vars: Vec<VariableRef> = (0..r1cs.ncols - 1)
       .map(|_| circ.add_global_input_variable().unwrap())
       .collect();
-    let minus_one = circ.const_var(-F::one());
     let zero = circ.const_var(F::zero());
     let mut value_to_position_lists: HashMap<F, Vec<(usize, usize, Matrix)>> = HashMap::new();
     r1cs
@@ -53,7 +52,7 @@ impl<F: Field> From<R1CS<F>> for FanInTwoCircuit<F> {
       .filter(|(_, v)| !v.is_zero())
       .for_each(|((ri, ci), v)| {
         value_to_position_lists
-          .entry(*v)
+          .entry(-*v)
           .or_insert(Vec::new())
           .push((*ri as usize, *ci as usize, Matrix::C))
       });
@@ -135,19 +134,15 @@ impl<F: Field> From<R1CS<F>> for FanInTwoCircuit<F> {
         }
       })
       .collect();
-    let mul_sub_results: Vec<VariableRef> = a_sum_results
+    a_sum_results
       .iter()
       .zip(b_sum_results.iter())
       .zip(c_sum_results.iter())
-      .map(|((a, b), c)| {
+      .for_each(|((a, b), c)| {
         let m = &circ.mul_vars(&a, &b);
-        let mc = &circ.mul_vars(&minus_one, &c);
-        circ.add_vars(m, mc)
-      })
-      .collect();
-    mul_sub_results.iter().for_each(|a| {
-      circ.assert_equal(a, &zero).unwrap();
-    });
+        let a = circ.add_vars(m, c);
+        circ.assert_equal(&a, &zero).unwrap();
+      });
     circ.mark_as_complete().unwrap();
     input_vars
       .iter()
