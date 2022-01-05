@@ -27,6 +27,7 @@ rayon = {version = "1", optional = true}
 ark-crypto-primitives = {version = "^0.3.0", path = "../../crypto-primitives"}
 ark-sponge = "^0.3.0"
 ark-r1cs-std = "^0.3.0"
+ark-groth16 = "^0.3.0"
 
 [features]
 default = ["std", "parallel", "ark-crypto-primitives/r1cs"]
