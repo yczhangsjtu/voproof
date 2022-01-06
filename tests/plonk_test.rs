@@ -86,6 +86,14 @@ where
   }
 }
 
+fn pad_to_power_of_two(a: usize) -> usize {
+  let mut ret = 1;
+  while ret < a {
+    ret *= 2;
+  }
+  ret
+}
+
 impl<P> Circuit<E, P> for BenchCircuit<P>
 where
   P: TEModelParameters<BaseField = F>,
@@ -102,7 +110,7 @@ where
 
   #[inline]
   fn padded_circuit_size(&self) -> usize {
-    self.size * 2
+    pad_to_power_of_two(self.size)
   }
 }
 
@@ -116,7 +124,7 @@ fn constraint_system_benchmark(scale: usize) {
   let timer = start_timer!(|| "Universal setup");
   let pp = KZG10::<E, DensePolynomial<F>>::setup(
     // +1 per wire, +2 for the permutation poly
-    circuit.size * 2 + 6,
+    circuit.padded_circuit_size() + 6,
     false,
     &mut OsRng,
   )
