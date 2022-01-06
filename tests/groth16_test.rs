@@ -17,7 +17,7 @@ use ark_relations::{
 use ark_std::{end_timer, start_timer};
 use blake2::Blake2s;
 use voproof::tools::to_field;
-use voproof::*;
+use voproof::max;
 mod utils;
 use utils::test_circuit::TestCircuit;
 use utils::mt_circuit::MerkleTreeCircuit;

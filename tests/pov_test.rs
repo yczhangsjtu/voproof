@@ -14,7 +14,7 @@ use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_pov::*, voproof_pov_prover_efficient::*, SNARK};
 use voproof::tools::{fmt_field, to_field, try_to_int};
-use voproof::*;
+use voproof::{fmt_ff_vector, max, generator_of};
 mod utils;
 use utils::mt_circuit::MerkleTreeCircuit;
 use utils::test_circuit::TestCircuit;

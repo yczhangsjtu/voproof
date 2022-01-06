@@ -6,7 +6,7 @@ use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_hpr::*, SNARK};
 use voproof::tools::{try_to_int, fmt_field};
-use voproof::*;
+use voproof::fmt_ff_vector;
 
 fn run_hpr_example<E: PairingEngine>(scale: usize) -> Result<(), Error> {
   let rng = &mut test_rng();

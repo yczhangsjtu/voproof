@@ -20,7 +20,7 @@ use voproof::cs::{
 use voproof::error::Error;
 use voproof::kzg::UniversalParams;
 use voproof::snarks::{voproof_r1cs::*, voproof_r1cs_prover_efficient::*, SNARK};
-use voproof::*;
+use voproof::{generator_of, max};
 
 mod utils;
 use utils::mt_circuit::MerkleTreeCircuit;
