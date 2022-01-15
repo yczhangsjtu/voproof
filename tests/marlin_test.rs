@@ -100,6 +100,7 @@ macro_rules! define_test {
     fn $func_name() {
       let timer = start_timer!(|| "Setup");
       let (srs, c, x) = $circuit_generator::<E>($scale);
+      println!("Degree: {}", srs.powers_of_g.len());
       end_timer!(timer);
       let timer = start_timer!(|| "Indexing");
       let (pk, vk) = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::index(&srs, c).unwrap();

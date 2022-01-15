@@ -139,6 +139,7 @@ fn constraint_system_benchmark(scale: usize) {
   let timer = start_timer!(|| "Proving");
   let proof = circuit.gen_proof(&pp, pk_p.clone(), &label).unwrap();
   end_timer!(timer);
+  println!("Proof size: {}", proof.serialized_size());
 
   let VerifierData { key, pi_pos } = verifier_data;
 

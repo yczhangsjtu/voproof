@@ -166,3 +166,46 @@ fn bench_marlin_verifier_test_circuit_scale_1000(b: &mut Bencher) {
   });
 }
 
+#[bench]
+fn bench_marlin_verifier_test_circuit_scale_8000(b: &mut Bencher) {
+  let (srs, c, x) = computes_universal_parameter_and_circuit::<E>(8000);
+  let (pk, vk) = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::index(&srs, c).unwrap();
+  let rng = &mut ark_std::test_rng();
+  let proof = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::prove(&pk, c.clone(), rng).unwrap();
+  b.iter(|| {
+    Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::verify(&vk, &x, &proof, rng).unwrap();
+  });
+}
+
+#[bench]
+fn bench_marlin_verifier_test_circuit_scale_16000(b: &mut Bencher) {
+  let (srs, c, x) = computes_universal_parameter_and_circuit::<E>(16000);
+  let (pk, vk) = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::index(&srs, c).unwrap();
+  let rng = &mut ark_std::test_rng();
+  let proof = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::prove(&pk, c.clone(), rng).unwrap();
+  b.iter(|| {
+    Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::verify(&vk, &x, &proof, rng).unwrap();
+  });
+}
+
+#[bench]
+fn bench_marlin_verifier_test_circuit_scale_32000(b: &mut Bencher) {
+  let (srs, c, x) = computes_universal_parameter_and_circuit::<E>(32000);
+  let (pk, vk) = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::index(&srs, c).unwrap();
+  let rng = &mut ark_std::test_rng();
+  let proof = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::prove(&pk, c.clone(), rng).unwrap();
+  b.iter(|| {
+    Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::verify(&vk, &x, &proof, rng).unwrap();
+  });
+}
+
+#[bench]
+fn bench_marlin_verifier_test_circuit_scale_64000(b: &mut Bencher) {
+  let (srs, c, x) = computes_universal_parameter_and_circuit::<E>(64000);
+  let (pk, vk) = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::index(&srs, c).unwrap();
+  let rng = &mut ark_std::test_rng();
+  let proof = Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::prove(&pk, c.clone(), rng).unwrap();
+  b.iter(|| {
+    Marlin::<Fr, SonicKZG10<E, P<Fr>>, Blake2s>::verify(&vk, &x, &proof, rng).unwrap();
+  });
+}
