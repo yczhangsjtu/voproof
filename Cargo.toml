@@ -28,7 +28,7 @@ ark-crypto-primitives = {version = "^0.3.0", path = "../../crypto-primitives"}
 ark-sponge = "^0.3.0"
 ark-r1cs-std = "^0.3.0"
 ark-groth16 = "^0.3.0"
-plonk = {version = "^0.8.2", path = "../../ark-plonk"}
+plonk = {version = "^0.8.2", path = "../ark-plonk"}
 rand_core = "0.6"
 ark-ed-on-bls12-381 = "0.3"
 
